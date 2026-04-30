@@ -1,7 +1,42 @@
-.next
-node_modules
-data
-coverage
-*.log
+# Dependencies
+/node_modules/
+
+# Next.js output
+/.next/
+/out/
+
+# Build output
+/build/
+/dist/
+
+# Local app data: SQLite databases, uploads, restore staging, backups
+/data/
+*.sqlite
+*.sqlite-*
+*.db
+*.db-*
+*.zip
+
+# Test output
+/coverage/
+
+# Environment and secrets
 .env
-.env.local
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# TypeScript
+*.tsbuildinfo
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

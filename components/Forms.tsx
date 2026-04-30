@@ -77,7 +77,7 @@ export function EditMaintenanceForm({ record }: { record: MaintenanceRecord }) {
     <EditPanel deleteAction={deleteAction}>
       <form action={updateAction} className="record-form">
         <Field label="Date"><input name="date" type="date" defaultValue={record.date} required /></Field>
-        <Field label="Odometer"><input name="odometer" type="number" min="0" defaultValue={record.odometer ?? ""} /></Field>
+        <Field label="Mileage at test"><input name="odometer" type="number" min="0" defaultValue={record.odometer ?? ""} /></Field>
         <Field label="Category"><input name="category" defaultValue={record.category} required /></Field>
         <Field label="Cost"><input name="cost" type="number" min="0" step="0.01" defaultValue={record.cost} /></Field>
         <Field label="Description"><textarea name="description" defaultValue={record.description} required /></Field>
@@ -157,7 +157,7 @@ export function MaintenanceForm({ vehicleId }: { vehicleId: number }) {
     <ModalPanel trigger={<><Wrench size={17} /> Add maintenance</>}>
       <form action={action} className="record-form">
         <Field label="Date"><input name="date" type="date" defaultValue={todayIso()} required /></Field>
-        <Field label="Odometer"><input name="odometer" type="number" min="0" /></Field>
+        <Field label="Mileage at test"><input name="odometer" type="number" min="0" /></Field>
         <Field label="Category"><input name="category" placeholder="Oil, tyres, brakes..." required /></Field>
         <Field label="Cost"><input name="cost" type="number" min="0" step="0.01" /></Field>
         <Field label="Description"><textarea name="description" required /></Field>

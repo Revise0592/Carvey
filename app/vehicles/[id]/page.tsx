@@ -148,7 +148,7 @@ export default async function VehiclePage({
           {mots.map((record) => (
             <article className="record-card" key={record.id}>
               <div className="record-header"><span className={`tag ${record.result}`}>{record.result}</span><h3>Expires {formatDate(record.expiryDate)}</h3></div>
-              <p className="record-meta">Tested {formatDate(record.testDate)} · {formatMiles(record.odometer)}</p>
+              <p className="record-meta">Tested {formatDate(record.testDate)} · Mileage at test: {formatMiles(record.odometer)}</p>
               <strong>{formatCurrency(record.cost)}</strong>
               {record.certificateRef ? <p>Reference: {record.certificateRef}</p> : null}
               {record.advisories ? <p>{record.advisories}</p> : null}
