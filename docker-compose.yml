@@ -1,0 +1,13 @@
+services:
+  carvey:
+    build: .
+    container_name: carvey
+    ports:
+      - "3000:3000"
+    environment:
+      TZ: Europe/London
+      CARVEY_DATA_DIR: /app/data
+      CARVEY_SESSION_SECRET: change-me-to-a-long-random-string-before-real-use
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
