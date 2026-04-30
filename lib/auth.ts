@@ -9,13 +9,12 @@ import { changePasswordForAdmin, changeUsernameForAdmin } from "./account";
 
 const cookieName = "carvey_session";
 
+const runtimeSecret = crypto.randomBytes(32).toString("base64");
+
 function sessionSecret() {
   const secret = process.env.CARVEY_SESSION_SECRET;
   if (secret && secret.length >= 24) return secret;
-  if (process.env.NODE_ENV === "production") {
-    throw new Error("CARVEY_SESSION_SECRET must be set to a long random string in production.");
-  }
-  return "dev-only-carvey-session-secret-change-me";
+  return runtimeSecret;
 }
 
 function sign(value: string) {
@@ -51,7 +50,7 @@ export async function login(username: string, password: string) {
   jar.set(cookieName, makeToken(user.id), {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production" && process.env.CARVEY_INSECURE_COOKIES !== "true",
+    secure: false,
     path: "/",
     maxAge: 60 * 60 * 24 * 30
   });
