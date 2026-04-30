@@ -27,6 +27,8 @@ export default async function GaragePage() {
             <input name="registration" placeholder="Registration" required />
             <input name="vin" placeholder="VIN" />
             <input name="currentOdometer" type="number" min="0" placeholder="Current mileage" />
+            <input name="purchasePrice" type="number" min="0" step="0.01" placeholder="Purchase price" />
+            <input name="purchaseDate" type="date" aria-label="Purchase date" />
             <textarea name="notes" placeholder="Notes" />
             <button className="primary-button" type="submit">Create vehicle</button>
           </form>
@@ -41,7 +43,7 @@ export default async function GaragePage() {
         </article>
         <article className="stat-card">
           <PoundSterling size={20} />
-          <span>Spend this year</span>
+          <span>Spent this year</span>
           <strong>{formatCurrency(stats.yearlySpend)}</strong>
         </article>
         <article className="stat-card">
@@ -59,6 +61,7 @@ export default async function GaragePage() {
               <span className="reg">{vehicle.registration}</span>
               <h2>{vehicle.make} {vehicle.model}</h2>
               <p>{vehicle.year ?? "Year unknown"} · {formatMiles(vehicle.currentOdometer)}</p>
+              {vehicle.purchasePrice ? <p>Bought for {formatCurrency(vehicle.purchasePrice)}</p> : null}
             </div>
           </Link>
         ))}

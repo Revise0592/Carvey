@@ -10,6 +10,8 @@ export type Vehicle = {
   registration: string;
   vin: string | null;
   currentOdometer: number | null;
+  purchasePrice: number | null;
+  purchaseDate: string | null;
   photoPath: string | null;
   thumbnailPath: string | null;
   notes: string | null;
@@ -74,10 +76,11 @@ export type AdminUser = {
 };
 
 let db: Database.Database | null = null;
+export const dbFileName = "carvey.sqlite";
 
 function openDb() {
   ensureDataDirs();
-  const database = new Database(path.join(dataDir, "carvey.sqlite"));
+  const database = new Database(path.join(dataDir, dbFileName));
   database.pragma("journal_mode = WAL");
   database.pragma("foreign_keys = ON");
   migrate(database);
@@ -92,6 +95,10 @@ export function getDb() {
 export function closeDbForTests() {
   db?.close();
   db = null;
+}
+
+export function closeDb() {
+  closeDbForTests();
 }
 
 function migrate(database: Database.Database) {
@@ -111,6 +118,8 @@ function migrate(database: Database.Database) {
       registration TEXT NOT NULL,
       vin TEXT,
       current_odometer INTEGER,
+      purchase_price REAL,
+      purchase_date TEXT,
       photo_path TEXT,
       thumbnail_path TEXT,
       notes TEXT,
@@ -173,6 +182,15 @@ function migrate(database: Database.Database) {
     CREATE INDEX IF NOT EXISTS idx_mot_vehicle ON mot_records(vehicle_id);
     CREATE INDEX IF NOT EXISTS idx_reminders_vehicle ON reminders(vehicle_id);
   `);
+  ensureColumn(database, "vehicles", "purchase_price", "REAL");
+  ensureColumn(database, "vehicles", "purchase_date", "TEXT");
+}
+
+function ensureColumn(database: Database.Database, table: string, column: string, definition: string) {
+  const columns = database.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
+  if (!columns.some((entry) => entry.name === column)) {
+    database.prepare(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`).run();
+  }
 }
 
 const vehicleSelect = `
@@ -183,6 +201,8 @@ const vehicleSelect = `
   registration,
   vin,
   current_odometer as currentOdometer,
+  purchase_price as purchasePrice,
+  purchase_date as purchaseDate,
   photo_path as photoPath,
   thumbnail_path as thumbnailPath,
   notes,
@@ -245,14 +265,45 @@ export function createVehicle(input: {
   registration: string;
   vin: string | null;
   currentOdometer: number | null;
+  purchasePrice: number | null;
+  purchaseDate: string | null;
   notes: string | null;
 }) {
   return getDb()
     .prepare(`
-      INSERT INTO vehicles (make, model, year, registration, vin, current_odometer, notes)
-      VALUES (@make, @model, @year, @registration, @vin, @currentOdometer, @notes)
+      INSERT INTO vehicles (make, model, year, registration, vin, current_odometer, purchase_price, purchase_date, notes)
+      VALUES (@make, @model, @year, @registration, @vin, @currentOdometer, @purchasePrice, @purchaseDate, @notes)
     `)
     .run(input);
+}
+
+export function updateVehicle(id: number, input: {
+  make: string;
+  model: string;
+  year: number | null;
+  registration: string;
+  vin: string | null;
+  currentOdometer: number | null;
+  purchasePrice: number | null;
+  purchaseDate: string | null;
+  notes: string | null;
+}) {
+  return getDb()
+    .prepare(`
+      UPDATE vehicles
+      SET make = @make,
+          model = @model,
+          year = @year,
+          registration = @registration,
+          vin = @vin,
+          current_odometer = @currentOdometer,
+          purchase_price = @purchasePrice,
+          purchase_date = @purchaseDate,
+          notes = @notes,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = @id
+    `)
+    .run({ id, ...input });
 }
 
 export function setVehiclePhoto(id: number, photoPath: string, thumbnailPath: string) {
@@ -343,6 +394,26 @@ export function createReminder(input: Omit<Reminder, "id" | "createdAt" | "compl
   return getDb()
     .prepare("INSERT INTO reminders (vehicle_id, title, due_date, due_odometer, recurrence) VALUES (@vehicleId, @title, @dueDate, @dueOdometer, @recurrence)")
     .run(input);
+}
+
+export function upsertMotReminder(vehicleId: number, dueDate: string) {
+  const existing = getDb()
+    .prepare("SELECT id FROM reminders WHERE vehicle_id = ? AND title = ? AND completed_at IS NULL ORDER BY id DESC LIMIT 1")
+    .get(vehicleId, "MOT due") as { id: number } | undefined;
+
+  if (existing) {
+    return getDb()
+      .prepare("UPDATE reminders SET due_date = ?, due_odometer = NULL, recurrence = ? WHERE id = ? AND vehicle_id = ?")
+      .run(dueDate, "12 months", existing.id, vehicleId);
+  }
+
+  return createReminder({
+    vehicleId,
+    title: "MOT due",
+    dueDate,
+    dueOdometer: null,
+    recurrence: "12 months"
+  });
 }
 
 export function updateReminder(id: number, vehicleId: number, input: Omit<Reminder, "id" | "vehicleId" | "createdAt">) {

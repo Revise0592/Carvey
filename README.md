@@ -1,6 +1,6 @@
 # Carvey
 
-Carvey is a self-hosted car maintenance dashboard for a household garage. It tracks vehicles, maintenance, repairs, MOTs, reminders, spend, and optimized vehicle photos.
+Carvey is a self-hosted car maintenance dashboard for a household garage. It tracks vehicles, maintenance, repairs, MOTs, reminders, money spent, and optimized vehicle photos.
 
 ## Local Development
 

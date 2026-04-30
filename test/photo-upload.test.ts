@@ -27,6 +27,8 @@ describe("processVehiclePhotoUpload", () => {
       registration: "HJ20 ABC",
       vin: null,
       currentOdometer: 12000,
+      purchasePrice: null,
+      purchaseDate: null,
       notes: null
     }).lastInsertRowid);
     const buffer = await sharp({ create: { width: 1800, height: 1200, channels: 3, background: "#ffffff" } }).png().toBuffer();
@@ -50,6 +52,8 @@ describe("processVehiclePhotoUpload", () => {
       registration: "FF11 FFF",
       vin: null,
       currentOdometer: null,
+      purchasePrice: null,
+      purchaseDate: null,
       notes: null
     }).lastInsertRowid);
     await expect(upload.processVehiclePhotoUpload(vehicleId, textFile)).resolves.toMatchObject({ ok: false, status: 400 });

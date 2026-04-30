@@ -492,7 +492,8 @@ summary {
 .tabs {
   display: flex;
   gap: 0.4rem;
-  overflow-x: auto;
+  flex-wrap: wrap;
+  overflow: visible;
   border-bottom: 1px solid var(--line);
   margin-bottom: 22px;
 }
@@ -515,18 +516,48 @@ summary {
 }
 
 .records-grid {
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  align-items: start;
 }
 
 .record-card {
   padding: 16px;
   display: grid;
-  gap: 0.7rem;
+  gap: 0.85rem;
+  align-content: start;
+  min-width: 0;
 }
 
 .reminder-card {
-  grid-template-columns: 1fr auto;
-  align-items: start;
+  grid-template-columns: 1fr;
+}
+
+.record-header {
+  display: grid;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.record-header h3 {
+  line-height: 1.18;
+  overflow-wrap: anywhere;
+}
+
+.record-meta {
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.record-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-top: 0.15rem;
+}
+
+.record-actions form {
+  margin: 0;
 }
 
 .entry-panel {
@@ -627,7 +658,10 @@ summary {
   font-weight: 800;
 }
 
-.segmented-control button.active {
+.segmented-control button.active,
+:root[data-theme-mode="system"] .theme-system,
+:root[data-theme-mode="light"] .theme-light,
+:root[data-theme-mode="dark"] .theme-dark {
   background: var(--surface);
   color: var(--text);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
@@ -675,5 +709,9 @@ summary {
   .inline-form {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .records-grid {
+    grid-template-columns: 1fr;
   }
 }

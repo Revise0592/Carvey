@@ -17,7 +17,9 @@ import {
   updateMaintenance,
   updateMot,
   updateReminder,
-  updateRepair
+  updateRepair,
+  updateVehicle,
+  upsertMotReminder
 } from "@/lib/db";
 import { changePassword, changeUsername, createFirstAdmin, login, logout, requireUser } from "@/lib/auth";
 
@@ -39,6 +41,11 @@ function nullableInt(formData: FormData, key: string) {
 function money(formData: FormData, key: string) {
   const value = str(formData, key);
   return value.length ? Number.parseFloat(value) : 0;
+}
+
+function nullableMoney(formData: FormData, key: string) {
+  const value = str(formData, key);
+  return value.length ? Number.parseFloat(value) : null;
 }
 
 const credentialsSchema = z.object({
@@ -80,11 +87,29 @@ export async function createVehicleAction(formData: FormData) {
     registration: z.string().min(1).parse(str(formData, "registration")).toUpperCase(),
     vin: nullableStr(formData, "vin"),
     currentOdometer: nullableInt(formData, "currentOdometer"),
+    purchasePrice: nullableMoney(formData, "purchasePrice"),
+    purchaseDate: nullableStr(formData, "purchaseDate"),
     notes: nullableStr(formData, "notes")
   };
   const result = createVehicle(input);
   revalidatePath("/garage");
   redirect(`/vehicles/${result.lastInsertRowid}`);
+}
+
+export async function updateVehicleAction(vehicleId: number, formData: FormData) {
+  await requireUser();
+  updateVehicle(vehicleId, {
+    make: z.string().min(1).parse(str(formData, "make")),
+    model: z.string().min(1).parse(str(formData, "model")),
+    year: nullableInt(formData, "year"),
+    registration: z.string().min(1).parse(str(formData, "registration")).toUpperCase(),
+    vin: nullableStr(formData, "vin"),
+    currentOdometer: nullableInt(formData, "currentOdometer"),
+    purchasePrice: nullableMoney(formData, "purchasePrice"),
+    purchaseDate: nullableStr(formData, "purchaseDate"),
+    notes: nullableStr(formData, "notes")
+  });
+  revalidateVehicle(vehicleId);
 }
 
 export async function createMaintenanceAction(vehicleId: number, formData: FormData) {
@@ -155,31 +180,35 @@ export async function deleteRepairAction(vehicleId: number, id: number) {
 
 export async function createMotAction(vehicleId: number, formData: FormData) {
   await requireUser();
+  const expiryDate = z.string().min(1).parse(str(formData, "expiryDate"));
   createMot({
     vehicleId,
     testDate: z.string().min(1).parse(str(formData, "testDate")),
-    expiryDate: z.string().min(1).parse(str(formData, "expiryDate")),
+    expiryDate,
     odometer: nullableInt(formData, "odometer"),
     result: z.enum(["pass", "fail", "advisory"]).parse(str(formData, "result")),
     advisories: nullableStr(formData, "advisories"),
     cost: money(formData, "cost"),
     certificateRef: nullableStr(formData, "certificateRef")
   });
+  upsertMotReminder(vehicleId, expiryDate);
   revalidatePath("/garage");
   revalidatePath(`/vehicles/${vehicleId}`);
 }
 
 export async function updateMotAction(vehicleId: number, id: number, formData: FormData) {
   await requireUser();
+  const expiryDate = z.string().min(1).parse(str(formData, "expiryDate"));
   updateMot(id, vehicleId, {
     testDate: z.string().min(1).parse(str(formData, "testDate")),
-    expiryDate: z.string().min(1).parse(str(formData, "expiryDate")),
+    expiryDate,
     odometer: nullableInt(formData, "odometer"),
     result: z.enum(["pass", "fail", "advisory"]).parse(str(formData, "result")),
     advisories: nullableStr(formData, "advisories"),
     cost: money(formData, "cost"),
     certificateRef: nullableStr(formData, "certificateRef")
   });
+  upsertMotReminder(vehicleId, expiryDate);
   revalidateVehicle(vehicleId);
 }
 

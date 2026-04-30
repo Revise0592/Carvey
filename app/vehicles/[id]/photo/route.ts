@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
@@ -26,5 +25,5 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   revalidatePath("/garage");
   revalidatePath(`/vehicles/${vehicleId}`);
-  redirect(`/vehicles/${vehicleId}`);
+  return NextResponse.redirect(new URL(`/vehicles/${vehicleId}`, request.url), 303);
 }

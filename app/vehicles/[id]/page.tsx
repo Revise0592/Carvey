@@ -4,6 +4,7 @@ import { CalendarDays, Hammer, ShieldCheck, Wrench } from "lucide-react";
 import { AppFrame } from "@/components/AppFrame";
 import {
   CompleteReminderButton,
+  EditVehicleForm,
   EditMaintenanceForm,
   EditMotForm,
   EditReminderForm,
@@ -43,7 +44,7 @@ export default async function VehiclePage({
   const repairs = listRepairs(vehicle.id);
   const mots = listMots(vehicle.id);
   const reminders = listReminders(vehicle.id);
-  const spend = [...maintenance, ...repairs, ...mots].reduce((total, record) => total + record.cost, 0);
+  const spent = [...maintenance, ...repairs, ...mots].reduce((total, record) => total + record.cost, 0);
   const latestMot = mots[0];
 
   return (
@@ -57,10 +58,14 @@ export default async function VehiclePage({
           <div className="hero-meta">
             <MileagePill>{formatMiles(vehicle.currentOdometer)}</MileagePill>
             <span className="pill">{vehicle.year ?? "Year unknown"}</span>
-            <span className="pill">{formatCurrency(spend)} logged</span>
+            <span className="pill">{formatCurrency(spent)} logged</span>
+            {vehicle.purchasePrice ? <span className="pill">{formatCurrency(vehicle.purchasePrice)} paid</span> : null}
           </div>
           {vehicle.notes ? <p>{vehicle.notes}</p> : null}
-          <VehiclePhotoForm vehicleId={vehicle.id} />
+          <div className="inline-form">
+            <VehiclePhotoForm vehicleId={vehicle.id} />
+            <EditVehicleForm vehicle={vehicle} />
+          </div>
         </div>
       </section>
 
@@ -85,6 +90,10 @@ export default async function VehiclePage({
               <strong>{repairs.length}</strong>
               <span>Open reminders</span>
               <strong>{reminders.filter((reminder) => !reminder.completedAt).length}</strong>
+              <span>Purchase date</span>
+              <strong>{formatDate(vehicle.purchaseDate)}</strong>
+              <span>Purchase price</span>
+              <strong>{vehicle.purchasePrice ? formatCurrency(vehicle.purchasePrice) : "Not set"}</strong>
             </div>
           </div>
           <div className="list-panel">
@@ -108,11 +117,11 @@ export default async function VehiclePage({
         <RecordSection title="Maintenance" icon={<Wrench size={19} />} form={<MaintenanceForm vehicleId={vehicle.id} />}>
           {maintenance.map((record) => (
             <article className="record-card" key={record.id}>
-              <div><span className="tag">{record.category}</span><h3>{record.description}</h3></div>
-              <p>{formatDate(record.date)} · {formatMiles(record.odometer)}</p>
+              <div className="record-header"><span className="tag">{record.category}</span><h3>{record.description}</h3></div>
+              <p className="record-meta">{formatDate(record.date)} · {formatMiles(record.odometer)}</p>
               <strong>{formatCurrency(record.cost)}</strong>
               {record.notes ? <p>{record.notes}</p> : null}
-              <EditMaintenanceForm record={record} />
+              <div className="record-actions"><EditMaintenanceForm record={record} /></div>
             </article>
           ))}
         </RecordSection>
@@ -122,11 +131,11 @@ export default async function VehiclePage({
         <RecordSection title="Repairs" icon={<Hammer size={19} />} form={<RepairForm vehicleId={vehicle.id} />}>
           {repairs.map((record) => (
             <article className="record-card" key={record.id}>
-              <div><span className="tag">{record.garage ?? "Repair"}</span><h3>{record.fault}</h3></div>
-              <p>{formatDate(record.date)} · {formatMiles(record.odometer)}</p>
+              <div className="record-header"><span className="tag">{record.garage ?? "Repair"}</span><h3>{record.fault}</h3></div>
+              <p className="record-meta">{formatDate(record.date)} · {formatMiles(record.odometer)}</p>
               <strong>{formatCurrency(record.cost)}</strong>
               {record.notes ? <p>{record.notes}</p> : null}
-              <EditRepairForm record={record} />
+              <div className="record-actions"><EditRepairForm record={record} /></div>
             </article>
           ))}
         </RecordSection>
@@ -136,12 +145,12 @@ export default async function VehiclePage({
         <RecordSection title="MOTs" icon={<ShieldCheck size={19} />} form={<MotForm vehicleId={vehicle.id} />}>
           {mots.map((record) => (
             <article className="record-card" key={record.id}>
-              <div><span className={`tag ${record.result}`}>{record.result}</span><h3>Expires {formatDate(record.expiryDate)}</h3></div>
-              <p>Tested {formatDate(record.testDate)} · {formatMiles(record.odometer)}</p>
+              <div className="record-header"><span className={`tag ${record.result}`}>{record.result}</span><h3>Expires {formatDate(record.expiryDate)}</h3></div>
+              <p className="record-meta">Tested {formatDate(record.testDate)} · {formatMiles(record.odometer)}</p>
               <strong>{formatCurrency(record.cost)}</strong>
               {record.certificateRef ? <p>Reference: {record.certificateRef}</p> : null}
               {record.advisories ? <p>{record.advisories}</p> : null}
-              <EditMotForm record={record} />
+              <div className="record-actions"><EditMotForm record={record} /></div>
             </article>
           ))}
         </RecordSection>
@@ -153,11 +162,13 @@ export default async function VehiclePage({
             const status = getReminderStatus(record, vehicle);
             return (
               <article className="record-card reminder-card" key={record.id}>
-                <div><span className={`tag ${status}`}>{status}</span><h3>{record.title}</h3></div>
-                <p>{record.dueDate ? `Due ${formatDate(record.dueDate)}` : "No date"} · {formatMiles(record.dueOdometer)}</p>
+                <div className="record-header"><span className={`tag ${status}`}>{status}</span><h3>{record.title}</h3></div>
+                <p className="record-meta">{record.dueDate ? `Due ${formatDate(record.dueDate)}` : "No date"} · {formatMiles(record.dueOdometer)}</p>
                 {record.recurrence ? <p>Repeats {record.recurrence}</p> : null}
-                {!record.completedAt ? <CompleteReminderButton vehicleId={vehicle.id} id={record.id} /> : null}
-                <EditReminderForm record={record} />
+                <div className="record-actions">
+                  {!record.completedAt ? <CompleteReminderButton vehicleId={vehicle.id} id={record.id} /> : null}
+                  <EditReminderForm record={record} />
+                </div>
               </article>
             );
           })}

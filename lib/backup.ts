@@ -1,0 +1,297 @@
+import AdmZip from "adm-zip";
+import crypto from "node:crypto";
+import fs from "node:fs";
+import fsp from "node:fs/promises";
+import path from "node:path";
+import Database from "better-sqlite3";
+import { dbFileName, getDb } from "./db";
+import { ensureDataDirs, restoreRollbackDir, restoreStagingDir, tempDir, uploadDir } from "./paths";
+
+const backupFormatVersion = 1;
+const appVersion = "0.1.0";
+const maxRestoreBytes = 256 * 1024 * 1024;
+
+export type BackupManifest = {
+  app: "Carvey";
+  appVersion: string;
+  formatVersion: number;
+  createdAt: string;
+  database: string;
+  uploads: string[];
+};
+
+export type RestoreSummary = {
+  token: string;
+  createdAt: string;
+  appVersion: string;
+  formatVersion: number;
+  uploadCount: number;
+  counts: {
+    vehicles: number;
+    maintenance: number;
+    repairs: number;
+    mots: number;
+    reminders: number;
+  };
+};
+
+type PreviewResult = { ok: true; summary: RestoreSummary } | { ok: false; message: string };
+
+export async function createBackupZip() {
+  ensureDataDirs();
+  const token = crypto.randomUUID();
+  const workDir = path.join(tempDir, `backup-${token}`);
+  await fsp.mkdir(workDir, { recursive: true });
+  const dbCopyPath = path.join(workDir, dbFileName);
+
+  await getDb().backup(dbCopyPath);
+
+  const uploads = await listUploadFiles();
+  const manifest: BackupManifest = {
+    app: "Carvey",
+    appVersion,
+    formatVersion: backupFormatVersion,
+    createdAt: new Date().toISOString(),
+    database: dbFileName,
+    uploads
+  };
+
+  const zip = new AdmZip();
+  zip.addLocalFile(dbCopyPath, "", dbFileName);
+  zip.addFile("manifest.json", Buffer.from(JSON.stringify(manifest, null, 2)));
+  for (const relativePath of uploads) {
+    zip.addLocalFile(path.join(uploadDir, relativePath), "uploads", relativePath);
+  }
+
+  const buffer = zip.toBuffer();
+  await fsp.rm(workDir, { recursive: true, force: true });
+  return { buffer, manifest };
+}
+
+export async function stageRestorePreview(file: File): Promise<PreviewResult> {
+  ensureDataDirs();
+  if (file.size <= 0) return { ok: false, message: "Choose a backup file to restore." };
+  if (file.size > maxRestoreBytes) return { ok: false, message: "Backup file is larger than 256 MB." };
+
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const token = crypto.randomUUID();
+  const stageDir = path.join(restoreStagingDir, token);
+  const zipPath = path.join(stageDir, "backup.zip");
+  const extractDir = path.join(stageDir, "preview");
+  await fsp.mkdir(stageDir, { recursive: true });
+  await fsp.writeFile(zipPath, buffer);
+
+  try {
+    const summary = await validateAndSummariseZip(buffer, token, extractDir);
+    await fsp.writeFile(path.join(stageDir, "summary.json"), JSON.stringify(summary, null, 2));
+    return { ok: true, summary };
+  } catch (error) {
+    await fsp.rm(stageDir, { recursive: true, force: true });
+    return { ok: false, message: error instanceof Error ? error.message : "Could not read backup." };
+  }
+}
+
+export async function readRestoreSummary(token: string | undefined) {
+  if (!token || !isSafeToken(token)) return null;
+  try {
+    const content = await fsp.readFile(path.join(restoreStagingDir, token, "summary.json"), "utf8");
+    return JSON.parse(content) as RestoreSummary;
+  } catch {
+    return null;
+  }
+}
+
+export async function confirmRestore(token: string) {
+  if (!isSafeToken(token)) return { ok: false as const, message: "Invalid restore token." };
+  const stageDir = path.join(restoreStagingDir, token);
+  const zipPath = path.join(stageDir, "backup.zip");
+  const extractDir = path.join(stageDir, "restore");
+
+  let buffer: Buffer;
+  try {
+    buffer = await fsp.readFile(zipPath);
+  } catch {
+    return { ok: false as const, message: "Restore preview has expired or is missing." };
+  }
+
+  try {
+    await validateAndSummariseZip(buffer, token, extractDir);
+    const timestamp = new Date().toISOString().replaceAll(":", "-").replaceAll(".", "-");
+    const rollbackDir = path.join(restoreRollbackDir, timestamp);
+    await fsp.mkdir(rollbackDir, { recursive: true });
+
+    await getDb().backup(path.join(rollbackDir, dbFileName));
+    await copyDir(uploadDir, path.join(rollbackDir, "uploads"));
+
+    restoreDatabaseContents(path.join(extractDir, dbFileName));
+    await fsp.rm(uploadDir, { recursive: true, force: true });
+    await fsp.mkdir(uploadDir, { recursive: true });
+    await copyDir(path.join(extractDir, "uploads"), uploadDir);
+    await fsp.rm(stageDir, { recursive: true, force: true });
+    return { ok: true as const, rollbackDir };
+  } catch (error) {
+    return { ok: false as const, message: error instanceof Error ? error.message : "Restore failed." };
+  }
+}
+
+function restoreDatabaseContents(backupDbPath: string) {
+  const database = getDb();
+  const backupPath = backupDbPath.replaceAll("'", "''");
+  const tables = [
+    {
+      name: "admin_users",
+      columns: ["id", "username", "password_hash", "created_at"]
+    },
+    {
+      name: "vehicles",
+      columns: ["id", "make", "model", "year", "registration", "vin", "current_odometer", "purchase_price", "purchase_date", "photo_path", "thumbnail_path", "notes", "archived", "created_at", "updated_at"]
+    },
+    {
+      name: "maintenance_records",
+      columns: ["id", "vehicle_id", "date", "odometer", "category", "description", "cost", "notes", "created_at"]
+    },
+    {
+      name: "repair_records",
+      columns: ["id", "vehicle_id", "date", "odometer", "fault", "garage", "cost", "notes", "created_at"]
+    },
+    {
+      name: "mot_records",
+      columns: ["id", "vehicle_id", "test_date", "expiry_date", "odometer", "result", "advisories", "cost", "certificate_ref", "created_at"]
+    },
+    {
+      name: "reminders",
+      columns: ["id", "vehicle_id", "title", "due_date", "due_odometer", "recurrence", "completed_at", "created_at"]
+    }
+  ];
+
+  database.pragma("foreign_keys = OFF");
+  database.exec(`ATTACH DATABASE '${backupPath}' AS restore_backup`);
+  try {
+    database.exec("BEGIN");
+    for (const table of [...tables].reverse()) {
+      database.exec(`DELETE FROM ${table.name}`);
+    }
+    for (const table of tables) {
+      const columns = table.columns.join(", ");
+      database.exec(`INSERT INTO ${table.name} (${columns}) SELECT ${columns} FROM restore_backup.${table.name}`);
+    }
+    database.exec(`
+      DELETE FROM sqlite_sequence WHERE name IN (${tables.map((table) => `'${table.name}'`).join(", ")});
+      INSERT OR REPLACE INTO sqlite_sequence (name, seq)
+      SELECT name, seq FROM restore_backup.sqlite_sequence
+      WHERE name IN (${tables.map((table) => `'${table.name}'`).join(", ")});
+    `);
+    database.exec("COMMIT");
+  } catch (error) {
+    try {
+      database.exec("ROLLBACK");
+    } catch {
+      // Ignore rollback failures so the original restore error is returned.
+    }
+    throw error;
+  } finally {
+    database.exec("DETACH DATABASE restore_backup");
+    database.pragma("foreign_keys = ON");
+  }
+}
+
+async function validateAndSummariseZip(buffer: Buffer, token: string, extractDir: string): Promise<RestoreSummary> {
+  const zip = new AdmZip(buffer);
+  const entries = zip.getEntries();
+  if (!entries.length) throw new Error("Backup zip is empty.");
+
+  for (const entry of entries) {
+    if (!isSafeZipPath(entry.entryName)) {
+      throw new Error("Backup contains an unsafe file path.");
+    }
+  }
+
+  const manifestEntry = zip.getEntry("manifest.json");
+  if (!manifestEntry) throw new Error("Backup is missing manifest.json.");
+  const manifest = JSON.parse(manifestEntry.getData().toString("utf8")) as BackupManifest;
+  if (manifest.app !== "Carvey" || manifest.formatVersion !== backupFormatVersion || manifest.database !== dbFileName) {
+    throw new Error("Backup format is not supported.");
+  }
+  if (!zip.getEntry(dbFileName)) throw new Error("Backup is missing carvey.sqlite.");
+
+  await fsp.rm(extractDir, { recursive: true, force: true });
+  await fsp.mkdir(extractDir, { recursive: true });
+  zip.extractAllTo(extractDir, true);
+
+  const backupDb = new Database(path.join(extractDir, dbFileName), { readonly: true, fileMustExist: true });
+  try {
+    const counts = {
+      vehicles: countRows(backupDb, "vehicles"),
+      maintenance: countRows(backupDb, "maintenance_records"),
+      repairs: countRows(backupDb, "repair_records"),
+      mots: countRows(backupDb, "mot_records"),
+      reminders: countRows(backupDb, "reminders")
+    };
+    return {
+      token,
+      createdAt: manifest.createdAt,
+      appVersion: manifest.appVersion,
+      formatVersion: manifest.formatVersion,
+      uploadCount: manifest.uploads.length,
+      counts
+    };
+  } finally {
+    backupDb.close();
+  }
+}
+
+function countRows(database: Database.Database, table: string) {
+  const row = database.prepare(`SELECT COUNT(*) as count FROM ${table}`).get() as { count: number };
+  return row.count;
+}
+
+async function listUploadFiles() {
+  const files: string[] = [];
+  await walkUploads(uploadDir, "", files);
+  return files.sort();
+}
+
+async function walkUploads(root: string, relativeDir: string, files: string[]) {
+  let entries: fs.Dirent[];
+  try {
+    entries = await fsp.readdir(path.join(root, relativeDir), { withFileTypes: true });
+  } catch {
+    return;
+  }
+
+  for (const entry of entries) {
+    const relativePath = path.join(relativeDir, entry.name);
+    if (entry.isDirectory()) {
+      await walkUploads(root, relativePath, files);
+    } else if (entry.isFile()) {
+      files.push(relativePath.split(path.sep).join("/"));
+    }
+  }
+}
+
+function isSafeZipPath(entryName: string) {
+  const normalised = path.posix.normalize(entryName);
+  return Boolean(entryName) && !normalised.startsWith("../") && !path.posix.isAbsolute(normalised) && normalised === entryName;
+}
+
+function isSafeToken(token: string) {
+  return /^[a-f0-9-]{36}$/i.test(token);
+}
+
+async function copyDir(from: string, to: string) {
+  try {
+    const entries = await fsp.readdir(from, { withFileTypes: true });
+    await fsp.mkdir(to, { recursive: true });
+    for (const entry of entries) {
+      const source = path.join(from, entry.name);
+      const target = path.join(to, entry.name);
+      if (entry.isDirectory()) {
+        await copyDir(source, target);
+      } else if (entry.isFile()) {
+        await fsp.copyFile(source, target);
+      }
+    }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+  }
+}

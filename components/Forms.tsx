@@ -12,10 +12,12 @@ import {
   updateMaintenanceAction,
   updateMotAction,
   updateReminderAction,
-  updateRepairAction
+  updateRepairAction,
+  updateVehicleAction
 } from "@/app/actions";
-import type { MaintenanceRecord, MotRecord, Reminder, RepairRecord } from "@/lib/db";
+import type { MaintenanceRecord, MotRecord, Reminder, RepairRecord, Vehicle } from "@/lib/db";
 import { todayIso } from "@/lib/format";
+import { EditPanel } from "./EditPanel";
 
 export function VehiclePhotoForm({ vehicleId }: { vehicleId: number }) {
   return (
@@ -27,6 +29,27 @@ export function VehiclePhotoForm({ vehicleId }: { vehicleId: number }) {
       </label>
       <button className="secondary-button" type="submit">Upload</button>
     </form>
+  );
+}
+
+export function EditVehicleForm({ vehicle }: { vehicle: Vehicle }) {
+  const updateAction = updateVehicleAction.bind(null, vehicle.id);
+  return (
+    <details className="entry-panel">
+      <summary>Edit car</summary>
+      <form action={updateAction} className="record-form">
+        <input name="make" defaultValue={vehicle.make} placeholder="Make" required />
+        <input name="model" defaultValue={vehicle.model} placeholder="Model" required />
+        <input name="year" type="number" min="1886" max="2100" defaultValue={vehicle.year ?? ""} placeholder="Year" />
+        <input name="registration" defaultValue={vehicle.registration} placeholder="Registration" required />
+        <input name="vin" defaultValue={vehicle.vin ?? ""} placeholder="VIN" />
+        <input name="currentOdometer" type="number" min="0" defaultValue={vehicle.currentOdometer ?? ""} placeholder="Current mileage" />
+        <input name="purchasePrice" type="number" min="0" step="0.01" defaultValue={vehicle.purchasePrice ?? ""} placeholder="Purchase price" />
+        <input name="purchaseDate" type="date" defaultValue={vehicle.purchaseDate ?? ""} aria-label="Purchase date" />
+        <textarea name="notes" defaultValue={vehicle.notes ?? ""} placeholder="Notes" />
+        <button className="primary-button" type="submit">Save car</button>
+      </form>
+    </details>
   );
 }
 
@@ -108,24 +131,6 @@ export function EditReminderForm({ record }: { record: Reminder }) {
         <button className="primary-button" type="submit">Save changes</button>
       </form>
     </EditPanel>
-  );
-}
-
-function EditPanel({ children, deleteAction }: { children: React.ReactNode; deleteAction: () => Promise<void> }) {
-  return (
-    <details className="edit-panel">
-      <summary>Edit</summary>
-      <div className="edit-menu">
-        {children}
-        <form action={deleteAction} className="delete-confirm">
-          <label>
-            <input type="checkbox" required />
-            Confirm delete
-          </label>
-          <button className="danger-button" type="submit">Delete entry</button>
-        </form>
-      </div>
-    </details>
   );
 }
 
