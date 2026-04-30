@@ -100,6 +100,34 @@ describe("record mutation helpers", () => {
     db.closeDbForTests();
   });
 
+  it("deletes a vehicle and its related records", async () => {
+    const db = await freshDb();
+    const vehicleId = Number(db.createVehicle({
+      make: "Nissan",
+      model: "Leaf",
+      year: 2021,
+      registration: "EV21 CAR",
+      vin: null,
+      currentOdometer: 18000,
+      purchasePrice: null,
+      purchaseDate: null,
+      notes: null
+    }).lastInsertRowid);
+    db.createMaintenance({ vehicleId, date: "2026-01-01", odometer: 18000, category: "Tyres", description: "Rotate tyres", cost: 0, notes: null });
+    db.createRepair({ vehicleId, date: "2026-01-02", odometer: 18001, fault: "Puncture", garage: null, cost: 25, notes: null });
+    db.createMot({ vehicleId, testDate: "2026-01-03", expiryDate: "2027-01-03", odometer: 18002, result: "pass", advisories: null, cost: 54.85, certificateRef: null });
+    db.createReminder({ vehicleId, title: "Check coolant", dueDate: "2026-02-01", dueOdometer: null, recurrence: null });
+
+    db.deleteVehicle(vehicleId);
+
+    expect(db.getVehicle(vehicleId)).toBeUndefined();
+    expect(db.listMaintenance(vehicleId)).toHaveLength(0);
+    expect(db.listRepairs(vehicleId)).toHaveLength(0);
+    expect(db.listMots(vehicleId)).toHaveLength(0);
+    expect(db.listReminders(vehicleId)).toHaveLength(0);
+    db.closeDbForTests();
+  });
+
   it("updates and deletes repair, MOT, and reminder records", async () => {
     const db = await freshDb();
     const vehicleId = Number(db.createVehicle({

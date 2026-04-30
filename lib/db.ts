@@ -306,6 +306,12 @@ export function updateVehicle(id: number, input: {
     .run({ id, ...input });
 }
 
+export function deleteVehicle(id: number) {
+  return getDb()
+    .prepare("DELETE FROM vehicles WHERE id = ?")
+    .run(id);
+}
+
 export function setVehiclePhoto(id: number, photoPath: string, thumbnailPath: string) {
   return getDb()
     .prepare("UPDATE vehicles SET photo_path = ?, thumbnail_path = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")

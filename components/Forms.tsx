@@ -1,10 +1,11 @@
-import { CalendarDays, Camera, Check, Gauge, Hammer, ShieldCheck, Wrench } from "lucide-react";
+import { CalendarDays, Camera, Check, Gauge, Hammer, ShieldCheck, Trash2, Wrench } from "lucide-react";
 import {
   completeReminderAction,
   createMaintenanceAction,
   createMotAction,
   createReminderAction,
   createRepairAction,
+  deleteVehicleAction,
   deleteMaintenanceAction,
   deleteMotAction,
   deleteReminderAction,
@@ -48,6 +49,23 @@ export function EditVehicleForm({ vehicle }: { vehicle: Vehicle }) {
         <input name="purchaseDate" type="date" defaultValue={vehicle.purchaseDate ?? ""} aria-label="Purchase date" />
         <textarea name="notes" defaultValue={vehicle.notes ?? ""} placeholder="Notes" />
         <button className="primary-button" type="submit">Save car</button>
+      </form>
+    </details>
+  );
+}
+
+export function DeleteVehicleForm({ vehicle }: { vehicle: Vehicle }) {
+  const action = deleteVehicleAction.bind(null, vehicle.id);
+  return (
+    <details className="entry-panel danger-panel">
+      <summary><Trash2 size={17} /> Delete car</summary>
+      <form action={action} className="delete-confirm destructive-form">
+        <p className="muted">This removes {vehicle.make} {vehicle.model} and all of its logs.</p>
+        <label>
+          <input type="checkbox" name="confirmed" required />
+          Confirm delete
+        </label>
+        <button className="danger-button" type="submit">Delete car</button>
       </form>
     </details>
   );

@@ -1,5 +1,7 @@
 "use server";
 
+import fs from "node:fs/promises";
+import path from "node:path";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -14,6 +16,8 @@ import {
   deleteMot,
   deleteReminder,
   deleteRepair,
+  deleteVehicle,
+  getVehicle,
   updateMaintenance,
   updateMot,
   updateReminder,
@@ -22,6 +26,7 @@ import {
   upsertMotReminder
 } from "@/lib/db";
 import { changePassword, changeUsername, createFirstAdmin, login, logout, requireUser } from "@/lib/auth";
+import { safeUploadPath } from "@/lib/paths";
 
 function str(formData: FormData, key: string) {
   const value = formData.get(key);
@@ -110,6 +115,18 @@ export async function updateVehicleAction(vehicleId: number, formData: FormData)
     notes: nullableStr(formData, "notes")
   });
   revalidateVehicle(vehicleId);
+}
+
+export async function deleteVehicleAction(vehicleId: number, formData: FormData) {
+  await requireUser();
+  if (str(formData, "confirmed") !== "on") return;
+  const vehicle = getVehicle(vehicleId);
+  if (!vehicle) redirect("/garage");
+  await removeUploadFile(vehicle.photoPath);
+  await removeUploadFile(vehicle.thumbnailPath);
+  deleteVehicle(vehicleId);
+  revalidatePath("/garage");
+  redirect("/garage");
 }
 
 export async function createMaintenanceAction(vehicleId: number, formData: FormData) {
@@ -277,4 +294,20 @@ export async function updatePasswordAction(formData: FormData) {
 function revalidateVehicle(vehicleId: number) {
   revalidatePath("/garage");
   revalidatePath(`/vehicles/${vehicleId}`);
+}
+
+async function removeUploadFile(uploadPath: string | null) {
+  if (!uploadPath?.startsWith("/uploads/")) return;
+  const parts = uploadPath.replace(/^\/uploads\//, "").split("/").map((part) => decodeURIComponent(part));
+  try {
+    await fs.unlink(safeUploadPath(parts));
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+  }
+  const dir = path.dirname(safeUploadPath(parts));
+  try {
+    await fs.rmdir(dir);
+  } catch {
+    // Ignore non-empty upload directories.
+  }
 }

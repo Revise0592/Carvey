@@ -578,7 +578,8 @@ summary {
   font-weight: 750;
 }
 
-.entry-panel .record-form {
+.entry-panel .record-form,
+.entry-panel .destructive-form {
   position: absolute;
   right: 0;
   z-index: 4;
@@ -595,6 +596,10 @@ summary {
   width: fit-content;
   min-height: 36px;
   padding: 0.55rem 0.75rem;
+}
+
+.danger-panel summary {
+  color: var(--danger);
 }
 
 .edit-panel .edit-menu {
@@ -697,6 +702,7 @@ summary {
 
   .floating-form,
   .entry-panel .record-form,
+  .entry-panel .destructive-form,
   .edit-panel .edit-menu {
     position: static;
     width: 100%;

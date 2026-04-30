@@ -4,6 +4,7 @@ import { CalendarDays, Hammer, ShieldCheck, Wrench } from "lucide-react";
 import { AppFrame } from "@/components/AppFrame";
 import {
   CompleteReminderButton,
+  DeleteVehicleForm,
   EditVehicleForm,
   EditMaintenanceForm,
   EditMotForm,
@@ -65,6 +66,7 @@ export default async function VehiclePage({
           <div className="inline-form">
             <VehiclePhotoForm vehicleId={vehicle.id} />
             <EditVehicleForm vehicle={vehicle} />
+            <DeleteVehicleForm vehicle={vehicle} />
           </div>
         </div>
       </section>
