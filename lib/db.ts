@@ -15,6 +15,7 @@ export type Vehicle = {
   photoPath: string | null;
   thumbnailPath: string | null;
   notes: string | null;
+  debugDestroyed: number;
   archived: number;
   createdAt: string;
   updatedAt: string;
@@ -123,6 +124,7 @@ function migrate(database: Database.Database) {
       photo_path TEXT,
       thumbnail_path TEXT,
       notes TEXT,
+      debug_destroyed INTEGER NOT NULL DEFAULT 0,
       archived INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -184,6 +186,7 @@ function migrate(database: Database.Database) {
   `);
   ensureColumn(database, "vehicles", "purchase_price", "REAL");
   ensureColumn(database, "vehicles", "purchase_date", "TEXT");
+  ensureColumn(database, "vehicles", "debug_destroyed", "INTEGER NOT NULL DEFAULT 0");
 }
 
 function ensureColumn(database: Database.Database, table: string, column: string, definition: string) {
@@ -206,6 +209,7 @@ const vehicleSelect = `
   photo_path as photoPath,
   thumbnail_path as thumbnailPath,
   notes,
+  debug_destroyed as debugDestroyed,
   archived,
   created_at as createdAt,
   updated_at as updatedAt
@@ -316,6 +320,12 @@ export function setVehiclePhoto(id: number, photoPath: string, thumbnailPath: st
   return getDb()
     .prepare("UPDATE vehicles SET photo_path = ?, thumbnail_path = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
     .run(photoPath, thumbnailPath, id);
+}
+
+export function setVehicleDebugDestroyed(id: number, destroyed: boolean) {
+  return getDb()
+    .prepare("UPDATE vehicles SET debug_destroyed = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+    .run(destroyed ? 1 : 0, id);
 }
 
 export function listMaintenance(vehicleId: number) {

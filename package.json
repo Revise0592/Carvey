@@ -2,6 +2,9 @@
   "name": "carvey",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build --webpack",
@@ -31,5 +34,8 @@
     "eslint-config-next": "^16.2.4",
     "typescript": "^5.9.3",
     "vitest": "^4.0.14"
+  },
+  "overrides": {
+    "postcss": "^8.5.10"
   }
 }

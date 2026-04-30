@@ -1,5 +1,6 @@
 services:
   carvey:
+    image: ghcr.io/revise0592/carvey:latest
     build: .
     container_name: carvey
     ports:
@@ -8,6 +9,13 @@ services:
       TZ: Europe/London
       CARVEY_DATA_DIR: /app/data
       CARVEY_SESSION_SECRET: change-me-to-a-long-random-string-before-real-use
+      CARVEY_DEBUG_EASTER_EGGS: "false"
     volumes:
       - ./data:/app/data
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then((response) => { if (!response.ok) process.exit(1); }).catch(() => process.exit(1));"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s

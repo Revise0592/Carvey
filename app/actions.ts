@@ -18,6 +18,7 @@ import {
   deleteRepair,
   deleteVehicle,
   getVehicle,
+  setVehicleDebugDestroyed,
   updateMaintenance,
   updateMot,
   updateReminder,
@@ -26,6 +27,7 @@ import {
   upsertMotReminder
 } from "@/lib/db";
 import { changePassword, changeUsername, createFirstAdmin, login, logout, requireUser } from "@/lib/auth";
+import { debugEasterEggsEnabled } from "@/lib/debug";
 import { safeUploadPath } from "@/lib/paths";
 
 function str(formData: FormData, key: string) {
@@ -127,6 +129,13 @@ export async function deleteVehicleAction(vehicleId: number, formData: FormData)
   deleteVehicle(vehicleId);
   revalidatePath("/garage");
   redirect("/garage");
+}
+
+export async function updateVehicleDebugAction(vehicleId: number, formData: FormData) {
+  await requireUser();
+  if (!debugEasterEggsEnabled()) return;
+  setVehicleDebugDestroyed(vehicleId, str(formData, "debugDestroyed") === "on");
+  revalidateVehicle(vehicleId);
 }
 
 export async function createMaintenanceAction(vehicleId: number, formData: FormData) {

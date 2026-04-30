@@ -144,7 +144,7 @@ function restoreDatabaseContents(backupDbPath: string) {
     },
     {
       name: "vehicles",
-      columns: ["id", "make", "model", "year", "registration", "vin", "current_odometer", "purchase_price", "purchase_date", "photo_path", "thumbnail_path", "notes", "archived", "created_at", "updated_at"]
+      columns: ["id", "make", "model", "year", "registration", "vin", "current_odometer", "purchase_price", "purchase_date", "photo_path", "thumbnail_path", "notes", "debug_destroyed", "archived", "created_at", "updated_at"]
     },
     {
       name: "maintenance_records",
@@ -167,13 +167,17 @@ function restoreDatabaseContents(backupDbPath: string) {
   database.pragma("foreign_keys = OFF");
   database.exec(`ATTACH DATABASE '${backupPath}' AS restore_backup`);
   try {
+    const restoreVehicleColumns = new Set((database.prepare("PRAGMA restore_backup.table_info(vehicles)").all() as Array<{ name: string }>).map((column) => column.name));
     database.exec("BEGIN");
     for (const table of [...tables].reverse()) {
       database.exec(`DELETE FROM ${table.name}`);
     }
     for (const table of tables) {
       const columns = table.columns.join(", ");
-      database.exec(`INSERT INTO ${table.name} (${columns}) SELECT ${columns} FROM restore_backup.${table.name}`);
+      const sourceColumns = table.name === "vehicles"
+        ? table.columns.map((column) => column === "debug_destroyed" && !restoreVehicleColumns.has(column) ? "0 AS debug_destroyed" : column).join(", ")
+        : columns;
+      database.exec(`INSERT INTO ${table.name} (${columns}) SELECT ${sourceColumns} FROM restore_backup.${table.name}`);
     }
     database.exec(`
       DELETE FROM sqlite_sequence WHERE name IN (${tables.map((table) => `'${table.name}'`).join(", ")});

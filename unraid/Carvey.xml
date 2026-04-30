@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>Carvey</Name>
+  <Repository>ghcr.io/revise0592/carvey:latest</Repository>
+  <Registry>https://github.com/Revise0592/Carvey/pkgs/container/carvey</Registry>
+  <Network>bridge</Network>
+  <MyIP/>
+  <MyMAC/>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support/>
+  <Project>https://github.com/Revise0592/Carvey</Project>
+  <ReadMe>https://github.com/Revise0592/Carvey#readme</ReadMe>
+  <Overview>Self-hosted car maintenance dashboard for tracking vehicles, maintenance, repairs, MOTs, reminders, costs, photos, printable seller sheets, and backups.</Overview>
+  <Category>Productivity: Tools:</Category>
+  <WebUI>http://[IP]:[PORT:3000]</WebUI>
+  <TemplateURL/>
+  <Icon>https://raw.githubusercontent.com/Revise0592/Carvey/refs/heads/main/public/icons/icon.svg</Icon>
+  <ExtraParams/>
+  <PostArgs/>
+  <CPUset/>
+  <DateInstalled/>
+  <DonateText/>
+  <DonateLink/>
+  <Requires/>
+  <Config Name="Web UI" Target="3000" Default="" Mode="tcp" Description="Carvey web interface." Type="Port" Display="always" Required="true" Mask="false">3000</Config>
+  <Config Name="Appdata" Target="/app/data" Default="" Mode="rw" Description="Persistent Carvey data, including SQLite database, uploads, backups, and restore rollback files." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/carvey/</Config>
+  <Config Name="TZ" Target="TZ" Default="" Mode="" Description="Timezone used by the container." Type="Variable" Display="advanced" Required="true" Mask="false">Europe/London</Config>
+  <Config Name="CARVEY_SESSION_SECRET" Target="CARVEY_SESSION_SECRET" Default="" Mode="" Description="Required long random secret used to sign login sessions. Change this before real use." Type="Variable" Display="always" Required="true" Mask="true">change-me-to-a-long-random-string-before-real-use</Config>
+  <Config Name="CARVEY_DATA_DIR" Target="CARVEY_DATA_DIR" Default="" Mode="" Description="Internal data directory. Do not change unless you also change the appdata path mapping." Type="Variable" Display="advanced" Required="true" Mask="false">/app/data</Config>
+  <Config Name="CARVEY_DEBUG_EASTER_EGGS" Target="CARVEY_DEBUG_EASTER_EGGS" Default="" Mode="" Description="Optional hidden debug easter egg controls. Keep false for normal deployments." Type="Variable" Display="advanced" Required="false" Mask="false">false</Config>
+  <TailscaleStateDir/>
+</Container>

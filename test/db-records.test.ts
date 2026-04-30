@@ -100,6 +100,28 @@ describe("record mutation helpers", () => {
     db.closeDbForTests();
   });
 
+  it("sets the hidden debug destroyed flag on vehicles", async () => {
+    const db = await freshDb();
+    const vehicleId = Number(db.createVehicle({
+      make: "Citroen",
+      model: "Saxo",
+      year: 2002,
+      registration: "SX02 DBG",
+      vin: null,
+      currentOdometer: 88000,
+      purchasePrice: null,
+      purchaseDate: null,
+      notes: null
+    }).lastInsertRowid);
+
+    expect(db.getVehicle(vehicleId)?.debugDestroyed).toBe(0);
+    db.setVehicleDebugDestroyed(vehicleId, true);
+    expect(db.getVehicle(vehicleId)?.debugDestroyed).toBe(1);
+    db.setVehicleDebugDestroyed(vehicleId, false);
+    expect(db.getVehicle(vehicleId)?.debugDestroyed).toBe(0);
+    db.closeDbForTests();
+  });
+
   it("deletes a vehicle and its related records", async () => {
     const db = await freshDb();
     const vehicleId = Number(db.createVehicle({

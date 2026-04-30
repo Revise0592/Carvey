@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CalendarDays, Hammer, ShieldCheck, Wrench } from "lucide-react";
+import { CalendarDays, Hammer, Printer, ShieldCheck, Wrench } from "lucide-react";
 import { AppFrame } from "@/components/AppFrame";
 import {
   CompleteReminderButton,
   DeleteVehicleForm,
+  DebugVehicleForm,
   EditVehicleForm,
   EditMaintenanceForm,
   EditMotForm,
@@ -14,12 +15,14 @@ import {
   MileagePill,
   MotForm,
   ReminderForm,
-  RepairForm,
-  VehiclePhotoForm
+  RepairForm
 } from "@/components/Forms";
+import { ExplosionEffect } from "@/components/ExplosionEffect";
+import { VehiclePhotoUploadForm } from "@/components/VehiclePhotoUploadForm";
 import { VehiclePhoto } from "@/components/VehiclePhoto";
 import { getVehicle, listMaintenance, listMots, listReminders, listRepairs } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
+import { debugEasterEggsEnabled } from "@/lib/debug";
 import { formatCurrency, formatDate, formatMiles } from "@/lib/format";
 import { getReminderStatus } from "@/lib/reminders";
 
@@ -47,9 +50,11 @@ export default async function VehiclePage({
   const reminders = listReminders(vehicle.id);
   const spent = [...maintenance, ...repairs, ...mots].reduce((total, record) => total + record.cost, 0);
   const latestMot = mots[0];
+  const debugEnabled = debugEasterEggsEnabled();
 
   return (
     <AppFrame>
+      {debugEnabled ? <ExplosionEffect active={Boolean(vehicle.debugDestroyed)} /> : null}
       <section className="vehicle-hero">
         <VehiclePhoto src={vehicle.photoPath} alt={`${vehicle.make} ${vehicle.model}`} className="hero-photo" />
         <div className="vehicle-hero-copy">
@@ -64,8 +69,13 @@ export default async function VehiclePage({
           </div>
           {vehicle.notes ? <p>{vehicle.notes}</p> : null}
           <div className="inline-form">
-            <VehiclePhotoForm vehicleId={vehicle.id} />
+            <VehiclePhotoUploadForm vehicleId={vehicle.id} />
+            <Link className="secondary-button" href={`/vehicles/${vehicle.id}/print`}>
+              <Printer size={17} />
+              Print
+            </Link>
             <EditVehicleForm vehicle={vehicle} />
+            {debugEnabled ? <DebugVehicleForm vehicle={vehicle} /> : null}
             <DeleteVehicleForm vehicle={vehicle} />
           </div>
         </div>
@@ -162,10 +172,14 @@ export default async function VehiclePage({
         <RecordSection title="Reminders" icon={<CalendarDays size={19} />} form={<ReminderForm vehicleId={vehicle.id} />}>
           {reminders.map((record) => {
             const status = getReminderStatus(record, vehicle);
+            const reminderDetails = [
+              record.dueDate ? `Due ${formatDate(record.dueDate)}` : "No date",
+              record.title.toLowerCase() === "mot due" ? null : formatMiles(record.dueOdometer)
+            ].filter(Boolean).join(" · ");
             return (
               <article className="record-card reminder-card" key={record.id}>
                 <div className="record-header"><span className={`tag ${status}`}>{status}</span><h3>{record.title}</h3></div>
-                <p className="record-meta">{record.dueDate ? `Due ${formatDate(record.dueDate)}` : "No date"} · {formatMiles(record.dueOdometer)}</p>
+                <p className="record-meta">{reminderDetails}</p>
                 {record.recurrence ? <p>Repeats {record.recurrence}</p> : null}
                 <div className="record-actions">
                   {!record.completedAt ? <CompleteReminderButton vehicleId={vehicle.id} id={record.id} /> : null}

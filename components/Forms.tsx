@@ -1,4 +1,4 @@
-import { CalendarDays, Camera, Check, Gauge, Hammer, ShieldCheck, Trash2, Wrench } from "lucide-react";
+import { CalendarDays, Check, Gauge, Hammer, ShieldCheck, Trash2, Wrench } from "lucide-react";
 import {
   completeReminderAction,
   createMaintenanceAction,
@@ -10,6 +10,7 @@ import {
   deleteMotAction,
   deleteReminderAction,
   deleteRepairAction,
+  updateVehicleDebugAction,
   updateMaintenanceAction,
   updateMotAction,
   updateReminderAction,
@@ -20,19 +21,6 @@ import type { MaintenanceRecord, MotRecord, Reminder, RepairRecord, Vehicle } fr
 import { todayIso } from "@/lib/format";
 import { EditPanel } from "./EditPanel";
 import { ModalPanel } from "./ModalPanel";
-
-export function VehiclePhotoForm({ vehicleId }: { vehicleId: number }) {
-  return (
-    <form action={`/vehicles/${vehicleId}/photo`} method="post" encType="multipart/form-data" className="inline-form">
-      <label className="file-button">
-        <Camera size={17} />
-        <span>Update photo</span>
-        <input name="photo" type="file" accept="image/jpeg,image/png,image/webp,image/avif,image/heic,image/heif" required />
-      </label>
-      <button className="secondary-button" type="submit">Upload</button>
-    </form>
-  );
-}
 
 export function EditVehicleForm({ vehicle }: { vehicle: Vehicle }) {
   const updateAction = updateVehicleAction.bind(null, vehicle.id);
@@ -65,6 +53,22 @@ export function DeleteVehicleForm({ vehicle }: { vehicle: Vehicle }) {
           Confirm delete
         </label>
         <button className="danger-button" type="submit">Delete car</button>
+      </form>
+    </ModalPanel>
+  );
+}
+
+export function DebugVehicleForm({ vehicle }: { vehicle: Vehicle }) {
+  const action = updateVehicleDebugAction.bind(null, vehicle.id);
+  return (
+    <ModalPanel trigger="Debug">
+      <form action={action} className="delete-confirm">
+        <p className="muted">Debug easter egg controls for this car.</p>
+        <label>
+          <input type="checkbox" name="debugDestroyed" defaultChecked={Boolean(vehicle.debugDestroyed)} />
+          Car has been destroyed
+        </label>
+        <button className="secondary-button" type="submit">Save debug flag</button>
       </form>
     </ModalPanel>
   );
@@ -132,18 +136,21 @@ export function EditMotForm({ record }: { record: MotRecord }) {
 export function EditReminderForm({ record }: { record: Reminder }) {
   const updateAction = updateReminderAction.bind(null, record.vehicleId, record.id);
   const deleteAction = deleteReminderAction.bind(null, record.vehicleId, record.id);
+  const isMotReminder = record.title.toLowerCase() === "mot due";
   return (
     <EditPanel deleteAction={deleteAction}>
       <form action={updateAction} className="record-form">
         <Field label="Title"><input name="title" defaultValue={record.title} required /></Field>
         <Field label="Due date"><input name="dueDate" type="date" defaultValue={record.dueDate ?? ""} /></Field>
-        <Field label="Due mileage"><input name="dueOdometer" type="number" min="0" defaultValue={record.dueOdometer ?? ""} /></Field>
+        {!isMotReminder ? (
+          <Field label="Due mileage"><input name="dueOdometer" type="number" min="0" defaultValue={record.dueOdometer ?? ""} /></Field>
+        ) : null}
         <Field label="Recurrence"><select name="recurrence" defaultValue={record.recurrence ?? ""}>
             <option value="">No recurrence</option>
             <option value="12 months">Every 12 months</option>
             <option value="6 months">Every 6 months</option>
-            <option value="10000 miles">Every 10,000 miles</option>
-            <option value="5000 miles">Every 5,000 miles</option>
+            {!isMotReminder ? <option value="10000 miles">Every 10,000 miles</option> : null}
+            {!isMotReminder ? <option value="5000 miles">Every 5,000 miles</option> : null}
           </select></Field>
         <button className="primary-button" type="submit">Save changes</button>
       </form>

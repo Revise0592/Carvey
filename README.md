@@ -57,9 +57,12 @@ Create a `.env.local` or use the Docker environment values:
 CARVEY_DATA_DIR=./data
 CARVEY_SESSION_SECRET=change-me-to-a-long-random-string
 TZ=Europe/London
+CARVEY_DEBUG_EASTER_EGGS=false
 ```
 
 `CARVEY_SESSION_SECRET` should be a long random value, especially if the app is reachable through a reverse proxy.
+
+`CARVEY_DEBUG_EASTER_EGGS=true` enables deliberately hidden debug controls, including non-production visual easter eggs on vehicle pages.
 
 ## Docker
 
@@ -70,6 +73,14 @@ docker compose up -d --build
 ```
 
 The app listens on port `3000`.
+
+Published images are available from GitHub Container Registry:
+
+```bash
+docker pull ghcr.io/revise0592/carvey:latest
+```
+
+The GitHub Actions workflow builds the container for pushes to `main`, publishes `latest`, and also publishes an immutable SHA tag.
 
 Persistent data is stored in `/app/data` inside the container. The included compose file maps this to `./data`:
 
@@ -109,7 +120,13 @@ For server-level backups, backing up the entire mounted `/app/data` directory is
 
 ## Unraid Notes
 
-Carvey is intentionally single-container and stores all persistent state under `/app/data`, which should suit a future Unraid Community Applications template.
+Carvey is intentionally single-container and stores all persistent state under `/app/data`.
+
+A draft Unraid template is included at:
+
+```text
+unraid/Carvey.xml
+```
 
 Suggested Unraid mappings:
 
@@ -117,6 +134,7 @@ Suggested Unraid mappings:
 - Appdata: `/app/data`
 - Timezone: `TZ`
 - Secret: `CARVEY_SESSION_SECRET`
+- Optional debug flag: `CARVEY_DEBUG_EASTER_EGGS`
 
 Run behind HTTPS if exposing through a reverse proxy.
 
