@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CarFront, LogOut, Settings } from "lucide-react";
+import { logoutAction } from "@/app/actions";
 
 export function AppFrame({ children }: { children: React.ReactNode }) {
   return (
@@ -16,9 +17,11 @@ export function AppFrame({ children }: { children: React.ReactNode }) {
           <Link href="/settings" className="icon-button" aria-label="Settings" title="Settings">
             <Settings size={18} />
           </Link>
-          <Link href="/logout" className="icon-button" aria-label="Sign out" title="Sign out">
-            <LogOut size={18} />
-          </Link>
+          <form action={logoutAction}>
+            <button type="submit" className="icon-button" aria-label="Sign out" title="Sign out">
+              <LogOut size={18} />
+            </button>
+          </form>
         </nav>
       </header>
       {children}
