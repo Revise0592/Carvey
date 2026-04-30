@@ -9,7 +9,9 @@ import { changePasswordForAdmin, changeUsernameForAdmin } from "./account";
 
 const cookieName = "carvey_session";
 
-const runtimeSecret = crypto.randomBytes(32).toString("base64");
+const runtimeSecret = process.env.NODE_ENV === "production"
+  ? crypto.randomBytes(32).toString("base64")
+  : "dev-only-carvey-session-secret-not-for-production";
 
 function sessionSecret() {
   const secret = process.env.CARVEY_SESSION_SECRET;
