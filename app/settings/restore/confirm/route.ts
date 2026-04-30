@@ -1,6 +1,9 @@
-import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { confirmRestore } from "@/lib/backup";
+
+function redirect(path: string) {
+  return new Response(null, { status: 303, headers: { Location: path } });
+}
 
 export async function POST(request: Request) {
   await requireUser();
@@ -9,16 +12,13 @@ export async function POST(request: Request) {
   const confirmed = formData.get("confirmed");
 
   if (typeof token !== "string" || confirmed !== "on") {
-    return NextResponse.redirect(new URL("/settings?restore=confirm-required", request.url), 303);
+    return redirect("/settings?restore=confirm-required");
   }
 
   const result = await confirmRestore(token);
-  const target = new URL("/settings", request.url);
   if (result.ok) {
-    target.searchParams.set("restore", "success");
-  } else {
-    target.searchParams.set("restore", "restore-error");
-    target.searchParams.set("message", result.message);
+    return redirect("/settings?restore=success");
   }
-  return NextResponse.redirect(target, 303);
+  const params = new URLSearchParams({ restore: "restore-error", message: result.message });
+  return redirect(`/settings?${params}`);
 }

@@ -25,5 +25,5 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   revalidatePath("/garage");
   revalidatePath(`/vehicles/${vehicleId}`);
-  return NextResponse.redirect(new URL(`/vehicles/${vehicleId}`, request.url), 303);
+  return new Response(null, { status: 303, headers: { Location: `/vehicles/${vehicleId}` } });
 }

@@ -1,6 +1,9 @@
-import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { stageRestorePreview } from "@/lib/backup";
+
+function redirect(path: string) {
+  return new Response(null, { status: 303, headers: { Location: path } });
+}
 
 export async function POST(request: Request) {
   await requireUser();
@@ -8,24 +11,20 @@ export async function POST(request: Request) {
   try {
     formData = await request.formData();
   } catch {
-    return NextResponse.redirect(new URL("/settings?restore=invalid-upload", request.url), 303);
+    return redirect("/settings?restore=invalid-upload");
   }
 
   const file = formData.get("backup");
   if (!(file instanceof File)) {
-    return NextResponse.redirect(new URL("/settings?restore=missing-file", request.url), 303);
+    return redirect("/settings?restore=missing-file");
   }
 
   const result = await stageRestorePreview(file);
   if (!result.ok) {
-    const target = new URL("/settings", request.url);
-    target.searchParams.set("restore", "preview-error");
-    target.searchParams.set("message", result.message);
-    return NextResponse.redirect(target, 303);
+    const params = new URLSearchParams({ restore: "preview-error", message: result.message });
+    return redirect(`/settings?${params}`);
   }
 
-  const target = new URL("/settings", request.url);
-  target.searchParams.set("restore", "preview");
-  target.searchParams.set("token", result.summary.token);
-  return NextResponse.redirect(target, 303);
+  const params = new URLSearchParams({ restore: "preview", token: result.summary.token });
+  return redirect(`/settings?${params}`);
 }
