@@ -51,7 +51,7 @@ export async function login(username: string, password: string) {
   jar.set(cookieName, makeToken(user.id), {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: process.env.NODE_ENV === "production" && process.env.CARVEY_INSECURE_COOKIES !== "true",
     path: "/",
     maxAge: 60 * 60 * 24 * 30
   });
