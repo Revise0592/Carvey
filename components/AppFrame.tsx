@@ -1,18 +1,19 @@
 import Link from "next/link";
-import { CarFront, LogOut, Settings } from "lucide-react";
+import { LogOut, Settings } from "lucide-react";
 import { logoutAction } from "@/app/actions";
+import { CarLogo } from "@/components/CarLogo";
 
 export function AppFrame({ children }: { children: React.ReactNode }) {
   return (
     <main className="app-shell">
       <header className="topbar">
         <Link href="/garage" className="brand">
-          <span className="brand-mark small"><CarFront size={19} /></span>
+          <span className="brand-mark small"><CarLogo size={19} /></span>
           <span>Carvey</span>
         </Link>
         <nav className="top-actions">
           <Link href="/garage" className="icon-button" aria-label="Garage" title="Garage">
-            <CarFront size={18} />
+            <CarLogo size={18} />
           </Link>
           <Link href="/settings" className="icon-button" aria-label="Settings" title="Settings">
             <Settings size={18} />

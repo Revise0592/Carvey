@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
-import { Wrench } from "lucide-react";
 import { setupAction } from "../actions";
 import { hasAdminUser } from "@/lib/db";
+import { CarLogo } from "@/components/CarLogo";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +10,7 @@ export default function SetupPage() {
   return (
     <main className="auth-shell">
       <section className="auth-card">
-        <div className="brand-mark"><Wrench size={22} /></div>
+        <div className="brand-mark"><CarLogo size={22} /></div>
         <h1>Set up Carvey</h1>
         <p>Create the household admin account for this garage.</p>
         <form action={setupAction} className="form-stack">
