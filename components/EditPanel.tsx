@@ -1,6 +1,4 @@
-"use client";
-
-import { useRef } from "react";
+import { ModalPanel } from "./ModalPanel";
 
 export function EditPanel({
   children,
@@ -9,18 +7,9 @@ export function EditPanel({
   children: React.ReactNode;
   deleteAction: () => Promise<void>;
 }) {
-  const detailsRef = useRef<HTMLDetailsElement>(null);
-
-  function closePanel() {
-    window.setTimeout(() => {
-      if (detailsRef.current) detailsRef.current.open = false;
-    }, 0);
-  }
-
   return (
-    <details className="edit-panel" ref={detailsRef}>
-      <summary>Edit</summary>
-      <div className="edit-menu" onSubmit={closePanel}>
+    <ModalPanel trigger="Edit">
+      <div className="edit-menu">
         {children}
         <form action={deleteAction} className="delete-confirm">
           <label>
@@ -30,6 +19,6 @@ export function EditPanel({
           <button className="danger-button" type="submit">Delete entry</button>
         </form>
       </div>
-    </details>
+    </ModalPanel>
   );
 }
