@@ -12,9 +12,6 @@ export function AppFrame({ children }: { children: React.ReactNode }) {
           <span>Carvey</span>
         </Link>
         <nav className="top-actions">
-          <Link href="/garage" className="icon-button" aria-label="Garage" title="Garage">
-            <CarLogo size={18} />
-          </Link>
           <Link href="/settings" className="icon-button" aria-label="Settings" title="Settings">
             <Settings size={18} />
           </Link>
