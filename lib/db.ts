@@ -76,6 +76,14 @@ export type AdminUser = {
   createdAt: string;
 };
 
+export type AuthSession = {
+  id: string;
+  adminUserId: number;
+  createdAt: string;
+  expiresAt: string;
+  revokedAt: string | null;
+};
+
 let db: Database.Database | null = null;
 export const dbFileName = "carvey.sqlite";
 
@@ -109,6 +117,14 @@ function migrate(database: Database.Database) {
       username TEXT NOT NULL UNIQUE,
       password_hash TEXT NOT NULL,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS auth_sessions (
+      id TEXT PRIMARY KEY,
+      admin_user_id INTEGER NOT NULL REFERENCES admin_users(id) ON DELETE CASCADE,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      expires_at TEXT NOT NULL,
+      revoked_at TEXT
     );
 
     CREATE TABLE IF NOT EXISTS vehicles (
@@ -179,6 +195,7 @@ function migrate(database: Database.Database) {
     );
 
     CREATE INDEX IF NOT EXISTS idx_vehicles_archived ON vehicles(archived);
+    CREATE INDEX IF NOT EXISTS idx_auth_sessions_admin ON auth_sessions(admin_user_id);
     CREATE INDEX IF NOT EXISTS idx_maintenance_vehicle ON maintenance_records(vehicle_id);
     CREATE INDEX IF NOT EXISTS idx_repairs_vehicle ON repair_records(vehicle_id);
     CREATE INDEX IF NOT EXISTS idx_mot_vehicle ON mot_records(vehicle_id);
@@ -248,6 +265,33 @@ export function updateAdminPassword(id: number, passwordHash: string) {
   return getDb()
     .prepare("UPDATE admin_users SET password_hash = ? WHERE id = ?")
     .run(passwordHash, id);
+}
+
+export function createAuthSession(id: string, adminUserId: number, expiresAt: string) {
+  return getDb()
+    .prepare("INSERT INTO auth_sessions (id, admin_user_id, expires_at) VALUES (?, ?, ?)")
+    .run(id, adminUserId, expiresAt);
+}
+
+export function getAuthSession(id: string) {
+  return getDb()
+    .prepare(`
+      SELECT
+        id,
+        admin_user_id as adminUserId,
+        created_at as createdAt,
+        expires_at as expiresAt,
+        revoked_at as revokedAt
+      FROM auth_sessions
+      WHERE id = ?
+    `)
+    .get(id) as AuthSession | undefined;
+}
+
+export function revokeAuthSession(id: string) {
+  return getDb()
+    .prepare("UPDATE auth_sessions SET revoked_at = CURRENT_TIMESTAMP WHERE id = ?")
+    .run(id);
 }
 
 export function listVehicles() {

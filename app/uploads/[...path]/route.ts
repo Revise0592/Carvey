@@ -7,7 +7,12 @@ export async function GET(_request: Request, { params }: { params: Promise<{ pat
   const user = await currentUser();
   if (!user) return new NextResponse(null, { status: 404 });
   const { path } = await params;
-  const filePath = safeUploadPath(path);
+  let filePath: string;
+  try {
+    filePath = safeUploadPath(path);
+  } catch {
+    return new NextResponse(null, { status: 404 });
+  }
   let file: Buffer;
   try {
     file = await fs.readFile(filePath);

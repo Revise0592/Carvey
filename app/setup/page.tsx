@@ -10,9 +10,13 @@ export default function SetupPage() {
   return (
     <main className="auth-shell">
       <section className="auth-card">
-        <div className="brand-mark"><CarLogo size={22} /></div>
-        <h1>Set up Carvey</h1>
-        <p>Create the household admin account for this garage.</p>
+        <div className="auth-header">
+          <div className="brand-mark auth-mark"><CarLogo size={22} /></div>
+          <div>
+            <h1>Set up Carvey</h1>
+            <p>Create the household admin account for this garage.</p>
+          </div>
+        </div>
         <form action={setupAction} className="form-stack">
           <label>
             Username

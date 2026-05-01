@@ -16,9 +16,17 @@ export function ensureDataDirs() {
 }
 
 export function safeUploadPath(parts: string[]) {
-  const relativePath = path.normalize(parts.join(path.sep));
-  if (relativePath.startsWith("..") || path.isAbsolute(relativePath)) {
+  if (!parts.length || parts.some(isUnsafePathSegment)) {
     throw new Error("Invalid upload path");
   }
-  return path.join(uploadDir, relativePath);
+  const targetPath = path.resolve(uploadDir, ...parts);
+  const uploadRoot = path.resolve(uploadDir);
+  if (!targetPath.startsWith(`${uploadRoot}${path.sep}`)) {
+    throw new Error("Invalid upload path");
+  }
+  return targetPath;
+}
+
+function isUnsafePathSegment(part: string) {
+  return !part || part === "." || part === ".." || part.includes("/") || part.includes("\\") || path.isAbsolute(part);
 }

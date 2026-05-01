@@ -169,6 +169,7 @@ function restoreDatabaseContents(backupDbPath: string) {
   try {
     const restoreVehicleColumns = new Set((database.prepare("PRAGMA restore_backup.table_info(vehicles)").all() as Array<{ name: string }>).map((column) => column.name));
     database.exec("BEGIN");
+    database.exec("DELETE FROM auth_sessions");
     for (const table of [...tables].reverse()) {
       database.exec(`DELETE FROM ${table.name}`);
     }
@@ -215,6 +216,9 @@ async function validateAndSummariseZip(buffer: Buffer, token: string, extractDir
   const manifest = JSON.parse(manifestEntry.getData().toString("utf8")) as BackupManifest;
   if (manifest.app !== "Carvey" || manifest.formatVersion !== backupFormatVersion || manifest.database !== dbFileName) {
     throw new Error("Backup format is not supported.");
+  }
+  if (!Array.isArray(manifest.uploads) || manifest.uploads.some((upload) => typeof upload !== "string" || !isSafeRelativePath(upload))) {
+    throw new Error("Backup manifest contains an unsafe upload path.");
   }
   if (!zip.getEntry(dbFileName)) throw new Error("Backup is missing carvey.sqlite.");
 
@@ -274,8 +278,13 @@ async function walkUploads(root: string, relativeDir: string, files: string[]) {
 }
 
 function isSafeZipPath(entryName: string) {
-  const normalised = path.posix.normalize(entryName);
-  return Boolean(entryName) && !normalised.startsWith("../") && !path.posix.isAbsolute(normalised) && normalised === entryName;
+  return isSafeRelativePath(entryName);
+}
+
+function isSafeRelativePath(entryName: string) {
+  if (!entryName || entryName.includes("\\") || path.posix.isAbsolute(entryName)) return false;
+  const parts = entryName.split("/");
+  return parts.every((part) => part && part !== "." && part !== "..") && path.posix.normalize(entryName) === entryName;
 }
 
 function isSafeToken(token: string) {

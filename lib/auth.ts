@@ -2,39 +2,54 @@ import "server-only";
 
 import bcrypt from "bcryptjs";
 import crypto from "node:crypto";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { createAdminUser, getAdminById, getAdminByUsername, hasAdminUser } from "./db";
+import { createAdminUser, createAuthSession, getAdminById, getAdminByUsername, getAuthSession, hasAdminUser, revokeAuthSession } from "./db";
 import { changePasswordForAdmin, changeUsernameForAdmin } from "./account";
 
 const cookieName = "carvey_session";
+const sessionMaxAgeSeconds = 60 * 60 * 24 * 30;
+const sessionMaxAgeMs = sessionMaxAgeSeconds * 1000;
 
-const runtimeSecret = process.env.NODE_ENV === "production"
-  ? crypto.randomBytes(32).toString("base64")
-  : "dev-only-carvey-session-secret-not-for-production";
+type HeaderLike = {
+  get(name: string): string | null;
+};
 
-function sessionSecret() {
-  const secret = process.env.CARVEY_SESSION_SECRET;
-  if (secret && secret.length >= 24) return secret;
-  return runtimeSecret;
+function shouldUseSecureCookies(requestHeaders: HeaderLike | null) {
+  if (process.env.NODE_ENV !== "production") return false;
+  const forwardedProto = requestHeaders?.get("x-forwarded-proto")?.split(",")[0]?.trim().toLowerCase();
+  if (forwardedProto) return forwardedProto === "https";
+  const protocol = requestHeaders?.get("x-forwarded-protocol")?.split(",")[0]?.trim().toLowerCase();
+  return protocol === "https";
 }
 
-function sign(value: string) {
-  return crypto.createHmac("sha256", sessionSecret()).update(value).digest("base64url");
+export function buildSessionCookieOptions(requestHeaders: HeaderLike | null = null) {
+  return {
+    httpOnly: true,
+    sameSite: "lax" as const,
+    secure: shouldUseSecureCookies(requestHeaders),
+    path: "/",
+    maxAge: sessionMaxAgeSeconds
+  };
 }
 
-function makeToken(userId: number) {
-  const value = `${userId}.${Date.now()}`;
-  return `${value}.${sign(value)}`;
+export function createSessionToken() {
+  return crypto.randomBytes(24).toString("hex");
 }
 
-function readToken(token: string | undefined) {
-  if (!token) return null;
-  const parts = token.split(".");
-  if (parts.length !== 3) return null;
-  const value = `${parts[0]}.${parts[1]}`;
-  if (sign(value) !== parts[2]) return null;
-  return Number(parts[0]);
+export function isValidSessionToken(token: string | undefined): token is string {
+  return typeof token === "string" && /^[a-f0-9]{48}$/.test(token);
+}
+
+function sessionExpiry(now = Date.now()) {
+  return new Date(now + sessionMaxAgeMs).toISOString();
+}
+
+export function readSessionUserId(token: string | undefined, now = Date.now()) {
+  if (!isValidSessionToken(token)) return null;
+  const session = getAuthSession(token);
+  if (!session || session.revokedAt || Date.parse(session.expiresAt) <= now) return null;
+  return session.adminUserId;
 }
 
 export async function createFirstAdmin(username: string, password: string) {
@@ -48,14 +63,11 @@ export async function login(username: string, password: string) {
   if (!user) return false;
   const ok = await bcrypt.compare(password, user.passwordHash);
   if (!ok) return false;
+  const sessionId = createSessionToken();
+  createAuthSession(sessionId, user.id, sessionExpiry());
   const jar = await cookies();
-  jar.set(cookieName, makeToken(user.id), {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: false,
-    path: "/",
-    maxAge: 60 * 60 * 24 * 30
-  });
+  const requestHeaders = await headers();
+  jar.set(cookieName, sessionId, buildSessionCookieOptions(requestHeaders));
   return true;
 }
 
@@ -69,12 +81,14 @@ export async function changePassword(userId: number, currentPassword: string, ne
 
 export async function logout() {
   const jar = await cookies();
+  const token = jar.get(cookieName)?.value;
+  if (isValidSessionToken(token)) revokeAuthSession(token);
   jar.delete(cookieName);
 }
 
 export async function currentUser() {
   const jar = await cookies();
-  const userId = readToken(jar.get(cookieName)?.value);
+  const userId = readSessionUserId(jar.get(cookieName)?.value);
   if (!userId) return null;
   return getAdminById(userId) ?? null;
 }

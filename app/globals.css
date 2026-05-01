@@ -345,8 +345,22 @@ summary {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 8px;
-  padding: 30px;
+  padding: 32px;
   box-shadow: var(--shadow);
+}
+
+.auth-header {
+  display: grid;
+  grid-template-columns: 48px 1fr;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.35rem;
+}
+
+.auth-mark {
+  width: 48px;
+  height: 48px;
+  border-radius: 13px;
 }
 
 .auth-card h1,
@@ -360,6 +374,10 @@ summary {
 .vehicle-hero p,
 .muted {
   color: var(--muted);
+}
+
+.auth-card p {
+  margin: 0.65rem 0 0;
 }
 
 .form-stack,

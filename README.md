@@ -55,12 +55,11 @@ Create a `.env.local` or use the Docker environment values:
 
 ```bash
 CARVEY_DATA_DIR=./data
-CARVEY_SESSION_SECRET=change-me-to-a-long-random-string
 TZ=Europe/London
 CARVEY_DEBUG_EASTER_EGGS=false
 ```
 
-`CARVEY_SESSION_SECRET` should be a long random value, especially if the app is reachable through a reverse proxy.
+Carvey stores login sessions in its SQLite database, so there is no session secret to create or manage. Cookies are marked HTTPS-only automatically when production requests arrive through HTTPS, while plain HTTP LAN installs continue to work.
 
 `CARVEY_DEBUG_EASTER_EGGS=true` enables deliberately hidden debug controls, including non-production visual easter eggs on vehicle pages.
 
@@ -133,7 +132,6 @@ Suggested Unraid mappings:
 - Web UI: container port `3000`
 - Appdata: `/app/data`
 - Timezone: `TZ`
-- Secret: `CARVEY_SESSION_SECRET`
 - Optional debug flag: `CARVEY_DEBUG_EASTER_EGGS`
 
 Run behind HTTPS if exposing through a reverse proxy.
