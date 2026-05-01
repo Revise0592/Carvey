@@ -62,7 +62,7 @@ export default async function GaragePage() {
             <div className="vehicle-card-body">
               <RegistrationPlate value={vehicle.registration} />
               <h2>{vehicle.make} {vehicle.model}</h2>
-              <p>{vehicle.year ?? "Year unknown"} · {formatMiles(vehicle.currentOdometer)}</p>
+              <p>{vehicle.year ?? "Year unknown"} · {formatMiles(vehicle.effectiveOdometer)}</p>
               {vehicle.purchasePrice ? <p>Bought for {formatCurrency(vehicle.purchasePrice)}</p> : null}
               {vehicle.sold ? <span className="tag sold">Sold</span> : null}
             </div>

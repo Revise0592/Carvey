@@ -8,12 +8,14 @@ import { z } from "zod";
 import {
   completeReminder,
   createMaintenance,
+  createMaintenanceCategory,
   createMot,
   createReminder,
   createRepair,
   createWorkshop,
   createVehicle,
   deleteMaintenance,
+  deleteMaintenanceCategory,
   deleteMot,
   deleteReminder,
   deleteRepair,
@@ -24,6 +26,7 @@ import {
   setVehicleDebugDestroyed,
   updateCollectionName,
   updateMaintenance,
+  updateMaintenanceCategory,
   updateMot,
   updateReminder,
   updateRepair,
@@ -359,6 +362,28 @@ export async function deleteWorkshopAction(workshopId: number, formData: FormDat
   deleteWorkshop(workshopId);
   revalidatePath("/settings");
   redirect("/settings?tab=workshops&workshop=deleted");
+}
+
+export async function createMaintenanceCategoryAction(formData: FormData) {
+  await requireUser();
+  createMaintenanceCategory(z.string().min(1).max(100).parse(str(formData, "name")));
+  revalidatePath("/settings");
+  redirect("/settings?tab=categories&category=created");
+}
+
+export async function updateMaintenanceCategoryAction(categoryId: number, formData: FormData) {
+  await requireUser();
+  updateMaintenanceCategory(categoryId, z.string().min(1).max(100).parse(str(formData, "name")));
+  revalidatePath("/settings");
+  redirect("/settings?tab=categories&category=updated");
+}
+
+export async function deleteMaintenanceCategoryAction(categoryId: number, formData: FormData) {
+  await requireUser();
+  if (str(formData, "confirmed") !== "on") return;
+  deleteMaintenanceCategory(categoryId);
+  revalidatePath("/settings");
+  redirect("/settings?tab=categories&category=deleted");
 }
 
 function revalidateVehicle(vehicleId: number) {

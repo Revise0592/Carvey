@@ -18,6 +18,7 @@ export type Vehicle = {
   debugDestroyed: number;
   archived: number;
   sold: number;
+  effectiveOdometer: number | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -32,6 +33,13 @@ export type MaintenanceRecord = {
   cost: number;
   notes: string | null;
   createdAt: string;
+};
+
+export type MaintenanceCategory = {
+  id: number;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type RepairRecord = {
@@ -163,6 +171,13 @@ function migrate(database: Database.Database) {
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
 
+    CREATE TABLE IF NOT EXISTS maintenance_categories (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
     CREATE TABLE IF NOT EXISTS vehicles (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       make TEXT NOT NULL,
@@ -254,6 +269,16 @@ function ensureColumn(database: Database.Database, table: string, column: string
   }
 }
 
+const latestRecordedOdometerSelect = `
+  SELECT MAX(odo) FROM (
+    SELECT MAX(odometer) as odo FROM maintenance_records WHERE vehicle_id = vehicles.id
+    UNION ALL
+    SELECT MAX(odometer) as odo FROM repair_records WHERE vehicle_id = vehicles.id
+    UNION ALL
+    SELECT MAX(odometer) as odo FROM mot_records WHERE vehicle_id = vehicles.id
+  )
+`;
+
 const vehicleSelect = `
   id,
   make,
@@ -261,7 +286,7 @@ const vehicleSelect = `
   year,
   registration,
   vin,
-  current_odometer as currentOdometer,
+  COALESCE((${latestRecordedOdometerSelect}), current_odometer) as currentOdometer,
   purchase_price as purchasePrice,
   purchase_date as purchaseDate,
   photo_path as photoPath,
@@ -270,6 +295,7 @@ const vehicleSelect = `
   debug_destroyed as debugDestroyed,
   archived,
   sold,
+  COALESCE((${latestRecordedOdometerSelect}), current_odometer) as effectiveOdometer,
   created_at as createdAt,
   updated_at as updatedAt
 `;
@@ -445,6 +471,30 @@ export function getOrCreateWorkshopByName(name: string): Workshop {
   return getWorkshop(result.lastInsertRowid as number)!;
 }
 
+export function listMaintenanceCategories() {
+  return getDb()
+    .prepare("SELECT id, name, created_at as createdAt, updated_at as updatedAt FROM maintenance_categories ORDER BY name COLLATE NOCASE ASC")
+    .all() as MaintenanceCategory[];
+}
+
+export function createMaintenanceCategory(name: string) {
+  return getDb()
+    .prepare("INSERT INTO maintenance_categories (name) VALUES (?)")
+    .run(name);
+}
+
+export function updateMaintenanceCategory(id: number, name: string) {
+  return getDb()
+    .prepare("UPDATE maintenance_categories SET name = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+    .run(name, id);
+}
+
+export function deleteMaintenanceCategory(id: number) {
+  return getDb()
+    .prepare("DELETE FROM maintenance_categories WHERE id = ?")
+    .run(id);
+}
+
 export function listVehicles() {
   return getDb()
     .prepare(`SELECT ${vehicleSelect} FROM vehicles WHERE archived = 0 ORDER BY updated_at DESC`)
@@ -512,6 +562,7 @@ export function deleteVehicle(id: number) {
     .prepare("DELETE FROM vehicles WHERE id = ?")
     .run(id);
 }
+
 
 export function setVehiclePhoto(id: number, photoPath: string, thumbnailPath: string) {
   return getDb()
@@ -677,7 +728,14 @@ export function getDashboardStats() {
     .all() as Array<{ vehicleId: number; make: string; model: string; registration: string; expiryDate: string }>;
   const reminders = getDb()
     .prepare(`
-      SELECT reminders.id, vehicle_id as vehicleId, title, due_date as dueDate, due_odometer as dueOdometer, vehicles.current_odometer as currentOdometer, make, model
+      SELECT reminders.id,
+             vehicle_id as vehicleId,
+             title,
+             due_date as dueDate,
+             due_odometer as dueOdometer,
+             COALESCE((${latestRecordedOdometerSelect}), vehicles.current_odometer) as currentOdometer,
+             make,
+             model
       FROM reminders
       JOIN vehicles ON vehicles.id = reminders.vehicle_id
       WHERE completed_at IS NULL AND vehicles.archived = 0

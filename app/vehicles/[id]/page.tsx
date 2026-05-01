@@ -20,7 +20,7 @@ import { ExplosionEffect } from "@/components/ExplosionEffect";
 import { RegistrationPlate } from "@/components/RegistrationPlate";
 import { VehiclePhotoUploadForm } from "@/components/VehiclePhotoUploadForm";
 import { VehiclePhoto } from "@/components/VehiclePhoto";
-import { getCollectionName, getVehicle, listMaintenance, listMots, listReminders, listRepairs, listWorkshops } from "@/lib/db";
+import { getCollectionName, getVehicle, listMaintenance, listMaintenanceCategories, listMots, listReminders, listRepairs, listWorkshops } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { debugEasterEggsEnabled } from "@/lib/debug";
 import { formatCurrency, formatDate, formatMiles } from "@/lib/format";
@@ -49,6 +49,7 @@ export default async function VehiclePage({
   const mots = listMots(vehicle.id);
   const reminders = listReminders(vehicle.id);
   const workshops = listWorkshops();
+  const categories = listMaintenanceCategories();
   const spent = [...maintenance, ...repairs, ...mots].reduce((total, record) => total + record.cost, 0);
   const latestMot = mots[0];
   const debugEnabled = debugEasterEggsEnabled();
@@ -64,7 +65,7 @@ export default async function VehiclePage({
           <RegistrationPlate value={vehicle.registration} className="large" />
           <h1>{vehicle.make} {vehicle.model}</h1>
           <div className="hero-meta">
-            <MileagePill>{formatMiles(vehicle.currentOdometer)}</MileagePill>
+            <MileagePill>{formatMiles(vehicle.effectiveOdometer)}</MileagePill>
             <span className="pill">{vehicle.year ?? "Year unknown"}</span>
             <span className="pill">{formatCurrency(spent)} logged</span>
             {vehicle.purchasePrice ? <span className="pill">{formatCurrency(vehicle.purchasePrice)} paid</span> : null}
@@ -128,14 +129,14 @@ export default async function VehiclePage({
       ) : null}
 
       {activeTab === "maintenance" ? (
-        <RecordSection title="Maintenance" icon={<Wrench size={19} />} form={<MaintenanceForm vehicleId={vehicle.id} />}>
+        <RecordSection title="Maintenance" icon={<Wrench size={19} />} form={<MaintenanceForm vehicleId={vehicle.id} categories={categories} />}>
           {maintenance.map((record) => (
             <article className="record-card" key={record.id}>
               <div className="record-header"><span className="tag">{record.category}</span><h3>{record.description}</h3></div>
               <p className="record-meta">{formatDate(record.date)} · {formatMiles(record.odometer)}</p>
               <strong>{formatCurrency(record.cost)}</strong>
               {record.notes ? <p>{record.notes}</p> : null}
-              <div className="record-actions"><EditMaintenanceForm record={record} /></div>
+              <div className="record-actions"><EditMaintenanceForm record={record} categories={categories} /></div>
             </article>
           ))}
         </RecordSection>

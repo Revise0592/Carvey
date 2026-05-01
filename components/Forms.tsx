@@ -17,7 +17,7 @@ import {
   updateRepairAction,
   updateVehicleAction
 } from "@/app/actions";
-import type { MaintenanceRecord, MotRecord, Reminder, RepairRecord, Vehicle, Workshop } from "@/lib/db";
+import type { MaintenanceCategory, MaintenanceRecord, MotRecord, Reminder, RepairRecord, Vehicle, Workshop } from "@/lib/db";
 import { todayIso } from "@/lib/format";
 import { EditPanel } from "./EditPanel";
 import { ModalPanel } from "./ModalPanel";
@@ -72,7 +72,7 @@ export function DebugVehicleForm({ vehicle }: { vehicle: Vehicle }) {
   );
 }
 
-export function EditMaintenanceForm({ record }: { record: MaintenanceRecord }) {
+export function EditMaintenanceForm({ record, categories }: { record: MaintenanceRecord; categories: MaintenanceCategory[] }) {
   const updateAction = updateMaintenanceAction.bind(null, record.vehicleId, record.id);
   const deleteAction = deleteMaintenanceAction.bind(null, record.vehicleId, record.id);
   return (
@@ -80,9 +80,14 @@ export function EditMaintenanceForm({ record }: { record: MaintenanceRecord }) {
       <form action={updateAction} className="record-form">
         <Field label="Date"><input name="date" type="date" defaultValue={record.date} required /></Field>
         <Field label="Mileage"><input name="odometer" type="number" min="0" defaultValue={record.odometer ?? ""} /></Field>
-        <Field label="Category"><input name="category" defaultValue={record.category} required /></Field>
+        <Field label="Category">
+          <input name="category" list="category-suggestions-edit" defaultValue={record.category} autoComplete="off" required />
+          <datalist id="category-suggestions-edit">
+            {categories.map((c) => <option value={c.name} key={c.id} />)}
+          </datalist>
+        </Field>
         <Field label="Cost"><input name="cost" type="number" min="0" step="0.01" defaultValue={record.cost} /></Field>
-        <Field label="Description"><textarea name="description" defaultValue={record.description} required /></Field>
+        <Field label="Description"><input name="description" defaultValue={record.description} required /></Field>
         <Field label="Notes"><textarea name="notes" defaultValue={record.notes ?? ""} /></Field>
         <button className="primary-button" type="submit">Save changes</button>
       </form>
@@ -161,16 +166,21 @@ export function EditReminderForm({ record }: { record: Reminder }) {
   );
 }
 
-export function MaintenanceForm({ vehicleId }: { vehicleId: number }) {
+export function MaintenanceForm({ vehicleId, categories }: { vehicleId: number; categories: MaintenanceCategory[] }) {
   const action = createMaintenanceAction.bind(null, vehicleId);
   return (
     <ModalPanel trigger={<><Wrench size={17} /> Add maintenance</>}>
       <form action={action} className="record-form">
         <Field label="Date"><input name="date" type="date" defaultValue={todayIso()} required /></Field>
         <Field label="Mileage"><input name="odometer" type="number" min="0" /></Field>
-        <Field label="Category"><input name="category" placeholder="Oil, tyres, brakes..." required /></Field>
+        <Field label="Category">
+          <input name="category" list="category-suggestions" autoComplete="off" required />
+          <datalist id="category-suggestions">
+            {categories.map((c) => <option value={c.name} key={c.id} />)}
+          </datalist>
+        </Field>
         <Field label="Cost"><input name="cost" type="number" min="0" step="0.01" /></Field>
-        <Field label="Description"><textarea name="description" required /></Field>
+        <Field label="Description"><input name="description" required /></Field>
         <Field label="Notes"><textarea name="notes" /></Field>
         <button className="primary-button" type="submit">Save maintenance</button>
       </form>

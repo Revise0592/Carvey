@@ -18,6 +18,7 @@ export type SellerSheetVehicle = {
   registration: string;
   vin: string | null;
   currentOdometer: number | null;
+  effectiveOdometer: number | null;
   notes: string | null;
 };
 
@@ -55,6 +56,7 @@ export function getSellerSheetData(vehicleId: number): SellerSheetData | null {
       registration: vehicle.registration,
       vin: vehicle.vin,
       currentOdometer: vehicle.currentOdometer,
+      effectiveOdometer: vehicle.effectiveOdometer,
       notes: vehicle.notes
     },
     maintenance,

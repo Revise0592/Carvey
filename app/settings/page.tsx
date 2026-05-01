@@ -2,24 +2,25 @@ import Link from "next/link";
 import { Building2, Download, KeyRound, RotateCcw, Settings2, Trash2, Upload, UserRound } from "lucide-react";
 import { AppFrame } from "@/components/AppFrame";
 import { ThemeControls } from "@/components/ThemeControls";
-import { createWorkshopAction, deleteWorkshopAction, updateCollectionNameAction, updatePasswordAction, updateUsernameAction, updateWorkshopAction } from "@/app/actions";
+import { createMaintenanceCategoryAction, createWorkshopAction, deleteMaintenanceCategoryAction, deleteWorkshopAction, updateCollectionNameAction, updateMaintenanceCategoryAction, updatePasswordAction, updateUsernameAction, updateWorkshopAction } from "@/app/actions";
 import { requireUser } from "@/lib/auth";
 import { readRestoreSummary } from "@/lib/backup";
-import { getCollectionName, listWorkshops, type Workshop } from "@/lib/db";
+import { getCollectionName, listMaintenanceCategories, listWorkshops, type MaintenanceCategory, type Workshop } from "@/lib/db";
 import { formatDate } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
-const settingsTabs = ["personalisation", "admin", "workshops", "backup"] as const;
+const settingsTabs = ["personalisation", "admin", "workshops", "categories", "backup"] as const;
 type SettingsTab = (typeof settingsTabs)[number];
 
-export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ tab?: string; account?: string; app?: string; workshop?: string; restore?: string; token?: string; message?: string }> }) {
+export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ tab?: string; account?: string; app?: string; workshop?: string; category?: string; restore?: string; token?: string; message?: string }> }) {
   const user = await requireUser();
   const params = await searchParams;
   const activeTab = settingsTabs.includes(params.tab as SettingsTab) ? (params.tab as SettingsTab) : "personalisation";
   const restoreSummary = await readRestoreSummary(params.token);
   const collectionName = getCollectionName();
   const workshops = listWorkshops();
+  const categories = listMaintenanceCategories();
 
   return (
     <AppFrame>
@@ -34,6 +35,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         <Link className={activeTab === "personalisation" ? "active" : ""} href="/settings?tab=personalisation">Personalisation</Link>
         <Link className={activeTab === "admin" ? "active" : ""} href="/settings?tab=admin">Admin</Link>
         <Link className={activeTab === "workshops" ? "active" : ""} href="/settings?tab=workshops">Garages & workshops</Link>
+        <Link className={activeTab === "categories" ? "active" : ""} href="/settings?tab=categories">Maintenance categories</Link>
         <Link className={activeTab === "backup" ? "active" : ""} href="/settings?tab=backup">Backup & restore</Link>
       </nav>
 
@@ -112,6 +114,35 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                 ))}
               </div>
             ) : <p className="muted">No saved garages or workshops yet.</p>}
+          </article>
+        </section>
+      ) : null}
+
+      {activeTab === "categories" ? (
+        <section className="settings-grid">
+          <article className="settings-panel">
+            <h2>Add category</h2>
+            {params.category === "created" ? <p className="success">Category saved.</p> : null}
+            {params.category === "updated" ? <p className="success">Category updated.</p> : null}
+            {params.category === "deleted" ? <p className="success">Category deleted.</p> : null}
+            <form action={createMaintenanceCategoryAction} className="record-form">
+              <label>
+                Name
+                <input name="name" required maxLength={100} placeholder="Oil service, tyres, brakes..." />
+              </label>
+              <button className="primary-button" type="submit">Save category</button>
+            </form>
+          </article>
+
+          <article className="settings-panel workshop-list-panel">
+            <h2>Saved categories</h2>
+            {categories.length ? (
+              <div className="workshop-list">
+                {categories.map((category) => (
+                  <CategoryCard category={category} key={category.id} />
+                ))}
+              </div>
+            ) : <p className="muted">No saved categories yet.</p>}
           </article>
         </section>
       ) : null}
@@ -249,5 +280,32 @@ function WorkshopForm({ workshop, action, button }: { workshop?: Workshop; actio
       </label>
       <button className="primary-button" type="submit">{button}</button>
     </form>
+  );
+}
+
+function CategoryCard({ category }: { category: MaintenanceCategory }) {
+  const updateAction = updateMaintenanceCategoryAction.bind(null, category.id);
+  const deleteAction = deleteMaintenanceCategoryAction.bind(null, category.id);
+  return (
+    <article className="workshop-card">
+      <h3>{category.name}</h3>
+      <details>
+        <summary className="secondary-button">Edit</summary>
+        <form action={updateAction} className="record-form">
+          <label>
+            Name
+            <input name="name" defaultValue={category.name} required maxLength={100} />
+          </label>
+          <button className="primary-button" type="submit">Save changes</button>
+        </form>
+      </details>
+      <form action={deleteAction} className="delete-confirm">
+        <label>
+          <input type="checkbox" name="confirmed" required />
+          Confirm delete
+        </label>
+        <button className="danger-button" type="submit"><Trash2 size={17} /> Delete</button>
+      </form>
+    </article>
   );
 }

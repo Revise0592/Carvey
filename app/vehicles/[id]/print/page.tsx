@@ -30,7 +30,7 @@ export default async function VehiclePrintPage({ params }: { params: Promise<{ i
       </header>
 
       <section className="print-cover">
-        <p className="print-eyebrow">Carvey seller sheet</p>
+        <p className="print-eyebrow">Vehicle Info Sheet</p>
         <div className="print-title-row">
           <div>
             <h1>{vehicle.make} {vehicle.model}</h1>
@@ -39,7 +39,7 @@ export default async function VehiclePrintPage({ params }: { params: Promise<{ i
           <RegistrationPlate value={vehicle.registration} />
         </div>
         <dl className="print-facts">
-          <div><dt>Current mileage</dt><dd>{formatMiles(vehicle.currentOdometer)}</dd></div>
+          <div><dt>Current mileage</dt><dd>{formatMiles(vehicle.effectiveOdometer)}</dd></div>
           <div><dt>VIN</dt><dd>{vehicle.vin ?? "Not recorded"}</dd></div>
           <div><dt>Generated</dt><dd>{generatedAt}</dd></div>
           <div><dt>Total logged spend</dt><dd>{formatCurrency(totals.loggedSpend)}</dd></div>
