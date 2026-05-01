@@ -12,13 +12,13 @@ export async function POST(request: Request) {
   const confirmed = formData.get("confirmed");
 
   if (typeof token !== "string" || confirmed !== "on") {
-    return redirect("/settings?restore=confirm-required");
+    return redirect("/settings?tab=backup&restore=confirm-required");
   }
 
   const result = await confirmRestore(token);
   if (result.ok) {
-    return redirect("/settings?restore=success");
+    return redirect("/settings?tab=backup&restore=success");
   }
-  const params = new URLSearchParams({ restore: "restore-error", message: result.message });
+  const params = new URLSearchParams({ tab: "backup", restore: "restore-error", message: result.message });
   return redirect(`/settings?${params}`);
 }
