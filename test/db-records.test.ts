@@ -187,7 +187,8 @@ describe("record mutation helpers", () => {
       currentOdometer: 25000,
       purchasePrice: 11500,
       purchaseDate: "2024-02-03",
-      notes: "Corrected"
+      notes: "Corrected",
+      sold: false
     });
 
     expect(db.getVehicle(vehicleId)).toMatchObject({

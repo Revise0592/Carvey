@@ -335,7 +335,8 @@ summary {
   padding: 0;
 }
 
-.checkbox-field {
+.checkbox-field,
+.record-form .checkbox-field {
   display: flex;
   align-items: center;
   gap: 0.55rem;
@@ -631,6 +632,11 @@ summary {
   color: #7a4b00;
 }
 
+.tag.sold {
+  background: color-mix(in srgb, var(--text) 12%, transparent);
+  color: var(--text-muted);
+}
+
 .split-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
@@ -804,6 +810,12 @@ summary {
   max-height: calc(min(760px, 100vh - 44px) - 62px);
   overflow: auto;
   padding: 0 22px 22px;
+}
+
+.modal-divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 0.5rem 0;
 }
 
 .edit-menu {

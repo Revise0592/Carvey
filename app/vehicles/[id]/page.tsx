@@ -4,7 +4,6 @@ import { CalendarDays, Hammer, Printer, ShieldCheck, Wrench } from "lucide-react
 import { AppFrame } from "@/components/AppFrame";
 import {
   CompleteReminderButton,
-  DeleteVehicleForm,
   DebugVehicleForm,
   EditVehicleForm,
   EditMaintenanceForm,
@@ -69,6 +68,7 @@ export default async function VehiclePage({
             <span className="pill">{vehicle.year ?? "Year unknown"}</span>
             <span className="pill">{formatCurrency(spent)} logged</span>
             {vehicle.purchasePrice ? <span className="pill">{formatCurrency(vehicle.purchasePrice)} paid</span> : null}
+            {vehicle.sold ? <span className="tag sold">Sold</span> : null}
           </div>
           {vehicle.notes ? <p>{vehicle.notes}</p> : null}
           <div className="inline-form">
@@ -79,7 +79,6 @@ export default async function VehiclePage({
             </Link>
             <EditVehicleForm vehicle={vehicle} />
             {debugEnabled ? <DebugVehicleForm vehicle={vehicle} /> : null}
-            <DeleteVehicleForm vehicle={vehicle} />
           </div>
         </div>
       </section>

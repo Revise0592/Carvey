@@ -24,6 +24,7 @@ import { ModalPanel } from "./ModalPanel";
 
 export function EditVehicleForm({ vehicle }: { vehicle: Vehicle }) {
   const updateAction = updateVehicleAction.bind(null, vehicle.id);
+  const deleteAction = deleteVehicleAction.bind(null, vehicle.id);
   return (
     <ModalPanel trigger="Edit car">
       <form action={updateAction} className="record-form">
@@ -36,23 +37,20 @@ export function EditVehicleForm({ vehicle }: { vehicle: Vehicle }) {
         <Field label="Purchase price"><input name="purchasePrice" type="number" min="0" step="0.01" defaultValue={vehicle.purchasePrice ?? ""} /></Field>
         <Field label="Purchase date"><input name="purchaseDate" type="date" defaultValue={vehicle.purchaseDate ?? ""} /></Field>
         <Field label="Notes"><textarea name="notes" defaultValue={vehicle.notes ?? ""} /></Field>
+        <label className="checkbox-field">
+          <input name="sold" type="checkbox" defaultChecked={Boolean(vehicle.sold)} />
+          Mark as sold
+        </label>
         <button className="primary-button" type="submit">Save car</button>
       </form>
-    </ModalPanel>
-  );
-}
-
-export function DeleteVehicleForm({ vehicle }: { vehicle: Vehicle }) {
-  const action = deleteVehicleAction.bind(null, vehicle.id);
-  return (
-    <ModalPanel trigger={<><Trash2 size={17} /> Delete car</>} tone="danger">
-      <form action={action} className="delete-confirm destructive-form">
+      <hr className="modal-divider" />
+      <form action={deleteAction} className="delete-confirm destructive-form">
         <p className="muted">This removes {vehicle.make} {vehicle.model} and all of its logs.</p>
         <label>
           <input type="checkbox" name="confirmed" required />
           Confirm delete
         </label>
-        <button className="danger-button" type="submit">Delete car</button>
+        <button className="danger-button" type="submit"><Trash2 size={17} /> Delete car</button>
       </form>
     </ModalPanel>
   );

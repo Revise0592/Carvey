@@ -17,6 +17,7 @@ export type Vehicle = {
   notes: string | null;
   debugDestroyed: number;
   archived: number;
+  sold: number;
   createdAt: string;
   updatedAt: string;
 };
@@ -177,6 +178,7 @@ function migrate(database: Database.Database) {
       notes TEXT,
       debug_destroyed INTEGER NOT NULL DEFAULT 0,
       archived INTEGER NOT NULL DEFAULT 0,
+      sold INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
@@ -241,6 +243,7 @@ function migrate(database: Database.Database) {
   ensureColumn(database, "vehicles", "purchase_price", "REAL");
   ensureColumn(database, "vehicles", "purchase_date", "TEXT");
   ensureColumn(database, "vehicles", "debug_destroyed", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(database, "vehicles", "sold", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn(database, "repair_records", "workshop_id", "INTEGER REFERENCES workshops(id) ON DELETE SET NULL");
 }
 
@@ -266,6 +269,7 @@ const vehicleSelect = `
   notes,
   debug_destroyed as debugDestroyed,
   archived,
+  sold,
   created_at as createdAt,
   updated_at as updatedAt
 `;
@@ -482,6 +486,7 @@ export function updateVehicle(id: number, input: {
   purchasePrice: number | null;
   purchaseDate: string | null;
   notes: string | null;
+  sold: boolean;
 }) {
   return getDb()
     .prepare(`
@@ -495,10 +500,11 @@ export function updateVehicle(id: number, input: {
           purchase_price = @purchasePrice,
           purchase_date = @purchaseDate,
           notes = @notes,
+          sold = @sold,
           updated_at = CURRENT_TIMESTAMP
       WHERE id = @id
     `)
-    .run({ id, ...input });
+    .run({ id, ...input, sold: input.sold ? 1 : 0 });
 }
 
 export function deleteVehicle(id: number) {

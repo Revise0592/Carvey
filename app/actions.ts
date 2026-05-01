@@ -139,7 +139,8 @@ export async function updateVehicleAction(vehicleId: number, formData: FormData)
     currentOdometer: nullableInt(formData, "currentOdometer"),
     purchasePrice: nullableMoney(formData, "purchasePrice"),
     purchaseDate: nullableStr(formData, "purchaseDate"),
-    notes: nullableStr(formData, "notes")
+    notes: nullableStr(formData, "notes"),
+    sold: str(formData, "sold") === "on"
   });
   revalidateVehicle(vehicleId);
 }
