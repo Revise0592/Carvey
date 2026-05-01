@@ -21,7 +21,7 @@ import { ExplosionEffect } from "@/components/ExplosionEffect";
 import { RegistrationPlate } from "@/components/RegistrationPlate";
 import { VehiclePhotoUploadForm } from "@/components/VehiclePhotoUploadForm";
 import { VehiclePhoto } from "@/components/VehiclePhoto";
-import { getVehicle, listMaintenance, listMots, listReminders, listRepairs } from "@/lib/db";
+import { getCollectionName, getVehicle, listMaintenance, listMots, listReminders, listRepairs, listWorkshops } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { debugEasterEggsEnabled } from "@/lib/debug";
 import { formatCurrency, formatDate, formatMiles } from "@/lib/format";
@@ -49,9 +49,11 @@ export default async function VehiclePage({
   const repairs = listRepairs(vehicle.id);
   const mots = listMots(vehicle.id);
   const reminders = listReminders(vehicle.id);
+  const workshops = listWorkshops();
   const spent = [...maintenance, ...repairs, ...mots].reduce((total, record) => total + record.cost, 0);
   const latestMot = mots[0];
   const debugEnabled = debugEasterEggsEnabled();
+  const collectionName = getCollectionName();
 
   return (
     <AppFrame>
@@ -59,7 +61,7 @@ export default async function VehiclePage({
       <section className="vehicle-hero">
         <VehiclePhoto src={vehicle.photoPath} alt={`${vehicle.make} ${vehicle.model}`} className="hero-photo" />
         <div className="vehicle-hero-copy">
-          <Link href="/garage" className="back-link">Garage</Link>
+          <Link href="/garage" className="back-link">{collectionName}</Link>
           <RegistrationPlate value={vehicle.registration} className="large" />
           <h1>{vehicle.make} {vehicle.model}</h1>
           <div className="hero-meta">
@@ -141,14 +143,14 @@ export default async function VehiclePage({
       ) : null}
 
       {activeTab === "repairs" ? (
-        <RecordSection title="Repairs" icon={<Hammer size={19} />} form={<RepairForm vehicleId={vehicle.id} />}>
+        <RecordSection title="Repairs" icon={<Hammer size={19} />} form={<RepairForm vehicleId={vehicle.id} workshops={workshops} />}>
           {repairs.map((record) => (
             <article className="record-card" key={record.id}>
               <div className="record-header"><span className="tag">{record.garage ?? "Repair"}</span><h3>{record.fault}</h3></div>
               <p className="record-meta">{formatDate(record.date)} · {formatMiles(record.odometer)}</p>
               <strong>{formatCurrency(record.cost)}</strong>
               {record.notes ? <p>{record.notes}</p> : null}
-              <div className="record-actions"><EditRepairForm record={record} /></div>
+              <div className="record-actions"><EditRepairForm record={record} workshops={workshops} /></div>
             </article>
           ))}
         </RecordSection>
@@ -159,7 +161,7 @@ export default async function VehiclePage({
           {mots.map((record) => (
             <article className="record-card" key={record.id}>
               <div className="record-header"><span className={`tag ${record.result}`}>{record.result}</span><h3>Expires {formatDate(record.expiryDate)}</h3></div>
-              <p className="record-meta">Tested {formatDate(record.testDate)} · Mileage at test: {formatMiles(record.odometer)}</p>
+              <p className="record-meta">Tested {formatDate(record.testDate)} · Mileage: {formatMiles(record.odometer)}</p>
               <strong>{formatCurrency(record.cost)}</strong>
               {record.certificateRef ? <p>Reference: {record.certificateRef}</p> : null}
               {record.advisories ? <p>{record.advisories}</p> : null}

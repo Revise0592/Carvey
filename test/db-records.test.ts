@@ -15,6 +15,108 @@ describe("record mutation helpers", () => {
     vi.resetModules();
   });
 
+  it("stores a custom collection name with a friendly default", async () => {
+    const db = await freshDb();
+    expect(db.getCollectionName()).toBe("My cars");
+
+    db.updateCollectionName("The Fleet");
+
+    expect(db.getCollectionName()).toBe("The Fleet");
+    db.closeDbForTests();
+  });
+
+  it("manages workshops and preserves repair text when a workshop is deleted", async () => {
+    const db = await freshDb();
+    const preferredId = Number(db.createWorkshop({
+      name: "Preferred Autos",
+      address: "1 Workshop Road",
+      phone: "01234 567890",
+      email: "hello@example.com",
+      website: "https://example.com",
+      notes: "Knows the Honda well",
+      preferred: true
+    }).lastInsertRowid);
+    const otherId = Number(db.createWorkshop({
+      name: "Budget Tyres",
+      address: null,
+      phone: null,
+      email: null,
+      website: null,
+      notes: null,
+      preferred: false
+    }).lastInsertRowid);
+
+    expect(db.listWorkshops().map((workshop) => workshop.name)).toEqual(["Preferred Autos", "Budget Tyres"]);
+    db.updateWorkshop(otherId, {
+      name: "Aardvark Tyres",
+      address: null,
+      phone: null,
+      email: null,
+      website: null,
+      notes: "Updated",
+      preferred: true
+    });
+    expect(db.listWorkshops().map((workshop) => workshop.name)).toEqual(["Aardvark Tyres", "Preferred Autos"]);
+
+    const vehicleId = Number(db.createVehicle({
+      make: "Honda",
+      model: "Jazz",
+      year: 2020,
+      registration: "HJ20 ABC",
+      vin: null,
+      currentOdometer: null,
+      purchasePrice: null,
+      purchaseDate: null,
+      notes: null
+    }).lastInsertRowid);
+    db.createRepair({
+      vehicleId,
+      date: "2026-01-01",
+      odometer: null,
+      fault: "Service",
+      garage: "Preferred Autos",
+      workshopId: preferredId,
+      cost: 120,
+      notes: null
+    });
+    expect(db.listRepairs(vehicleId)[0]).toMatchObject({ garage: "Preferred Autos", workshopId: preferredId });
+
+    db.deleteWorkshop(preferredId);
+
+    expect(db.listRepairs(vehicleId)[0]).toMatchObject({ garage: "Preferred Autos", workshopId: null });
+    db.closeDbForTests();
+  });
+
+  it("getOrCreateWorkshopByName reuses existing workshop case-insensitively", async () => {
+    const db = await freshDb();
+    const first = db.getOrCreateWorkshopByName("Quick Lube");
+    const second = db.getOrCreateWorkshopByName("quick lube");
+    const third = db.getOrCreateWorkshopByName("QUICK LUBE");
+    expect(second.id).toBe(first.id);
+    expect(third.id).toBe(first.id);
+    expect(db.listWorkshops()).toHaveLength(1);
+    db.closeDbForTests();
+  });
+
+  it("getOrCreateWorkshopByName creates new workshop when no match", async () => {
+    const db = await freshDb();
+    const a = db.getOrCreateWorkshopByName("Garage A");
+    const b = db.getOrCreateWorkshopByName("Garage B");
+    expect(a.id).not.toBe(b.id);
+    expect(db.listWorkshops()).toHaveLength(2);
+    db.closeDbForTests();
+  });
+
+  it("getOrCreateWorkshopByName normalizes whitespace before matching and storing", async () => {
+    const db = await freshDb();
+    const w = db.getOrCreateWorkshopByName("  Bob's  Garage  ");
+    expect(w.name).toBe("Bob's Garage");
+    const again = db.getOrCreateWorkshopByName("Bob's  Garage");
+    expect(again.id).toBe(w.id);
+    expect(db.listWorkshops()).toHaveLength(1);
+    db.closeDbForTests();
+  });
+
   it("updates and deletes maintenance records scoped to a vehicle", async () => {
     const db = await freshDb();
     const vehicle = db.createVehicle({
@@ -136,7 +238,7 @@ describe("record mutation helpers", () => {
       notes: null
     }).lastInsertRowid);
     db.createMaintenance({ vehicleId, date: "2026-01-01", odometer: 18000, category: "Tyres", description: "Rotate tyres", cost: 0, notes: null });
-    db.createRepair({ vehicleId, date: "2026-01-02", odometer: 18001, fault: "Puncture", garage: null, cost: 25, notes: null });
+    db.createRepair({ vehicleId, date: "2026-01-02", odometer: 18001, fault: "Puncture", garage: null, workshopId: null, cost: 25, notes: null });
     db.createMot({ vehicleId, testDate: "2026-01-03", expiryDate: "2027-01-03", odometer: 18002, result: "pass", advisories: null, cost: 54.85, certificateRef: null });
     db.createReminder({ vehicleId, title: "Check coolant", dueDate: "2026-02-01", dueOdometer: null, recurrence: null });
 
@@ -164,8 +266,8 @@ describe("record mutation helpers", () => {
       notes: null
     }).lastInsertRowid);
 
-    const repairId = Number(db.createRepair({ vehicleId, date: "2026-01-01", odometer: null, fault: "Tyre", garage: null, cost: 10, notes: null }).lastInsertRowid);
-    db.updateRepair(repairId, vehicleId, { date: "2026-01-02", odometer: 130100, fault: "Two tyres", garage: "Local garage", cost: 180, notes: "Front axle" });
+    const repairId = Number(db.createRepair({ vehicleId, date: "2026-01-01", odometer: null, fault: "Tyre", garage: null, workshopId: null, cost: 10, notes: null }).lastInsertRowid);
+    db.updateRepair(repairId, vehicleId, { date: "2026-01-02", odometer: 130100, fault: "Two tyres", garage: "Local garage", workshopId: null, cost: 180, notes: "Front axle" });
     expect(db.listRepairs(vehicleId)[0].fault).toBe("Two tyres");
 
     const motId = Number(db.createMot({ vehicleId, testDate: "2026-02-01", expiryDate: "2027-02-01", odometer: null, result: "pass", advisories: null, cost: 54.85, certificateRef: null }).lastInsertRowid);

@@ -33,7 +33,7 @@ describe("seller sheet data", () => {
 
     db.setVehiclePhoto(vehicleId, "/uploads/vehicles/car.webp", "/uploads/vehicles/car-thumb.webp");
     db.createMaintenance({ vehicleId, date: "2026-01-01", odometer: 93000, category: "Service", description: "Oil service", cost: 120, notes: "Fully synthetic" });
-    db.createRepair({ vehicleId, date: "2026-02-01", odometer: 94000, fault: "Exhaust bracket", garage: "Local garage", cost: 80, notes: null });
+    db.createRepair({ vehicleId, date: "2026-02-01", odometer: 94000, fault: "Exhaust bracket", garage: "Local garage", workshopId: null, cost: 80, notes: null });
     db.createMot({ vehicleId, testDate: "2026-03-01", expiryDate: "2027-03-01", odometer: 94400, result: "pass", advisories: null, cost: 54.85, certificateRef: "MOT123" });
     db.createReminder({ vehicleId, title: "MOT due", dueDate: "2027-03-01", dueOdometer: null, recurrence: "12 months" });
     const completedId = Number(db.createReminder({ vehicleId, title: "Completed service", dueDate: "2026-05-01", dueOdometer: null, recurrence: null }).lastInsertRowid);

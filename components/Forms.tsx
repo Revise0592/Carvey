@@ -17,7 +17,7 @@ import {
   updateRepairAction,
   updateVehicleAction
 } from "@/app/actions";
-import type { MaintenanceRecord, MotRecord, Reminder, RepairRecord, Vehicle } from "@/lib/db";
+import type { MaintenanceRecord, MotRecord, Reminder, RepairRecord, Vehicle, Workshop } from "@/lib/db";
 import { todayIso } from "@/lib/format";
 import { EditPanel } from "./EditPanel";
 import { ModalPanel } from "./ModalPanel";
@@ -81,7 +81,7 @@ export function EditMaintenanceForm({ record }: { record: MaintenanceRecord }) {
     <EditPanel deleteAction={deleteAction}>
       <form action={updateAction} className="record-form">
         <Field label="Date"><input name="date" type="date" defaultValue={record.date} required /></Field>
-        <Field label="Mileage at test"><input name="odometer" type="number" min="0" defaultValue={record.odometer ?? ""} /></Field>
+        <Field label="Mileage"><input name="odometer" type="number" min="0" defaultValue={record.odometer ?? ""} /></Field>
         <Field label="Category"><input name="category" defaultValue={record.category} required /></Field>
         <Field label="Cost"><input name="cost" type="number" min="0" step="0.01" defaultValue={record.cost} /></Field>
         <Field label="Description"><textarea name="description" defaultValue={record.description} required /></Field>
@@ -92,16 +92,21 @@ export function EditMaintenanceForm({ record }: { record: MaintenanceRecord }) {
   );
 }
 
-export function EditRepairForm({ record }: { record: RepairRecord }) {
+export function EditRepairForm({ record, workshops }: { record: RepairRecord; workshops: Workshop[] }) {
   const updateAction = updateRepairAction.bind(null, record.vehicleId, record.id);
   const deleteAction = deleteRepairAction.bind(null, record.vehicleId, record.id);
   return (
     <EditPanel deleteAction={deleteAction}>
       <form action={updateAction} className="record-form">
         <Field label="Date"><input name="date" type="date" defaultValue={record.date} required /></Field>
-        <Field label="Odometer"><input name="odometer" type="number" min="0" defaultValue={record.odometer ?? ""} /></Field>
+        <Field label="Mileage"><input name="odometer" type="number" min="0" defaultValue={record.odometer ?? ""} /></Field>
         <Field label="Fault or repair"><input name="fault" defaultValue={record.fault} required /></Field>
-        <Field label="Garage or vendor"><input name="garage" defaultValue={record.garage ?? ""} /></Field>
+        <Field label="Garage/workshop">
+          <input name="garage" list="workshop-suggestions" defaultValue={record.garage ?? ""} autoComplete="off" />
+          <datalist id="workshop-suggestions">
+            {workshops.map((w) => <option value={w.name} key={w.id} />)}
+          </datalist>
+        </Field>
         <Field label="Cost"><input name="cost" type="number" min="0" step="0.01" defaultValue={record.cost} /></Field>
         <Field label="Notes"><textarea name="notes" defaultValue={record.notes ?? ""} /></Field>
         <button className="primary-button" type="submit">Save changes</button>
@@ -118,7 +123,7 @@ export function EditMotForm({ record }: { record: MotRecord }) {
       <form action={updateAction} className="record-form">
         <Field label="Test date"><input name="testDate" type="date" defaultValue={record.testDate} required /></Field>
         <Field label="Expiry date"><input name="expiryDate" type="date" defaultValue={record.expiryDate} required /></Field>
-        <Field label="Odometer"><input name="odometer" type="number" min="0" defaultValue={record.odometer ?? ""} /></Field>
+        <Field label="Mileage"><input name="odometer" type="number" min="0" defaultValue={record.odometer ?? ""} /></Field>
         <Field label="Result"><select name="result" defaultValue={record.result} required>
             <option value="pass">Pass</option>
             <option value="advisory">Pass with advisories</option>
@@ -164,7 +169,7 @@ export function MaintenanceForm({ vehicleId }: { vehicleId: number }) {
     <ModalPanel trigger={<><Wrench size={17} /> Add maintenance</>}>
       <form action={action} className="record-form">
         <Field label="Date"><input name="date" type="date" defaultValue={todayIso()} required /></Field>
-        <Field label="Mileage at test"><input name="odometer" type="number" min="0" /></Field>
+        <Field label="Mileage"><input name="odometer" type="number" min="0" /></Field>
         <Field label="Category"><input name="category" placeholder="Oil, tyres, brakes..." required /></Field>
         <Field label="Cost"><input name="cost" type="number" min="0" step="0.01" /></Field>
         <Field label="Description"><textarea name="description" required /></Field>
@@ -175,15 +180,20 @@ export function MaintenanceForm({ vehicleId }: { vehicleId: number }) {
   );
 }
 
-export function RepairForm({ vehicleId }: { vehicleId: number }) {
+export function RepairForm({ vehicleId, workshops }: { vehicleId: number; workshops: Workshop[] }) {
   const action = createRepairAction.bind(null, vehicleId);
   return (
     <ModalPanel trigger={<><Hammer size={17} /> Add repair</>}>
       <form action={action} className="record-form">
         <Field label="Date"><input name="date" type="date" defaultValue={todayIso()} required /></Field>
-        <Field label="Odometer"><input name="odometer" type="number" min="0" /></Field>
+        <Field label="Mileage"><input name="odometer" type="number" min="0" /></Field>
         <Field label="Fault or repair"><input name="fault" required /></Field>
-        <Field label="Garage or vendor"><input name="garage" /></Field>
+        <Field label="Garage/workshop">
+          <input name="garage" list="workshop-suggestions" autoComplete="off" />
+          <datalist id="workshop-suggestions">
+            {workshops.map((w) => <option value={w.name} key={w.id} />)}
+          </datalist>
+        </Field>
         <Field label="Cost"><input name="cost" type="number" min="0" step="0.01" /></Field>
         <Field label="Notes"><textarea name="notes" /></Field>
         <button className="primary-button" type="submit">Save repair</button>
@@ -199,7 +209,7 @@ export function MotForm({ vehicleId }: { vehicleId: number }) {
       <form action={action} className="record-form">
         <Field label="Test date"><input name="testDate" type="date" defaultValue={todayIso()} required /></Field>
         <Field label="Expiry date"><input name="expiryDate" type="date" required /></Field>
-        <Field label="Odometer"><input name="odometer" type="number" min="0" /></Field>
+        <Field label="Mileage"><input name="odometer" type="number" min="0" /></Field>
         <Field label="Result"><select name="result" defaultValue="pass" required>
             <option value="pass">Pass</option>
             <option value="advisory">Pass with advisories</option>
@@ -264,3 +274,4 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     </label>
   );
 }
+

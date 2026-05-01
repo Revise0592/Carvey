@@ -11,19 +11,24 @@ import {
   createMot,
   createReminder,
   createRepair,
+  createWorkshop,
   createVehicle,
   deleteMaintenance,
   deleteMot,
   deleteReminder,
   deleteRepair,
+  deleteWorkshop,
   deleteVehicle,
+  getOrCreateWorkshopByName,
   getVehicle,
   setVehicleDebugDestroyed,
+  updateCollectionName,
   updateMaintenance,
   updateMot,
   updateReminder,
   updateRepair,
   updateVehicle,
+  updateWorkshop,
   upsertMotReminder
 } from "@/lib/db";
 import { changePassword, changeUsername, createFirstAdmin, login, logout, requireUser } from "@/lib/auth";
@@ -53,6 +58,26 @@ function money(formData: FormData, key: string) {
 function nullableMoney(formData: FormData, key: string) {
   const value = str(formData, key);
   return value.length ? Number.parseFloat(value) : null;
+}
+
+
+function workshopInput(formData: FormData) {
+  return {
+    name: z.string().min(1).max(100).parse(str(formData, "name")),
+    address: nullableStr(formData, "address"),
+    phone: nullableStr(formData, "phone"),
+    email: nullableStr(formData, "email"),
+    website: nullableStr(formData, "website"),
+    notes: nullableStr(formData, "notes"),
+    preferred: str(formData, "preferred") === "on"
+  };
+}
+
+function repairWorkshopInput(formData: FormData) {
+  const raw = nullableStr(formData, "garage");
+  if (!raw) return { garage: null, workshopId: null };
+  const workshop = getOrCreateWorkshopByName(raw);
+  return { garage: workshop.name, workshopId: workshop.id };
 }
 
 const credentialsSchema = z.object({
@@ -173,12 +198,14 @@ export async function deleteMaintenanceAction(vehicleId: number, id: number) {
 
 export async function createRepairAction(vehicleId: number, formData: FormData) {
   await requireUser();
+  const workshop = repairWorkshopInput(formData);
   createRepair({
     vehicleId,
     date: z.string().min(1).parse(str(formData, "date")),
     odometer: nullableInt(formData, "odometer"),
     fault: z.string().min(1).parse(str(formData, "fault")),
-    garage: nullableStr(formData, "garage"),
+    garage: workshop.garage,
+    workshopId: workshop.workshopId,
     cost: money(formData, "cost"),
     notes: nullableStr(formData, "notes")
   });
@@ -187,11 +214,13 @@ export async function createRepairAction(vehicleId: number, formData: FormData) 
 
 export async function updateRepairAction(vehicleId: number, id: number, formData: FormData) {
   await requireUser();
+  const workshop = repairWorkshopInput(formData);
   updateRepair(id, vehicleId, {
     date: z.string().min(1).parse(str(formData, "date")),
     odometer: nullableInt(formData, "odometer"),
     fault: z.string().min(1).parse(str(formData, "fault")),
-    garage: nullableStr(formData, "garage"),
+    garage: workshop.garage,
+    workshopId: workshop.workshopId,
     cost: money(formData, "cost"),
     notes: nullableStr(formData, "notes")
   });
@@ -288,7 +317,7 @@ export async function updateUsernameAction(formData: FormData) {
   const username = z.string().min(2).max(48).parse(str(formData, "username"));
   changeUsername(user.id, username);
   revalidatePath("/settings");
-  redirect("/settings?account=username-updated");
+  redirect("/settings?tab=admin&account=username-updated");
 }
 
 export async function updatePasswordAction(formData: FormData) {
@@ -296,8 +325,39 @@ export async function updatePasswordAction(formData: FormData) {
   const currentPassword = z.string().min(1).parse(str(formData, "currentPassword"));
   const nextPassword = z.string().min(8).max(256).parse(str(formData, "nextPassword"));
   const ok = await changePassword(user.id, currentPassword, nextPassword);
-  if (!ok) redirect("/settings?account=password-error");
-  redirect("/settings?account=password-updated");
+  if (!ok) redirect("/settings?tab=admin&account=password-error");
+  redirect("/settings?tab=admin&account=password-updated");
+}
+
+export async function updateCollectionNameAction(formData: FormData) {
+  await requireUser();
+  const collectionName = z.string().min(1).max(40).parse(str(formData, "collectionName"));
+  updateCollectionName(collectionName);
+  revalidatePath("/garage");
+  revalidatePath("/settings");
+  redirect("/settings?tab=personalisation&app=collection-updated");
+}
+
+export async function createWorkshopAction(formData: FormData) {
+  await requireUser();
+  createWorkshop(workshopInput(formData));
+  revalidatePath("/settings");
+  redirect("/settings?tab=workshops&workshop=created");
+}
+
+export async function updateWorkshopAction(workshopId: number, formData: FormData) {
+  await requireUser();
+  updateWorkshop(workshopId, workshopInput(formData));
+  revalidatePath("/settings");
+  redirect("/settings?tab=workshops&workshop=updated");
+}
+
+export async function deleteWorkshopAction(workshopId: number, formData: FormData) {
+  await requireUser();
+  if (str(formData, "confirmed") !== "on") return;
+  deleteWorkshop(workshopId);
+  revalidatePath("/settings");
+  redirect("/settings?tab=workshops&workshop=deleted");
 }
 
 function revalidateVehicle(vehicleId: number) {

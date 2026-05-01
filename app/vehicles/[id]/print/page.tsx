@@ -94,7 +94,7 @@ export default async function VehiclePrintPage({ params }: { params: Promise<{ i
               <tr>
                 <th>Tested</th>
                 <th>Expires</th>
-                <th>Mileage at test</th>
+                <th>Mileage</th>
                 <th>Result</th>
                 <th>Reference</th>
                 <th>Cost</th>
@@ -124,22 +124,17 @@ export default async function VehiclePrintPage({ params }: { params: Promise<{ i
               <tr>
                 <th>Reminder</th>
                 <th>Due date</th>
-                <th>Due mileage</th>
                 <th>Recurrence</th>
               </tr>
             </thead>
             <tbody>
-              {reminders.map((record) => {
-                const isMotReminder = record.title.toLowerCase() === "mot due";
-                return (
-                  <tr key={record.id}>
-                    <td>{record.title}</td>
-                    <td>{formatDate(record.dueDate)}</td>
-                    <td>{isMotReminder ? "Not applicable" : formatMiles(record.dueOdometer)}</td>
-                    <td>{record.recurrence ?? "None"}</td>
-                  </tr>
-                );
-              })}
+              {reminders.map((record) => (
+                <tr key={record.id}>
+                  <td>{record.title}</td>
+                  <td>{formatDate(record.dueDate)}</td>
+                  <td>{record.recurrence ?? "None"}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         ) : <p className="print-empty">No open reminders.</p>}

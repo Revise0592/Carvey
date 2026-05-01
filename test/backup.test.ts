@@ -70,7 +70,27 @@ describe("backup and restore", () => {
 
   it("previews and restores a backup, replacing current data with rollback", async () => {
     const source = await freshModules("carvey-source-");
-    source.db.createVehicle(vehicleInput("Source"));
+    const vehicleId = Number(source.db.createVehicle(vehicleInput("Source")).lastInsertRowid);
+    source.db.updateCollectionName("The Fleet");
+    const workshopId = Number(source.db.createWorkshop({
+      name: "Preferred Autos",
+      address: "1 Workshop Road",
+      phone: "01234 567890",
+      email: "hello@example.com",
+      website: "https://example.com",
+      notes: "Trusted",
+      preferred: true
+    }).lastInsertRowid);
+    source.db.createRepair({
+      vehicleId,
+      date: "2026-01-01",
+      odometer: null,
+      fault: "Service",
+      garage: "Preferred Autos",
+      workshopId,
+      cost: 120,
+      notes: null
+    });
     await fs.mkdir(source.paths.vehiclePhotoDir, { recursive: true });
     await fs.writeFile(path.join(source.paths.vehiclePhotoDir, "source.webp"), "source image");
     const sourceBackup = await source.backup.createBackupZip();
@@ -91,6 +111,9 @@ describe("backup and restore", () => {
     const vehicles = target.db.listVehicles();
     expect(vehicles).toHaveLength(1);
     expect(vehicles[0].make).toBe("Source");
+    expect(target.db.getCollectionName()).toBe("The Fleet");
+    expect(target.db.listWorkshops()[0]).toMatchObject({ name: "Preferred Autos", preferred: 1 });
+    expect(target.db.listRepairs(vehicles[0].id)[0]).toMatchObject({ garage: "Preferred Autos", workshopId });
     await expect(fs.stat(path.join(target.paths.vehiclePhotoDir, "source.webp"))).resolves.toBeTruthy();
     await expect(fs.readdir(target.paths.restoreRollbackDir)).resolves.toHaveLength(1);
     target.db.closeDbForTests();

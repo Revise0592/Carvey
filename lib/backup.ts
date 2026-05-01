@@ -147,12 +147,16 @@ function restoreDatabaseContents(backupDbPath: string) {
       columns: ["id", "make", "model", "year", "registration", "vin", "current_odometer", "purchase_price", "purchase_date", "photo_path", "thumbnail_path", "notes", "debug_destroyed", "archived", "created_at", "updated_at"]
     },
     {
+      name: "workshops",
+      columns: ["id", "name", "address", "phone", "email", "website", "notes", "preferred", "created_at", "updated_at"]
+    },
+    {
       name: "maintenance_records",
       columns: ["id", "vehicle_id", "date", "odometer", "category", "description", "cost", "notes", "created_at"]
     },
     {
       name: "repair_records",
-      columns: ["id", "vehicle_id", "date", "odometer", "fault", "garage", "cost", "notes", "created_at"]
+      columns: ["id", "vehicle_id", "date", "odometer", "fault", "garage", "workshop_id", "cost", "notes", "created_at"]
     },
     {
       name: "mot_records",
@@ -168,17 +172,29 @@ function restoreDatabaseContents(backupDbPath: string) {
   database.exec(`ATTACH DATABASE '${backupPath}' AS restore_backup`);
   try {
     const restoreVehicleColumns = new Set((database.prepare("PRAGMA restore_backup.table_info(vehicles)").all() as Array<{ name: string }>).map((column) => column.name));
+    const restoreAppSettingsColumns = new Set((database.prepare("PRAGMA restore_backup.table_info(app_settings)").all() as Array<{ name: string }>).map((column) => column.name));
+    const restoreTables = new Set((database.prepare("SELECT name FROM restore_backup.sqlite_master WHERE type = 'table'").all() as Array<{ name: string }>).map((table) => table.name));
+    const restoreRepairColumns = restoreTables.has("repair_records")
+      ? new Set((database.prepare("PRAGMA restore_backup.table_info(repair_records)").all() as Array<{ name: string }>).map((column) => column.name))
+      : new Set<string>();
     database.exec("BEGIN");
     database.exec("DELETE FROM auth_sessions");
+    database.exec("DELETE FROM app_settings");
     for (const table of [...tables].reverse()) {
       database.exec(`DELETE FROM ${table.name}`);
     }
     for (const table of tables) {
+      if (!restoreTables.has(table.name)) continue;
       const columns = table.columns.join(", ");
-      const sourceColumns = table.name === "vehicles"
-        ? table.columns.map((column) => column === "debug_destroyed" && !restoreVehicleColumns.has(column) ? "0 AS debug_destroyed" : column).join(", ")
-        : columns;
+      const sourceColumns = table.columns.map((column) => {
+        if (table.name === "vehicles" && column === "debug_destroyed" && !restoreVehicleColumns.has(column)) return "0 AS debug_destroyed";
+        if (table.name === "repair_records" && column === "workshop_id" && !restoreRepairColumns.has(column)) return "NULL AS workshop_id";
+        return column;
+      }).join(", ");
       database.exec(`INSERT INTO ${table.name} (${columns}) SELECT ${sourceColumns} FROM restore_backup.${table.name}`);
+    }
+    if (restoreAppSettingsColumns.has("key") && restoreAppSettingsColumns.has("value") && restoreAppSettingsColumns.has("updated_at")) {
+      database.exec("INSERT INTO app_settings (key, value, updated_at) SELECT key, value, updated_at FROM restore_backup.app_settings");
     }
     database.exec(`
       DELETE FROM sqlite_sequence WHERE name IN (${tables.map((table) => `'${table.name}'`).join(", ")});

@@ -40,6 +40,7 @@ export type RepairRecord = {
   odometer: number | null;
   fault: string;
   garage: string | null;
+  workshopId: number | null;
   cost: number;
   notes: string | null;
   createdAt: string;
@@ -84,6 +85,21 @@ export type AuthSession = {
   revokedAt: string | null;
 };
 
+export type Workshop = {
+  id: number;
+  name: string;
+  address: string | null;
+  phone: string | null;
+  email: string | null;
+  website: string | null;
+  notes: string | null;
+  preferred: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export const defaultCollectionName = "My cars";
+
 let db: Database.Database | null = null;
 export const dbFileName = "carvey.sqlite";
 
@@ -127,6 +143,25 @@ function migrate(database: Database.Database) {
       revoked_at TEXT
     );
 
+    CREATE TABLE IF NOT EXISTS app_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS workshops (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      address TEXT,
+      phone TEXT,
+      email TEXT,
+      website TEXT,
+      notes TEXT,
+      preferred INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
     CREATE TABLE IF NOT EXISTS vehicles (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       make TEXT NOT NULL,
@@ -165,6 +200,7 @@ function migrate(database: Database.Database) {
       odometer INTEGER,
       fault TEXT NOT NULL,
       garage TEXT,
+      workshop_id INTEGER REFERENCES workshops(id) ON DELETE SET NULL,
       cost REAL NOT NULL DEFAULT 0,
       notes TEXT,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -196,6 +232,7 @@ function migrate(database: Database.Database) {
 
     CREATE INDEX IF NOT EXISTS idx_vehicles_archived ON vehicles(archived);
     CREATE INDEX IF NOT EXISTS idx_auth_sessions_admin ON auth_sessions(admin_user_id);
+    CREATE INDEX IF NOT EXISTS idx_workshops_preferred ON workshops(preferred);
     CREATE INDEX IF NOT EXISTS idx_maintenance_vehicle ON maintenance_records(vehicle_id);
     CREATE INDEX IF NOT EXISTS idx_repairs_vehicle ON repair_records(vehicle_id);
     CREATE INDEX IF NOT EXISTS idx_mot_vehicle ON mot_records(vehicle_id);
@@ -204,6 +241,7 @@ function migrate(database: Database.Database) {
   ensureColumn(database, "vehicles", "purchase_price", "REAL");
   ensureColumn(database, "vehicles", "purchase_date", "TEXT");
   ensureColumn(database, "vehicles", "debug_destroyed", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(database, "repair_records", "workshop_id", "INTEGER REFERENCES workshops(id) ON DELETE SET NULL");
 }
 
 function ensureColumn(database: Database.Database, table: string, column: string, definition: string) {
@@ -294,6 +332,115 @@ export function revokeAuthSession(id: string) {
     .run(id);
 }
 
+export function getAppSetting(key: string) {
+  const row = getDb()
+    .prepare("SELECT value FROM app_settings WHERE key = ?")
+    .get(key) as { value: string } | undefined;
+  return row?.value ?? null;
+}
+
+export function setAppSetting(key: string, value: string) {
+  return getDb()
+    .prepare(`
+      INSERT INTO app_settings (key, value, updated_at)
+      VALUES (?, ?, CURRENT_TIMESTAMP)
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP
+    `)
+    .run(key, value);
+}
+
+export function getCollectionName() {
+  return getAppSetting("collectionName") ?? defaultCollectionName;
+}
+
+export function updateCollectionName(name: string) {
+  return setAppSetting("collectionName", name);
+}
+
+const workshopSelect = `
+  id,
+  name,
+  address,
+  phone,
+  email,
+  website,
+  notes,
+  preferred,
+  created_at as createdAt,
+  updated_at as updatedAt
+`;
+
+export function listWorkshops() {
+  return getDb()
+    .prepare(`SELECT ${workshopSelect} FROM workshops ORDER BY preferred DESC, name COLLATE NOCASE ASC, id ASC`)
+    .all() as Workshop[];
+}
+
+export function getWorkshop(id: number) {
+  return getDb()
+    .prepare(`SELECT ${workshopSelect} FROM workshops WHERE id = ?`)
+    .get(id) as Workshop | undefined;
+}
+
+export function createWorkshop(input: {
+  name: string;
+  address: string | null;
+  phone: string | null;
+  email: string | null;
+  website: string | null;
+  notes: string | null;
+  preferred: boolean;
+}) {
+  return getDb()
+    .prepare(`
+      INSERT INTO workshops (name, address, phone, email, website, notes, preferred)
+      VALUES (@name, @address, @phone, @email, @website, @notes, @preferred)
+    `)
+    .run({ ...input, preferred: input.preferred ? 1 : 0 });
+}
+
+export function updateWorkshop(id: number, input: {
+  name: string;
+  address: string | null;
+  phone: string | null;
+  email: string | null;
+  website: string | null;
+  notes: string | null;
+  preferred: boolean;
+}) {
+  return getDb()
+    .prepare(`
+      UPDATE workshops
+      SET name = @name,
+          address = @address,
+          phone = @phone,
+          email = @email,
+          website = @website,
+          notes = @notes,
+          preferred = @preferred,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = @id
+    `)
+    .run({ id, ...input, preferred: input.preferred ? 1 : 0 });
+}
+
+export function deleteWorkshop(id: number) {
+  return getDb()
+    .prepare("DELETE FROM workshops WHERE id = ?")
+    .run(id);
+}
+
+export function getOrCreateWorkshopByName(name: string): Workshop {
+  const normalized = name.trim().replace(/\s+/g, " ");
+  const db = getDb();
+  const existing = db
+    .prepare(`SELECT ${workshopSelect} FROM workshops WHERE lower(name) = lower(?)`)
+    .get(normalized) as Workshop | undefined;
+  if (existing) return existing;
+  const result = db.prepare("INSERT INTO workshops (name) VALUES (?)").run(normalized);
+  return getWorkshop(result.lastInsertRowid as number)!;
+}
+
 export function listVehicles() {
   return getDb()
     .prepare(`SELECT ${vehicleSelect} FROM vehicles WHERE archived = 0 ORDER BY updated_at DESC`)
@@ -380,7 +527,7 @@ export function listMaintenance(vehicleId: number) {
 
 export function listRepairs(vehicleId: number) {
   return getDb()
-    .prepare("SELECT id, vehicle_id as vehicleId, date, odometer, fault, garage, cost, notes, created_at as createdAt FROM repair_records WHERE vehicle_id = ? ORDER BY date DESC, id DESC")
+    .prepare("SELECT id, vehicle_id as vehicleId, date, odometer, fault, garage, workshop_id as workshopId, cost, notes, created_at as createdAt FROM repair_records WHERE vehicle_id = ? ORDER BY date DESC, id DESC")
     .all(vehicleId) as RepairRecord[];
 }
 
@@ -416,13 +563,13 @@ export function deleteMaintenance(id: number, vehicleId: number) {
 
 export function createRepair(input: Omit<RepairRecord, "id" | "createdAt">) {
   return getDb()
-    .prepare("INSERT INTO repair_records (vehicle_id, date, odometer, fault, garage, cost, notes) VALUES (@vehicleId, @date, @odometer, @fault, @garage, @cost, @notes)")
+    .prepare("INSERT INTO repair_records (vehicle_id, date, odometer, fault, garage, workshop_id, cost, notes) VALUES (@vehicleId, @date, @odometer, @fault, @garage, @workshopId, @cost, @notes)")
     .run(input);
 }
 
 export function updateRepair(id: number, vehicleId: number, input: Omit<RepairRecord, "id" | "vehicleId" | "createdAt">) {
   return getDb()
-    .prepare("UPDATE repair_records SET date = @date, odometer = @odometer, fault = @fault, garage = @garage, cost = @cost, notes = @notes WHERE id = @id AND vehicle_id = @vehicleId")
+    .prepare("UPDATE repair_records SET date = @date, odometer = @odometer, fault = @fault, garage = @garage, workshop_id = @workshopId, cost = @cost, notes = @notes WHERE id = @id AND vehicle_id = @vehicleId")
     .run({ id, vehicleId, ...input });
 }
 

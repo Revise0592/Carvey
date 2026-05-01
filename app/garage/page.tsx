@@ -4,20 +4,21 @@ import { AppFrame } from "@/components/AppFrame";
 import { RegistrationPlate } from "@/components/RegistrationPlate";
 import { VehiclePhoto } from "@/components/VehiclePhoto";
 import { createVehicleAction } from "@/app/actions";
-import { getDashboardStats } from "@/lib/db";
+import { getCollectionName, getDashboardStats } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { formatCurrency, formatDate, formatMiles } from "@/lib/format";
 
 export default async function GaragePage() {
   await requireUser();
   const stats = getDashboardStats();
+  const collectionName = getCollectionName();
 
   return (
     <AppFrame>
       <section className="page-heading">
         <div>
-          <p className="eyebrow">Your garage</p>
-          <h1>Garage</h1>
+          <p className="eyebrow">Overview</p>
+          <h1>{collectionName}</h1>
         </div>
         <details className="add-vehicle">
           <summary><Plus size={17} /> Add vehicle</summary>
