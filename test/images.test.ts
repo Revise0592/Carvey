@@ -23,7 +23,7 @@ describe("optimizeVehiclePhoto", () => {
         background: "#0f766e"
       }
     }).jpeg().toBuffer();
-    const file = new File([input], "vehicle.jpg", { type: "image/jpeg" });
+    const file = new File([new Uint8Array(input)], "vehicle.jpg", { type: "image/jpeg" });
 
     const result = await optimizeVehiclePhoto(file, 12);
     const photoPath = path.join(vehiclePhotoDir, path.basename(result.photoPath));

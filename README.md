@@ -1,6 +1,6 @@
 # Carvey
 
-Carvey is a self-hosted car maintenance dashboard for a household garage. It is designed for people who want a simple local-first way to track cars, maintenance, repairs, MOTs, reminders, costs, and vehicle photos without depending on a hosted service.
+Carvey is a self-hosted car maintenance dashboard for keeping track of your vehicles. It is designed for people who want a simple local-first way to track cars, maintenance, repairs, MOTs, reminders, costs, and vehicle photos without depending on a hosted service.
 
 The app is currently UK-first: miles, GBP, UK date formatting, and MOT terminology are used throughout.
 
@@ -47,7 +47,7 @@ Open:
 http://localhost:3000
 ```
 
-On first run, Carvey will ask you to create the household admin account.
+On first run, Carvey will ask you to create your admin account.
 
 ### Environment Variables
 

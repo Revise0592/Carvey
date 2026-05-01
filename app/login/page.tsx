@@ -18,7 +18,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           <div className="brand-mark auth-mark"><CarLogo size={22} /></div>
           <div>
             <h1>Welcome back</h1>
-            <p>Sign in to your household garage.</p>
+            <p>Sign in to Carvey.</p>
           </div>
         </div>
         {params.error ? <p className="error">Those details did not match.</p> : null}

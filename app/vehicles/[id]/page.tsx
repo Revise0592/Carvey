@@ -18,6 +18,7 @@ import {
   RepairForm
 } from "@/components/Forms";
 import { ExplosionEffect } from "@/components/ExplosionEffect";
+import { RegistrationPlate } from "@/components/RegistrationPlate";
 import { VehiclePhotoUploadForm } from "@/components/VehiclePhotoUploadForm";
 import { VehiclePhoto } from "@/components/VehiclePhoto";
 import { getVehicle, listMaintenance, listMots, listReminders, listRepairs } from "@/lib/db";
@@ -59,7 +60,7 @@ export default async function VehiclePage({
         <VehiclePhoto src={vehicle.photoPath} alt={`${vehicle.make} ${vehicle.model}`} className="hero-photo" />
         <div className="vehicle-hero-copy">
           <Link href="/garage" className="back-link">Garage</Link>
-          <span className="reg">{vehicle.registration}</span>
+          <RegistrationPlate value={vehicle.registration} className="large" />
           <h1>{vehicle.make} {vehicle.model}</h1>
           <div className="hero-meta">
             <MileagePill>{formatMiles(vehicle.currentOdometer)}</MileagePill>

@@ -14,7 +14,7 @@ export default function SetupPage() {
           <div className="brand-mark auth-mark"><CarLogo size={22} /></div>
           <div>
             <h1>Set up Carvey</h1>
-            <p>Create the household admin account for this garage.</p>
+            <p>Create your admin account.</p>
           </div>
         </div>
         <form action={setupAction} className="form-stack">
@@ -26,7 +26,7 @@ export default function SetupPage() {
             Password
             <input name="password" type="password" autoComplete="new-password" required minLength={8} />
           </label>
-          <button className="primary-button" type="submit">Create garage</button>
+          <button className="primary-button" type="submit">Create account</button>
         </form>
       </section>
     </main>

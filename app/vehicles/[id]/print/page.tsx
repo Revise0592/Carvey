@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PrintButton } from "@/components/PrintButton";
+import { RegistrationPlate } from "@/components/RegistrationPlate";
 import { requireUser } from "@/lib/auth";
 import { formatCurrency, formatDate, formatMiles } from "@/lib/format";
 import { getSellerSheetData } from "@/lib/seller-sheet";
@@ -35,7 +36,7 @@ export default async function VehiclePrintPage({ params }: { params: Promise<{ i
             <h1>{vehicle.make} {vehicle.model}</h1>
             <p>{vehicle.year ?? "Year unknown"} · {vehicle.registration}</p>
           </div>
-          <span className="reg">{vehicle.registration}</span>
+          <RegistrationPlate value={vehicle.registration} />
         </div>
         <dl className="print-facts">
           <div><dt>Current mileage</dt><dd>{formatMiles(vehicle.currentOdometer)}</dd></div>

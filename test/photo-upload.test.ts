@@ -32,7 +32,7 @@ describe("processVehiclePhotoUpload", () => {
       notes: null
     }).lastInsertRowid);
     const buffer = await sharp({ create: { width: 1800, height: 1200, channels: 3, background: "#ffffff" } }).png().toBuffer();
-    const result = await upload.processVehiclePhotoUpload(vehicleId, new File([buffer], "car.png", { type: "image/png" }));
+    const result = await upload.processVehiclePhotoUpload(vehicleId, new File([new Uint8Array(buffer)], "car.png", { type: "image/png" }));
 
     expect(result.ok).toBe(true);
     expect(db.getVehicle(vehicleId)?.photoPath).toMatch(/\.webp$/);

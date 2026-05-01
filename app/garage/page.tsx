@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { CalendarClock, Plus, PoundSterling, Wrench } from "lucide-react";
 import { AppFrame } from "@/components/AppFrame";
+import { RegistrationPlate } from "@/components/RegistrationPlate";
 import { VehiclePhoto } from "@/components/VehiclePhoto";
 import { createVehicleAction } from "@/app/actions";
 import { getDashboardStats } from "@/lib/db";
@@ -15,7 +16,7 @@ export default async function GaragePage() {
     <AppFrame>
       <section className="page-heading">
         <div>
-          <p className="eyebrow">Household garage</p>
+          <p className="eyebrow">Your garage</p>
           <h1>Garage</h1>
         </div>
         <details className="add-vehicle">
@@ -58,7 +59,7 @@ export default async function GaragePage() {
           <Link className="vehicle-card" href={`/vehicles/${vehicle.id}`} key={vehicle.id}>
             <VehiclePhoto src={vehicle.thumbnailPath} alt={`${vehicle.make} ${vehicle.model}`} />
             <div className="vehicle-card-body">
-              <span className="reg">{vehicle.registration}</span>
+              <RegistrationPlate value={vehicle.registration} />
               <h2>{vehicle.make} {vehicle.model}</h2>
               <p>{vehicle.year ?? "Year unknown"} · {formatMiles(vehicle.currentOdometer)}</p>
               {vehicle.purchasePrice ? <p>Bought for {formatCurrency(vehicle.purchasePrice)}</p> : null}
