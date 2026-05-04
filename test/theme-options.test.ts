@@ -12,6 +12,10 @@ describe("theme options", () => {
   it("normalizes car palettes with factory as the fallback", () => {
     expect(normalizeThemePalette("british-racing")).toBe("british-racing");
     expect(normalizeThemePalette("petrol-blue")).toBe("petrol-blue");
+    expect(normalizeThemePalette("heritage-cream")).toBe("heritage-cream");
+    expect(normalizeThemePalette("oxford-blue")).toBe("oxford-blue");
+    expect(normalizeThemePalette("burgundy-velour")).toBe("burgundy-velour");
+    expect(normalizeThemePalette("champagne-gold")).toBe("champagne-gold");
     expect(normalizeThemePalette("unknown")).toBe("factory");
     expect(normalizeThemePalette(null)).toBe("factory");
   });
@@ -23,7 +27,11 @@ describe("theme options", () => {
       "midnight-alloy",
       "tan-leather",
       "signal-red",
-      "petrol-blue"
+      "petrol-blue",
+      "heritage-cream",
+      "oxford-blue",
+      "burgundy-velour",
+      "champagne-gold"
     ]);
   });
 });

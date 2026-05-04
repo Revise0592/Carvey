@@ -31,6 +31,26 @@ export const themePalettes = [
     id: "petrol-blue",
     label: "Petrol Blue",
     swatches: ["#126b8f", "#eef5f6", "#102633"]
+  },
+  {
+    id: "heritage-cream",
+    label: "Heritage Cream",
+    swatches: ["#8e5a33", "#f7f1e4", "#33241c"]
+  },
+  {
+    id: "oxford-blue",
+    label: "Oxford Blue",
+    swatches: ["#1f4b7a", "#eef1f4", "#102033"]
+  },
+  {
+    id: "burgundy-velour",
+    label: "Burgundy Velour",
+    swatches: ["#7a2c3c", "#f6ece8", "#2d1a20"]
+  },
+  {
+    id: "champagne-gold",
+    label: "Champagne Gold",
+    swatches: ["#b08a42", "#f5f0e2", "#394047"]
   }
 ] as const;
 

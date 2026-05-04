@@ -4,7 +4,12 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Carvey",
-  description: "A self-hosted car maintenance dashboard."
+  description: "A self-hosted car maintenance dashboard.",
+  icons: {
+    icon: "/icons/icon-light.png",
+    shortcut: "/icons/icon-light.png",
+    apple: "/icons/icon-light.png"
+  }
 };
 
 export const viewport: Viewport = {
