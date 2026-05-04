@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { LogOut, Settings } from "lucide-react";
 import { logoutAction } from "@/app/actions";
-import { BrandLogo } from "@/components/BrandLogo";
+import { BrandLogo, BrandWordmark } from "@/components/BrandLogo";
 
 export function AppFrame({ children }: { children: React.ReactNode }) {
   return (
@@ -9,7 +9,7 @@ export function AppFrame({ children }: { children: React.ReactNode }) {
       <header className="topbar">
         <Link href="/garage" className="brand">
           <span className="brand-mark small"><BrandLogo /></span>
-          <span className="brand-wordmark">Carvey</span>
+          <BrandWordmark />
         </Link>
         <nav className="top-actions">
           <Link href="/settings" className="icon-button" aria-label="Settings" title="Settings">
