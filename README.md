@@ -6,7 +6,7 @@ Carvey is a self-hosted, local-first car maintenance tracker for managing vehicl
 
 ## Screenshots
 
-![Carvey App](screenshot/Screenshot_20260504_213758.png)
+![Carvey App](screenshot/Screenshot_20260504_222651.png)
 
 ## What It Does
 
