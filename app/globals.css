@@ -19,6 +19,9 @@
   --accent-strong: #115e59;
   --accent-contrast: #ffffff;
   --accent-soft: color-mix(in srgb, var(--accent) 14%, transparent);
+  --warning: #9a6700;
+  --warning-strong: #7a4b00;
+  --warning-soft: color-mix(in srgb, #f6c453 26%, var(--surface) 74%);
   --danger: #b42318;
   --control-bg: #ffffff;
   --control-fg: #17181c;
@@ -53,6 +56,9 @@
   --accent-strong: #5ed4c7;
   --accent-contrast: #071312;
   --accent-soft: color-mix(in srgb, var(--accent) 18%, transparent);
+  --warning: #ffd27d;
+  --warning-strong: #ffe1ab;
+  --warning-soft: color-mix(in srgb, #f0ad33 18%, var(--surface) 82%);
   --danger: #ff8a7a;
   --control-bg: #252832;
   --control-fg: #f4f5f7;
@@ -1026,8 +1032,9 @@ textarea:focus-visible {
 
 .tag.advisory,
 .tag.upcoming {
-  background: #fff0c2;
-  color: #7a4b00;
+  border-color: color-mix(in srgb, var(--warning) 30%, var(--line));
+  background: var(--warning-soft);
+  color: var(--warning-strong);
 }
 
 .sold-pill,
