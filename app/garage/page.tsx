@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarClock, PoundSterling, Wrench } from "lucide-react";
+import { BadgeCheck, CalendarClock, PoundSterling, Wrench } from "lucide-react";
 import { AppFrame } from "@/components/AppFrame";
 import { CreateVehicleForm } from "@/components/Forms";
 import { RegistrationPlate } from "@/components/RegistrationPlate";
@@ -24,17 +24,17 @@ export default async function GaragePage() {
       </section>
 
       <section className="stats-grid">
-        <article className="stat-card">
+        <article className="stat-card stat-card-garage">
           <Wrench size={20} />
           <span>Vehicles</span>
           <strong>{stats.vehicles.length}</strong>
         </article>
-        <article className="stat-card">
+        <article className="stat-card stat-card-spend">
           <PoundSterling size={20} />
           <span>Spent this year</span>
           <strong>{formatCurrency(stats.yearlySpend)}</strong>
         </article>
-        <article className="stat-card">
+        <article className="stat-card stat-card-reminders">
           <CalendarClock size={20} />
           <span>Open reminders</span>
           <strong>{stats.reminders.length}</strong>
@@ -44,13 +44,20 @@ export default async function GaragePage() {
       <section className="garage-grid">
         {stats.vehicles.map((vehicle) => (
           <Link className="vehicle-card" href={`/vehicles/${vehicle.id}`} key={vehicle.id}>
-            <VehiclePhoto src={vehicle.thumbnailPath} alt={`${vehicle.make} ${vehicle.model}`} />
+            <div className="photo-frame vehicle-card-photo-frame">
+              <VehiclePhoto src={vehicle.thumbnailPath} alt={`${vehicle.make} ${vehicle.model}`} />
+              {vehicle.sold ? (
+                <span className="photo-sold-badge photo-sold-badge-compact">
+                  <BadgeCheck size={13} />
+                  Sold
+                </span>
+              ) : null}
+            </div>
             <div className="vehicle-card-body">
               <RegistrationPlate value={vehicle.registration} />
               <h2>{vehicle.make} {vehicle.model}</h2>
               <p>{vehicle.year ?? "Year unknown"} · {formatMiles(vehicle.effectiveOdometer)}</p>
               {vehicle.purchasePrice ? <p>Bought for {formatCurrency(vehicle.purchasePrice)}</p> : null}
-              {vehicle.sold ? <span className="tag sold">Sold</span> : null}
             </div>
           </Link>
         ))}

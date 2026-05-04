@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CalendarDays, Hammer, Printer, ShieldCheck, Wrench } from "lucide-react";
+import { BadgeCheck, CalendarDays, Hammer, Printer, ShieldCheck, Wrench } from "lucide-react";
 import { AppFrame } from "@/components/AppFrame";
+import { BackButton } from "@/components/BackButton";
 import {
   CompleteReminderButton,
   DebugVehicleForm,
@@ -58,8 +59,17 @@ export default async function VehiclePage({
   return (
     <AppFrame>
       {debugEnabled ? <ExplosionEffect active={Boolean(vehicle.debugDestroyed)} /> : null}
+      <BackButton />
       <section className="vehicle-hero">
-        <VehiclePhoto src={vehicle.photoPath} alt={`${vehicle.make} ${vehicle.model}`} className="hero-photo" />
+        <div className="photo-frame hero-photo-frame">
+          <VehiclePhoto src={vehicle.photoPath} alt={`${vehicle.make} ${vehicle.model}`} className="hero-photo" />
+          {vehicle.sold ? (
+            <span className="photo-sold-badge">
+              <BadgeCheck size={14} />
+              Sold
+            </span>
+          ) : null}
+        </div>
         <div className="vehicle-hero-copy">
           <Link href="/garage" className="back-link">{collectionName}</Link>
           <RegistrationPlate value={vehicle.registration} className="large" />
@@ -69,7 +79,6 @@ export default async function VehiclePage({
             <span className="pill">{vehicle.year ?? "Year unknown"}</span>
             <span className="pill">{formatCurrency(spent)} logged</span>
             {vehicle.purchasePrice ? <span className="pill">{formatCurrency(vehicle.purchasePrice)} paid</span> : null}
-            {vehicle.sold ? <span className="tag sold">Sold</span> : null}
           </div>
           {vehicle.notes ? <p>{vehicle.notes}</p> : null}
           <div className="inline-form">
@@ -129,7 +138,14 @@ export default async function VehiclePage({
       ) : null}
 
       {activeTab === "maintenance" ? (
-        <RecordSection title="Maintenance" icon={<Wrench size={19} />} form={<MaintenanceForm vehicleId={vehicle.id} categories={categories} />}>
+        <RecordSection
+          title="Maintenance"
+          icon={<Wrench size={19} />}
+          form={<MaintenanceForm vehicleId={vehicle.id} categories={categories} />}
+          emptyTitle="No maintenance logged"
+          emptyMessage="Add the first service or upkeep entry for this car."
+          hasRecords={maintenance.length > 0}
+        >
           {maintenance.map((record) => (
             <article className="record-card" key={record.id}>
               <div className="record-header"><span className="tag">{record.category}</span><h3>{record.description}</h3></div>
@@ -143,7 +159,14 @@ export default async function VehiclePage({
       ) : null}
 
       {activeTab === "repairs" ? (
-        <RecordSection title="Repairs" icon={<Hammer size={19} />} form={<RepairForm vehicleId={vehicle.id} workshops={workshops} />}>
+        <RecordSection
+          title="Repairs"
+          icon={<Hammer size={19} />}
+          form={<RepairForm vehicleId={vehicle.id} workshops={workshops} />}
+          emptyTitle="No repairs logged"
+          emptyMessage="Track faults, fixes, and garage work once they happen."
+          hasRecords={repairs.length > 0}
+        >
           {repairs.map((record) => (
             <article className="record-card" key={record.id}>
               <div className="record-header"><span className="tag">{record.garage ?? "Repair"}</span><h3>{record.fault}</h3></div>
@@ -157,7 +180,14 @@ export default async function VehiclePage({
       ) : null}
 
       {activeTab === "mots" ? (
-        <RecordSection title="MOTs" icon={<ShieldCheck size={19} />} form={<MotForm vehicleId={vehicle.id} />}>
+        <RecordSection
+          title="MOTs"
+          icon={<ShieldCheck size={19} />}
+          form={<MotForm vehicleId={vehicle.id} />}
+          emptyTitle="No MOT history yet"
+          emptyMessage="Add the latest MOT result to start building this vehicle's test record."
+          hasRecords={mots.length > 0}
+        >
           {mots.map((record) => (
             <article className="record-card" key={record.id}>
               <div className="record-header"><span className={`tag ${record.result}`}>{record.result}</span><h3>Expires {formatDate(record.expiryDate)}</h3></div>
@@ -172,7 +202,14 @@ export default async function VehiclePage({
       ) : null}
 
       {activeTab === "reminders" ? (
-        <RecordSection title="Reminders" icon={<CalendarDays size={19} />} form={<ReminderForm vehicleId={vehicle.id} />}>
+        <RecordSection
+          title="Reminders"
+          icon={<CalendarDays size={19} />}
+          form={<ReminderForm vehicleId={vehicle.id} />}
+          emptyTitle="No reminders set"
+          emptyMessage="Create reminders for upcoming jobs, inspections, or mileage milestones."
+          hasRecords={reminders.length > 0}
+        >
           {reminders.map((record) => {
             const status = getReminderStatus(record, vehicle);
             const reminderDetails = [
@@ -201,12 +238,18 @@ function RecordSection({
   title,
   icon,
   form,
-  children
+  children,
+  hasRecords,
+  emptyTitle,
+  emptyMessage
 }: {
   title: string;
   icon: React.ReactNode;
   form: React.ReactNode;
   children: React.ReactNode;
+  hasRecords: boolean;
+  emptyTitle: string;
+  emptyMessage: string;
 }) {
   return (
     <section className="records-shell">
@@ -215,7 +258,12 @@ function RecordSection({
         {form}
       </div>
       <div className="records-grid">
-        {children}
+        {hasRecords ? children : (
+          <div className="empty-state records-empty-state">
+            <h3>{emptyTitle}</h3>
+            <p>{emptyMessage}</p>
+          </div>
+        )}
       </div>
     </section>
   );

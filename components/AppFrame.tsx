@@ -1,15 +1,15 @@
 import Link from "next/link";
 import { LogOut, Settings } from "lucide-react";
 import { logoutAction } from "@/app/actions";
-import { CarLogo } from "@/components/CarLogo";
+import { BrandLogo } from "@/components/BrandLogo";
 
 export function AppFrame({ children }: { children: React.ReactNode }) {
   return (
     <main className="app-shell">
       <header className="topbar">
         <Link href="/garage" className="brand">
-          <span className="brand-mark small"><CarLogo size={19} /></span>
-          <span>Carvey</span>
+          <span className="brand-mark small"><BrandLogo /></span>
+          <span className="brand-wordmark">Carvey</span>
         </Link>
         <nav className="top-actions">
           <Link href="/settings" className="icon-button" aria-label="Settings" title="Settings">

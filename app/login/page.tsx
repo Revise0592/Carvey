@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 import { loginAction } from "../actions";
+import { BrandLogo } from "@/components/BrandLogo";
 import { currentUser } from "@/lib/auth";
 import { hasAdminUser } from "@/lib/db";
-import { CarLogo } from "@/components/CarLogo";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +15,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
     <main className="auth-shell">
       <section className="auth-card">
         <div className="auth-header">
-          <div className="brand-mark auth-mark"><CarLogo size={22} /></div>
+          <div className="brand-mark auth-mark"><BrandLogo /></div>
           <div>
             <h1>Welcome back</h1>
             <p>Sign in to Carvey.</p>
