@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { CalendarClock, Plus, PoundSterling, Wrench } from "lucide-react";
+import { CalendarClock, PoundSterling, Wrench } from "lucide-react";
 import { AppFrame } from "@/components/AppFrame";
+import { CreateVehicleForm } from "@/components/Forms";
 import { RegistrationPlate } from "@/components/RegistrationPlate";
 import { VehiclePhoto } from "@/components/VehiclePhoto";
-import { createVehicleAction } from "@/app/actions";
 import { getCollectionName, getDashboardStats } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { formatCurrency, formatDate, formatMiles } from "@/lib/format";
@@ -20,21 +20,7 @@ export default async function GaragePage() {
           <p className="eyebrow">Overview</p>
           <h1>{collectionName}</h1>
         </div>
-        <details className="add-vehicle">
-          <summary><Plus size={17} /> Add vehicle</summary>
-          <form action={createVehicleAction} className="record-form floating-form">
-            <input name="make" placeholder="Make" required />
-            <input name="model" placeholder="Model" required />
-            <input name="year" type="number" min="1886" max="2100" placeholder="Year" />
-            <input name="registration" placeholder="Registration" required />
-            <input name="vin" placeholder="VIN" />
-            <input name="currentOdometer" type="number" min="0" placeholder="Current mileage" />
-            <input name="purchasePrice" type="number" min="0" step="0.01" placeholder="Purchase price" />
-            <input name="purchaseDate" type="date" aria-label="Purchase date" />
-            <textarea name="notes" placeholder="Notes" />
-            <button className="primary-button" type="submit">Create vehicle</button>
-          </form>
-        </details>
+        <CreateVehicleForm />
       </section>
 
       <section className="stats-grid">

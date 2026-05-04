@@ -5,11 +5,15 @@ import fsp from "node:fs/promises";
 import path from "node:path";
 import Database from "better-sqlite3";
 import { dbFileName, getDb } from "./db";
-import { ensureDataDirs, restoreRollbackDir, restoreStagingDir, tempDir, uploadDir } from "./paths";
+import { dataDir, ensureDataDirs, restoreRollbackDir, restoreStagingDir, tempDir, uploadDir } from "./paths";
 
 const backupFormatVersion = 1;
 const appVersion = "0.1.0";
 const maxRestoreBytes = 256 * 1024 * 1024;
+const showcaseDemoBackupPath = process.env.CARVEY_SHOWCASE_DEMO_BACKUP ?? path.resolve(process.cwd(), "data/demo/showcase-backup.zip");
+const debugDemoDir = path.join(dataDir, "debug-demo");
+const debugDemoRollbackZipPath = path.join(debugDemoDir, "previous-live-data.zip");
+const debugDemoStatePath = path.join(debugDemoDir, "state.json");
 
 export type BackupManifest = {
   app: "Carvey";
@@ -36,6 +40,18 @@ export type RestoreSummary = {
 };
 
 type PreviewResult = { ok: true; summary: RestoreSummary } | { ok: false; message: string };
+type MutationResult = { ok: true } | { ok: false; message: string };
+type DebugDemoState = {
+  active: boolean;
+  activatedAt: string | null;
+};
+
+export type ShowcaseDemoStatus = {
+  available: boolean;
+  active: boolean;
+  canRestorePrevious: boolean;
+  summary: RestoreSummary | null;
+};
 
 export async function createBackupZip() {
   ensureDataDirs();
@@ -116,22 +132,68 @@ export async function confirmRestore(token: string) {
 
   try {
     await validateAndSummariseZip(buffer, token, extractDir);
-    const timestamp = new Date().toISOString().replaceAll(":", "-").replaceAll(".", "-");
-    const rollbackDir = path.join(restoreRollbackDir, timestamp);
-    await fsp.mkdir(rollbackDir, { recursive: true });
-
-    await getDb().backup(path.join(rollbackDir, dbFileName));
-    await copyDir(uploadDir, path.join(rollbackDir, "uploads"));
-
-    restoreDatabaseContents(path.join(extractDir, dbFileName));
-    await fsp.rm(uploadDir, { recursive: true, force: true });
-    await fsp.mkdir(uploadDir, { recursive: true });
-    await copyDir(path.join(extractDir, "uploads"), uploadDir);
+    const rollbackDir = await createRollbackSnapshot();
+    await restoreExtractedBackup(extractDir);
     await fsp.rm(stageDir, { recursive: true, force: true });
     return { ok: true as const, rollbackDir };
   } catch (error) {
     return { ok: false as const, message: error instanceof Error ? error.message : "Restore failed." };
   }
+}
+
+export async function getShowcaseDemoStatus(): Promise<ShowcaseDemoStatus> {
+  const summary = await readBackupSummaryFromFile(showcaseDemoBackupPath);
+  const state = await readDebugDemoState();
+  return {
+    available: Boolean(summary),
+    active: state.active,
+    canRestorePrevious: await fileExists(debugDemoRollbackZipPath),
+    summary
+  };
+}
+
+export async function activateShowcaseDemoData(): Promise<MutationResult> {
+  ensureDataDirs();
+  const buffer = await readPackagedDemoBuffer();
+  if (!buffer) return { ok: false, message: "Showcase demo backup is not available." };
+
+  const state = await readDebugDemoState();
+  const rollbackExists = await fileExists(debugDemoRollbackZipPath);
+  await fsp.mkdir(debugDemoDir, { recursive: true });
+
+  // Preserve the original live data snapshot while demo mode is active.
+  if (!state.active || !rollbackExists) {
+    const liveBackup = await createBackupZip();
+    await fsp.writeFile(debugDemoRollbackZipPath, liveBackup.buffer);
+  }
+
+  const extractDir = path.join(debugDemoDir, "showcase-extract");
+  await restoreValidatedBackupBuffer(buffer, `showcase-${Date.now()}`, extractDir);
+  await writeDebugDemoState({ active: true, activatedAt: new Date().toISOString() });
+  return { ok: true };
+}
+
+export async function restorePreviousDebugDemoData(): Promise<MutationResult> {
+  ensureDataDirs();
+  const buffer = await readFileIfExists(debugDemoRollbackZipPath);
+  if (!buffer) return { ok: false, message: "No previous live data snapshot is available." };
+
+  const extractDir = path.join(debugDemoDir, "rollback-extract");
+  await restoreValidatedBackupBuffer(buffer, `rollback-${Date.now()}`, extractDir);
+  await fsp.rm(debugDemoDir, { recursive: true, force: true });
+  return { ok: true };
+}
+
+export async function saveCurrentDataAsShowcaseDemo(): Promise<MutationResult> {
+  await writeCurrentDataToShowcaseDemoBackup();
+  return { ok: true };
+}
+
+export async function syncShowcaseDemoBackupIfActive() {
+  const state = await readDebugDemoState();
+  if (!state.active) return false;
+  await writeCurrentDataToShowcaseDemoBackup();
+  return true;
 }
 
 function restoreDatabaseContents(backupDbPath: string) {
@@ -144,11 +206,15 @@ function restoreDatabaseContents(backupDbPath: string) {
     },
     {
       name: "vehicles",
-      columns: ["id", "make", "model", "year", "registration", "vin", "current_odometer", "purchase_price", "purchase_date", "photo_path", "thumbnail_path", "notes", "debug_destroyed", "archived", "created_at", "updated_at"]
+      columns: ["id", "make", "model", "year", "registration", "vin", "current_odometer", "purchase_price", "purchase_date", "photo_path", "thumbnail_path", "notes", "debug_destroyed", "archived", "sold", "created_at", "updated_at"]
     },
     {
       name: "workshops",
       columns: ["id", "name", "address", "phone", "email", "website", "notes", "preferred", "created_at", "updated_at"]
+    },
+    {
+      name: "maintenance_categories",
+      columns: ["id", "name", "created_at", "updated_at"]
     },
     {
       name: "maintenance_records",
@@ -188,6 +254,7 @@ function restoreDatabaseContents(backupDbPath: string) {
       const columns = table.columns.join(", ");
       const sourceColumns = table.columns.map((column) => {
         if (table.name === "vehicles" && column === "debug_destroyed" && !restoreVehicleColumns.has(column)) return "0 AS debug_destroyed";
+        if (table.name === "vehicles" && column === "sold" && !restoreVehicleColumns.has(column)) return "0 AS sold";
         if (table.name === "repair_records" && column === "workshop_id" && !restoreRepairColumns.has(column)) return "NULL AS workshop_id";
         return column;
       }).join(", ");
@@ -267,6 +334,95 @@ async function validateAndSummariseZip(buffer: Buffer, token: string, extractDir
 function countRows(database: Database.Database, table: string) {
   const row = database.prepare(`SELECT COUNT(*) as count FROM ${table}`).get() as { count: number };
   return row.count;
+}
+
+async function createRollbackSnapshot() {
+  const timestamp = new Date().toISOString().replaceAll(":", "-").replaceAll(".", "-");
+  const rollbackDir = path.join(restoreRollbackDir, timestamp);
+  await fsp.mkdir(rollbackDir, { recursive: true });
+  await getDb().backup(path.join(rollbackDir, dbFileName));
+  await copyDir(uploadDir, path.join(rollbackDir, "uploads"));
+  return rollbackDir;
+}
+
+async function writeCurrentDataToShowcaseDemoBackup() {
+  ensureDataDirs();
+  await fsp.mkdir(path.dirname(showcaseDemoBackupPath), { recursive: true });
+  const { buffer } = await createBackupZip();
+  const tempPath = `${showcaseDemoBackupPath}.tmp`;
+  await fsp.writeFile(tempPath, buffer);
+  await fsp.rename(tempPath, showcaseDemoBackupPath);
+}
+
+async function restoreExtractedBackup(extractDir: string) {
+  restoreDatabaseContents(path.join(extractDir, dbFileName));
+  await fsp.rm(uploadDir, { recursive: true, force: true });
+  await fsp.mkdir(uploadDir, { recursive: true });
+  await copyDir(path.join(extractDir, "uploads"), uploadDir);
+  ensureDataDirs();
+}
+
+async function restoreValidatedBackupBuffer(buffer: Buffer, token: string, extractDir: string) {
+  try {
+    await validateAndSummariseZip(buffer, token, extractDir);
+    await restoreExtractedBackup(extractDir);
+  } finally {
+    await fsp.rm(extractDir, { recursive: true, force: true });
+  }
+}
+
+async function readBackupSummaryFromFile(filePath: string) {
+  const buffer = await readFileIfExists(filePath);
+  if (!buffer) return null;
+  const extractDir = path.join(tempDir, `backup-summary-${crypto.randomUUID()}`);
+  try {
+    return await validateAndSummariseZip(buffer, "summary", extractDir);
+  } catch {
+    return null;
+  } finally {
+    await fsp.rm(extractDir, { recursive: true, force: true });
+  }
+}
+
+async function readPackagedDemoBuffer() {
+  return readFileIfExists(showcaseDemoBackupPath);
+}
+
+async function readDebugDemoState(): Promise<DebugDemoState> {
+  const buffer = await readFileIfExists(debugDemoStatePath);
+  if (!buffer) return { active: false, activatedAt: null };
+  try {
+    const parsed = JSON.parse(buffer.toString("utf8")) as Partial<DebugDemoState>;
+    return {
+      active: parsed.active === true,
+      activatedAt: typeof parsed.activatedAt === "string" ? parsed.activatedAt : null
+    };
+  } catch {
+    return { active: false, activatedAt: null };
+  }
+}
+
+async function writeDebugDemoState(state: DebugDemoState) {
+  await fsp.mkdir(debugDemoDir, { recursive: true });
+  await fsp.writeFile(debugDemoStatePath, JSON.stringify(state, null, 2));
+}
+
+async function readFileIfExists(filePath: string) {
+  try {
+    return await fsp.readFile(filePath);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw error;
+  }
+}
+
+async function fileExists(filePath: string) {
+  try {
+    await fsp.access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 async function listUploadFiles() {

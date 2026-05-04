@@ -2,9 +2,10 @@ import Link from "next/link";
 import { Building2, Download, KeyRound, RotateCcw, Settings2, Trash2, Upload, UserRound } from "lucide-react";
 import { AppFrame } from "@/components/AppFrame";
 import { ThemeControls } from "@/components/ThemeControls";
-import { createMaintenanceCategoryAction, createWorkshopAction, deleteMaintenanceCategoryAction, deleteWorkshopAction, updateCollectionNameAction, updateMaintenanceCategoryAction, updatePasswordAction, updateUsernameAction, updateWorkshopAction } from "@/app/actions";
+import { createMaintenanceCategoryAction, createWorkshopAction, deleteMaintenanceCategoryAction, deleteWorkshopAction, loadShowcaseDemoDataAction, restorePreviousDemoDataAction, saveCurrentShowcaseDemoDataAction, updateCollectionNameAction, updateMaintenanceCategoryAction, updatePasswordAction, updateUsernameAction, updateWorkshopAction } from "@/app/actions";
 import { requireUser } from "@/lib/auth";
-import { readRestoreSummary } from "@/lib/backup";
+import { getShowcaseDemoStatus, readRestoreSummary } from "@/lib/backup";
+import { debugEasterEggsEnabled } from "@/lib/debug";
 import { getCollectionName, listMaintenanceCategories, listWorkshops, type MaintenanceCategory, type Workshop } from "@/lib/db";
 import { formatDate } from "@/lib/format";
 
@@ -13,11 +14,13 @@ export const dynamic = "force-dynamic";
 const settingsTabs = ["personalisation", "admin", "workshops", "categories", "backup"] as const;
 type SettingsTab = (typeof settingsTabs)[number];
 
-export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ tab?: string; account?: string; app?: string; workshop?: string; category?: string; restore?: string; token?: string; message?: string }> }) {
+export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ tab?: string; account?: string; app?: string; workshop?: string; category?: string; restore?: string; token?: string; debug?: string; message?: string }> }) {
   const user = await requireUser();
   const params = await searchParams;
   const activeTab = settingsTabs.includes(params.tab as SettingsTab) ? (params.tab as SettingsTab) : "personalisation";
   const restoreSummary = await readRestoreSummary(params.token);
+  const debugEnabled = debugEasterEggsEnabled();
+  const debugDemoStatus = debugEnabled ? await getShowcaseDemoStatus() : null;
   const collectionName = getCollectionName();
   const workshops = listWorkshops();
   const categories = listMaintenanceCategories();
@@ -181,6 +184,40 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
               <button className="secondary-button" type="submit">Preview restore</button>
             </form>
           </article>
+
+          {debugEnabled && debugDemoStatus ? (
+            <article className="settings-panel">
+              <h2>Debug tools</h2>
+              <p className="muted">Load a curated screenshot garage for demos and GitHub screenshots. This temporarily replaces the live view until you restore the saved snapshot.</p>
+              {params.debug === "demo-loaded" ? <p className="success">Showcase demo data loaded.</p> : null}
+              {params.debug === "demo-saved" ? <p className="success">Current demo data saved as the showcase backup.</p> : null}
+              {params.debug === "previous-restored" ? <p className="success">Previous live data restored.</p> : null}
+              {params.debug === "missing-rollback" ? <p className="error">No previous live-data snapshot is available to restore.</p> : null}
+              {params.debug === "error" ? <p className="error">{params.message ?? "Debug demo action failed."}</p> : null}
+              <dl className="metric-list">
+                <span>Demo vehicles</span>
+                <strong>{debugDemoStatus.summary?.counts.vehicles ?? "Unavailable"}</strong>
+                <span>Logged records</span>
+                <strong>{debugDemoStatus.summary ? debugDemoStatus.summary.counts.maintenance + debugDemoStatus.summary.counts.repairs + debugDemoStatus.summary.counts.mots + debugDemoStatus.summary.counts.reminders : "Unavailable"}</strong>
+                <span>Demo photos/files</span>
+                <strong>{debugDemoStatus.summary?.uploadCount ?? "Unavailable"}</strong>
+                <span>Status</span>
+                <strong>{debugDemoStatus.active ? "Demo active" : "Live data active"}</strong>
+              </dl>
+              <form action={loadShowcaseDemoDataAction} className="record-form">
+                <p className="muted">Safe for screenshots: your current data is snapshotted before the demo garage is applied.</p>
+                <button className="secondary-button" type="submit" disabled={!debugDemoStatus.available}>Load showcase demo data</button>
+              </form>
+              <form action={saveCurrentShowcaseDemoDataAction} className="record-form">
+                <p className="muted">While demo mode is active, edits and photo uploads are now synced automatically. Use this to save the current garage to the packaged showcase backup on demand as well.</p>
+                <button className="primary-button" type="submit" disabled={!debugDemoStatus.active}>Save current demo data</button>
+              </form>
+              <form action={restorePreviousDemoDataAction} className="record-form">
+                <p className="muted">Return to the last live dataset captured before demo mode was enabled.</p>
+                <button className="danger-button" type="submit" disabled={!debugDemoStatus.canRestorePrevious}>Return to previous data</button>
+              </form>
+            </article>
+          ) : null}
 
           {restoreSummary ? (
             <article className="settings-panel restore-preview">

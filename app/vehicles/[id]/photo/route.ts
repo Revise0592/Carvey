@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
+import { syncShowcaseDemoBackupIfActive } from "@/lib/backup";
 import { processVehiclePhotoUpload } from "@/lib/photo-upload";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -23,6 +24,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const result = await processVehiclePhotoUpload(vehicleId, file);
   if (!result.ok) return new NextResponse(result.message, { status: result.status });
 
+  await syncShowcaseDemoBackupIfActive();
   revalidatePath("/garage");
   revalidatePath(`/vehicles/${vehicleId}`);
   return new Response(null, { status: 303, headers: { Location: `/vehicles/${vehicleId}` } });

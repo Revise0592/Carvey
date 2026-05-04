@@ -172,6 +172,7 @@ body {
   color: var(--text);
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif;
   letter-spacing: 0;
+  overflow-x: hidden;
 }
 
 a {
@@ -231,6 +232,11 @@ summary {
   display: flex;
   align-items: center;
   gap: 0.6rem;
+}
+
+.hero-meta,
+.inline-form {
+  flex-wrap: wrap;
 }
 
 .brand {
@@ -301,6 +307,13 @@ summary {
   color: var(--control-fg);
   border: 1px solid var(--line);
   padding: 0.7rem 0.9rem;
+}
+
+.primary-button,
+.secondary-button,
+.file-button,
+.modal-trigger {
+  max-width: 100%;
 }
 
 .danger-button {
@@ -445,36 +458,6 @@ summary {
   text-transform: uppercase;
   font-size: 0.76rem;
   font-weight: 800;
-}
-
-.add-vehicle {
-  position: relative;
-}
-
-.add-vehicle summary {
-  list-style: none;
-  min-height: 42px;
-  border-radius: 8px;
-  background: var(--inverse-bg);
-  color: var(--inverse-fg);
-  padding: 0.7rem 0.95rem;
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  font-weight: 700;
-}
-
-.floating-form {
-  position: absolute;
-  right: 0;
-  z-index: 5;
-  width: min(420px, calc(100vw - 32px));
-  margin-top: 8px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 14px;
-  box-shadow: var(--shadow);
 }
 
 .stats-grid,
@@ -656,6 +639,7 @@ summary {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 1rem;
   border-top: 1px solid var(--line);
   padding: 0.8rem 0;
@@ -682,6 +666,7 @@ summary {
 .vehicle-hero-copy {
   display: grid;
   gap: 0.8rem;
+  min-width: 0;
 }
 
 .vehicle-hero h1 {
@@ -697,16 +682,20 @@ summary {
   display: flex;
   gap: 0.4rem;
   flex-wrap: wrap;
-  overflow: visible;
+  overflow-x: auto;
+  overflow-y: hidden;
   border-bottom: 1px solid var(--line);
   margin-bottom: 22px;
+  scrollbar-width: thin;
 }
 
 .tabs a {
+  flex: 0 0 auto;
   padding: 0.85rem 1rem;
   color: var(--muted);
   font-weight: 750;
   border-bottom: 3px solid transparent;
+  white-space: nowrap;
 }
 
 .tabs a.active {
@@ -1288,7 +1277,19 @@ summary {
 @media (max-width: 760px) {
   .app-shell {
     width: min(100% - 24px, 1180px);
-    padding-top: 14px;
+    padding: 14px 0 36px;
+  }
+
+  .topbar {
+    padding: 4px 0 20px;
+  }
+
+  .brand {
+    font-size: 1rem;
+  }
+
+  .top-actions {
+    gap: 0.45rem;
   }
 
   .stats-grid,
@@ -1303,14 +1304,42 @@ summary {
     display: grid;
   }
 
-  .floating-form,
-  .edit-panel .edit-menu {
-    position: static;
-    width: 100%;
+  .page-heading,
+  .section-heading,
+  .vehicle-hero-copy,
+  .settings-panel,
+  .record-card,
+  .list-panel,
+  .empty-state {
+    gap: 0.85rem;
   }
 
   .hero-photo {
     min-height: 240px;
+  }
+
+  .vehicle-hero {
+    gap: 18px;
+  }
+
+  .vehicle-hero h1 {
+    font-size: clamp(2rem, 10vw, 3rem);
+  }
+
+  .reg.large {
+    --plate-height: 36px;
+    font-size: 1.35rem;
+    padding-inline: 0.75rem;
+  }
+
+  .hero-meta {
+    gap: 0.5rem;
+  }
+
+  .hero-meta .pill,
+  .hero-meta .tag {
+    min-height: 38px;
+    align-items: center;
   }
 
   .inline-form {
@@ -1318,8 +1347,58 @@ summary {
     flex-direction: column;
   }
 
+  .inline-form > *,
+  .inline-form > form,
+  .inline-form .file-button,
+  .inline-form .secondary-button,
+  .inline-form .modal-trigger {
+    width: 100%;
+  }
+
+  .tabs {
+    flex-wrap: nowrap;
+    margin-inline: -12px;
+    padding-inline: 12px;
+  }
+
+  .tabs a {
+    padding-inline: 0.9rem;
+  }
+
   .records-grid {
     grid-template-columns: 1fr;
+  }
+
+  .record-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .record-actions > *,
+  .record-actions form,
+  .record-actions .modal-trigger {
+    width: 100%;
+  }
+
+  .modal-backdrop {
+    padding: 12px;
+    align-items: end;
+  }
+
+  .modal-card {
+    width: 100%;
+    max-height: min(88vh, 760px);
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+
+  .modal-body {
+    padding: 0 16px 16px;
+  }
+
+  .settings-tabs {
+    margin-inline: -12px;
+    padding-inline: 12px;
   }
 
   .print-facts,
@@ -1334,6 +1413,50 @@ summary {
   .print-title-row {
     align-items: flex-start;
     flex-direction: column;
+  }
+}
+
+@media (max-width: 480px) {
+  .app-shell {
+    width: min(100% - 20px, 1180px);
+  }
+
+  .stat-card,
+  .list-panel,
+  .vehicle-card-body,
+  .record-card,
+  .empty-state,
+  .settings-panel,
+  .print-cover,
+  .print-section {
+    padding: 14px;
+  }
+
+  .auth-card {
+    padding: 24px;
+  }
+
+  .topbar {
+    gap: 0.75rem;
+  }
+
+  .brand-mark.small {
+    width: 32px;
+    height: 32px;
+  }
+
+  .modal-chrome {
+    padding: 12px 12px 6px;
+  }
+
+  .modal-close {
+    width: 38px;
+    min-height: 38px;
+  }
+
+  .print-facts,
+  .print-summary {
+    grid-template-columns: 1fr;
   }
 }
 

@@ -3,7 +3,10 @@ import Database from "better-sqlite3";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import sharp from "sharp";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+const showcaseAssetVersion = "v2";
 
 async function freshModules(prefix = "carvey-backup-") {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), prefix));
@@ -30,8 +33,14 @@ function vehicleInput(make: string) {
 }
 
 describe("backup and restore", () => {
+  const originalDemoBackup = process.env.CARVEY_SHOWCASE_DEMO_BACKUP;
+
   beforeEach(() => {
     vi.resetModules();
+  });
+
+  afterEach(() => {
+    process.env.CARVEY_SHOWCASE_DEMO_BACKUP = originalDemoBackup;
   });
 
   it("creates a backup zip with manifest, SQLite DB, and uploads", async () => {
@@ -71,7 +80,9 @@ describe("backup and restore", () => {
   it("previews and restores a backup, replacing current data with rollback", async () => {
     const source = await freshModules("carvey-source-");
     const vehicleId = Number(source.db.createVehicle(vehicleInput("Source")).lastInsertRowid);
+    source.db.updateVehicle(vehicleId, { ...vehicleInput("Source"), sold: true });
     source.db.updateCollectionName("The Fleet");
+    source.db.createMaintenanceCategory("Tyres");
     const workshopId = Number(source.db.createWorkshop({
       name: "Preferred Autos",
       address: "1 Workshop Road",
@@ -111,14 +122,253 @@ describe("backup and restore", () => {
     const vehicles = target.db.listVehicles();
     expect(vehicles).toHaveLength(1);
     expect(vehicles[0].make).toBe("Source");
+    expect(vehicles[0].sold).toBe(1);
     expect(target.db.getCollectionName()).toBe("The Fleet");
+    expect(target.db.listMaintenanceCategories()[0]).toMatchObject({ name: "Tyres" });
     expect(target.db.listWorkshops()[0]).toMatchObject({ name: "Preferred Autos", preferred: 1 });
     expect(target.db.listRepairs(vehicles[0].id)[0]).toMatchObject({ garage: "Preferred Autos", workshopId });
     await expect(fs.stat(path.join(target.paths.vehiclePhotoDir, "source.webp"))).resolves.toBeTruthy();
     await expect(fs.readdir(target.paths.restoreRollbackDir)).resolves.toHaveLength(1);
     target.db.closeDbForTests();
   });
+
+  it("loads packaged showcase demo data and restores the previous live data snapshot", async () => {
+    const demoAssetDir = await fs.mkdtemp(path.join(os.tmpdir(), "carvey-demo-asset-"));
+    process.env.CARVEY_SHOWCASE_DEMO_BACKUP = path.join(demoAssetDir, "showcase-backup.zip");
+    await writeShowcaseDemoBackup(process.env.CARVEY_SHOWCASE_DEMO_BACKUP);
+
+    const target = await freshModules("carvey-demo-target-");
+    const liveVehicleId = Number(target.db.createVehicle(vehicleInput("Private")).lastInsertRowid);
+    target.db.createMaintenanceCategory("Original category");
+    target.db.setVehiclePhoto(liveVehicleId, "/uploads/vehicles/private.webp", "/uploads/vehicles/private-thumb.webp");
+    await fs.mkdir(target.paths.vehiclePhotoDir, { recursive: true });
+    await fs.writeFile(path.join(target.paths.vehiclePhotoDir, "private.webp"), "private image");
+    await fs.writeFile(path.join(target.paths.vehiclePhotoDir, "private-thumb.webp"), "private thumb");
+
+    expect(await target.backup.getShowcaseDemoStatus()).toMatchObject({
+      available: true,
+      active: false,
+      canRestorePrevious: false
+    });
+
+    expect(await target.backup.activateShowcaseDemoData()).toMatchObject({ ok: true });
+    expect(target.db.getCollectionName()).toBe("Press Garage");
+    expect(target.db.listVehicles()).toHaveLength(3);
+    expect(target.db.listVehicles().some((vehicle) => vehicle.sold === 1)).toBe(true);
+    expect(target.db.listMaintenanceCategories().map((category) => category.name)).toEqual(expect.arrayContaining(["Inspection", "Service", "Tyres"]));
+    expect(await target.backup.getShowcaseDemoStatus()).toMatchObject({
+      available: true,
+      active: true,
+      canRestorePrevious: true
+    });
+
+    expect(await target.backup.restorePreviousDebugDemoData()).toMatchObject({ ok: true });
+    expect(target.db.getCollectionName()).toBe("My cars");
+    expect(target.db.listVehicles()).toHaveLength(1);
+    expect(target.db.getVehicle(liveVehicleId)?.make).toBe("Private");
+    expect(target.db.listMaintenanceCategories()).toMatchObject([{ id: 1, name: "Original category", createdAt: expect.any(String), updatedAt: expect.any(String) }]);
+    expect(await target.backup.getShowcaseDemoStatus()).toMatchObject({
+      available: true,
+      active: false,
+      canRestorePrevious: false
+    });
+    target.db.closeDbForTests();
+  });
+
+  it("persists demo-mode changes back into the showcase backup", async () => {
+    const demoAssetDir = await fs.mkdtemp(path.join(os.tmpdir(), "carvey-demo-persist-"));
+    process.env.CARVEY_SHOWCASE_DEMO_BACKUP = path.join(demoAssetDir, "showcase-backup.zip");
+    await writeShowcaseDemoBackup(process.env.CARVEY_SHOWCASE_DEMO_BACKUP);
+
+    const target = await freshModules("carvey-demo-persist-target-");
+    target.db.createVehicle(vehicleInput("Private"));
+
+    expect(await target.backup.activateShowcaseDemoData()).toMatchObject({ ok: true });
+    const civic = target.db.listVehicles().find((vehicle) => vehicle.make === "Honda");
+    expect(civic).toBeTruthy();
+    target.db.updateCollectionName("Demo Garage Updated");
+    target.db.setVehiclePhoto(civic!.id, "/uploads/vehicles/custom-demo.webp", "/uploads/vehicles/custom-demo-thumb.webp");
+    await fs.mkdir(target.paths.vehiclePhotoDir, { recursive: true });
+    await writeShowcasePhoto(target.paths.vehiclePhotoDir, "custom-demo", "#7C3AED");
+
+    await expect(target.backup.syncShowcaseDemoBackupIfActive()).resolves.toBe(true);
+    await expect(target.backup.restorePreviousDebugDemoData()).resolves.toMatchObject({ ok: true });
+    await expect(target.backup.activateShowcaseDemoData()).resolves.toMatchObject({ ok: true });
+
+    const refreshedCivic = target.db.listVehicles().find((vehicle) => vehicle.make === "Honda");
+    expect(target.db.getCollectionName()).toBe("Demo Garage Updated");
+    expect(refreshedCivic?.photoPath).toBe("/uploads/vehicles/custom-demo.webp");
+    await expect(fs.stat(path.join(target.paths.vehiclePhotoDir, "custom-demo.webp"))).resolves.toBeTruthy();
+    target.db.closeDbForTests();
+  });
+
+  it("fails safely when restoring previous demo data without a saved snapshot", async () => {
+    const target = await freshModules("carvey-demo-missing-");
+    await expect(target.backup.restorePreviousDebugDemoData()).resolves.toMatchObject({
+      ok: false,
+      message: "No previous live data snapshot is available."
+    });
+    target.db.closeDbForTests();
+  });
 });
+
+async function writeShowcaseDemoBackup(outputPath: string) {
+  const source = await freshModules("carvey-demo-source-");
+  source.db.updateCollectionName("Press Garage");
+  source.db.createMaintenanceCategory("Service");
+  source.db.createMaintenanceCategory("Tyres");
+  source.db.createMaintenanceCategory("Inspection");
+  const workshopId = Number(source.db.createWorkshop({
+    name: "North Loop Motors",
+    address: "27 Demo Street",
+    phone: "020 7946 0123",
+    email: "service@northloop.invalid",
+    website: "https://northloop.invalid",
+    notes: "Fictional showcase workshop",
+    preferred: true
+  }).lastInsertRowid);
+
+  const civicId = Number(source.db.createVehicle({
+    make: "Honda",
+    model: "Civic Type R",
+    year: 2019,
+    registration: "DE19 MOO",
+    vin: "DEMOHONDACIVIC001",
+    currentOdometer: 42100,
+    purchasePrice: 32995,
+    purchaseDate: "2024-03-12",
+    notes: "Weekend car with a tidy paper trail."
+  }).lastInsertRowid);
+  const volvoId = Number(source.db.createVehicle({
+    make: "Volvo",
+    model: "V70 D5",
+    year: 2007,
+    registration: "PR07 EST",
+    vin: "DEMOVOLVOV70D5002",
+    currentOdometer: 163200,
+    purchasePrice: 3950,
+    purchaseDate: "2021-09-01",
+    notes: "Long-haul estate with recent suspension work."
+  }).lastInsertRowid);
+  const mazdaId = Number(source.db.createVehicle({
+    make: "Mazda",
+    model: "MX-5",
+    year: 2002,
+    registration: "MK02 SUN",
+    vin: "DEMOMAZDAMX500003",
+    currentOdometer: 88750,
+    purchasePrice: 4600,
+    purchaseDate: "2020-05-10",
+    notes: "Sold car kept here to show the sold badge and history export."
+  }).lastInsertRowid);
+  source.db.updateVehicle(mazdaId, {
+    make: "Mazda",
+    model: "MX-5",
+    year: 2002,
+    registration: "MK02 SUN",
+    vin: "DEMOMAZDAMX500003",
+    currentOdometer: 88750,
+    purchasePrice: 4600,
+    purchaseDate: "2020-05-10",
+    notes: "Sold car kept here to show the sold badge and history export.",
+    sold: true
+  });
+
+  source.db.createMaintenance({
+    vehicleId: civicId,
+    date: "2026-02-14",
+    odometer: 41880,
+    category: "Service",
+    description: "Major service with spark plugs and brake fluid",
+    cost: 480,
+    notes: "Dealer stamps up to date."
+  });
+  source.db.createMaintenance({
+    vehicleId: volvoId,
+    date: "2026-01-09",
+    odometer: 162400,
+    category: "Tyres",
+    description: "Fitted four all-season tyres",
+    cost: 612,
+    notes: "Matching set fitted for winter touring."
+  });
+  source.db.createRepair({
+    vehicleId: volvoId,
+    date: "2026-03-03",
+    odometer: 163050,
+    fault: "Rear spring replacement",
+    garage: "North Loop Motors",
+    workshopId,
+    cost: 355,
+    notes: "Both rear springs replaced as a pair."
+  });
+  source.db.createRepair({
+    vehicleId: mazdaId,
+    date: "2025-08-21",
+    odometer: 88210,
+    fault: "New hood drains and alignment",
+    garage: "North Loop Motors",
+    workshopId,
+    cost: 190,
+    notes: "Sorted water ingress before sale."
+  });
+  source.db.createMot({
+    vehicleId: civicId,
+    testDate: "2026-04-18",
+    expiryDate: "2026-05-20",
+    odometer: 42090,
+    result: "advisory",
+    advisories: "Front tyres wearing on inner shoulders",
+    cost: 54.85,
+    certificateRef: "DEMO-CIVIC-MOT"
+  });
+  source.db.createMot({
+    vehicleId: mazdaId,
+    testDate: "2025-06-10",
+    expiryDate: "2026-06-10",
+    odometer: 88050,
+    result: "pass",
+    advisories: null,
+    cost: 54.85,
+    certificateRef: "DEMO-MX5-MOT"
+  });
+  source.db.createReminder({
+    vehicleId: civicId,
+    title: "Track day brake check",
+    dueDate: "2026-05-18",
+    dueOdometer: null,
+    recurrence: null
+  });
+  source.db.createReminder({
+    vehicleId: volvoId,
+    title: "Cambelt planning",
+    dueDate: null,
+    dueOdometer: 165000,
+    recurrence: "Every 10000 miles"
+  });
+  source.db.upsertMotReminder(civicId, "2026-05-20");
+
+  await fs.mkdir(source.paths.vehiclePhotoDir, { recursive: true });
+  await writeShowcasePhoto(source.paths.vehiclePhotoDir, `showcase-civic-${showcaseAssetVersion}`, "#D93A2F");
+  await writeShowcasePhoto(source.paths.vehiclePhotoDir, `showcase-volvo-${showcaseAssetVersion}`, "#26547C");
+  await writeShowcasePhoto(source.paths.vehiclePhotoDir, `showcase-mx5-${showcaseAssetVersion}`, "#E0A100");
+  source.db.setVehiclePhoto(civicId, `/uploads/vehicles/showcase-civic-${showcaseAssetVersion}.webp`, `/uploads/vehicles/showcase-civic-${showcaseAssetVersion}-thumb.webp`);
+  source.db.setVehiclePhoto(volvoId, `/uploads/vehicles/showcase-volvo-${showcaseAssetVersion}.webp`, `/uploads/vehicles/showcase-volvo-${showcaseAssetVersion}-thumb.webp`);
+  source.db.setVehiclePhoto(mazdaId, `/uploads/vehicles/showcase-mx5-${showcaseAssetVersion}.webp`, `/uploads/vehicles/showcase-mx5-${showcaseAssetVersion}-thumb.webp`);
+
+  const backup = await source.backup.createBackupZip();
+  await fs.writeFile(outputPath, backup.buffer);
+  source.db.closeDbForTests();
+}
+
+async function writeShowcasePhoto(targetDir: string, targetBase: string, accent: string) {
+  await sharp({ create: { width: 1200, height: 720, channels: 3, background: accent } })
+    .webp({ quality: 82 })
+    .toFile(path.join(targetDir, `${targetBase}.webp`));
+  await sharp({ create: { width: 640, height: 420, channels: 3, background: accent } })
+    .webp({ quality: 78 })
+    .toFile(path.join(targetDir, `${targetBase}-thumb.webp`));
+}
 
 function zipWithUnsafeEntry(entryName: string) {
   const name = Buffer.from(entryName);

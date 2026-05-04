@@ -10,12 +10,15 @@
 /dist/
 
 # Local app data: SQLite databases, uploads, restore staging, backups
-/data/
+/data/*
+!/data/demo/
+/data/demo/*
 *.sqlite
 *.sqlite-*
 *.db
 *.db-*
 *.zip
+!/data/demo/showcase-backup.zip
 
 # Test output
 /coverage/
