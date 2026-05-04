@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://github.com/Revise0592/Carvey/blob/31ea637efb9f5a802d88152231258c1e5a00acbf/public/icons/png/carvey-icon-dark-1024.png?raw=true" alt="Carvey Logo"/>
+  <img src="https://github.com/Revise0592/Carvey/blob/b1b4f202433316ee2018a7de8dd16c459ef820e1/public/icons/png/carvey-icon-dark-128.png" alt="Carvey Logo"/>
 </p>
 
 Carvey is a self-hosted, local-first car maintenance tracker for managing vehicles, repairs, maintenance, MOTs, reminders and running costs. Your "digital service history" for your older cars, or your digital backup of all that paperwork you've got stuffed in a slippery fish.
