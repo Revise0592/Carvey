@@ -1,6 +1,8 @@
-# Carvey
+<p align="center">
+  <img src="https://github.com/Revise0592/Carvey/blob/31ea637efb9f5a802d88152231258c1e5a00acbf/public/icons/png/carvey-icon-dark-1024.png?raw=true" alt="Carvey Logo"/>
+</p>
 
-Carvey is a self-hosted, local-first car maintenance tracker for managing vehicles, repairs, maintenance, MOTs, reminders, costs, and photos.
+Carvey is a self-hosted, local-first car maintenance tracker for managing vehicles, repairs, maintenance, MOTs, reminders and running costs. Your "digital service history" for your older cars, or your digital backup of all that paperwork you've got stuffed in a slippery fish.
 
 ## Screenshots
 
@@ -9,10 +11,10 @@ Carvey is a self-hosted, local-first car maintenance tracker for managing vehicl
 ## What It Does
 
 - Tracks multiple vehicles in one garage
-- Stores vehicle details, mileage, notes, and photos
+- Stores vehicle details, mileage and notes
 - Logs maintenance, repairs, MOTs, and reminders
 - Shows a dashboard with costs, reminders, and MOTs due soon
-- Backs up and restores the database and uploaded images together
+- Backup & restore your config / data.
 
 ## How It Works
 
