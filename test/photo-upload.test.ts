@@ -10,7 +10,8 @@ async function freshModules() {
   vi.resetModules();
   const db = await import("@/lib/db");
   const upload = await import("@/lib/photo-upload");
-  return { db, upload };
+  const paths = await import("@/lib/paths");
+  return { db, upload, paths };
 }
 
 describe("processVehiclePhotoUpload", () => {
@@ -36,6 +37,29 @@ describe("processVehiclePhotoUpload", () => {
 
     expect(result.ok).toBe(true);
     expect(db.getVehicle(vehicleId)?.photoPath).toMatch(/\.webp$/);
+    db.closeDbForTests();
+  });
+
+  it("recreates the vehicle upload directory before saving", async () => {
+    const { db, upload, paths } = await freshModules();
+    const vehicleId = Number(db.createVehicle({
+      make: "Mazda",
+      model: "3",
+      year: 2021,
+      registration: "MZ21 DEM",
+      vin: null,
+      currentOdometer: 8000,
+      purchasePrice: null,
+      purchaseDate: null,
+      notes: null
+    }).lastInsertRowid);
+    await fs.rm(paths.vehiclePhotoDir, { recursive: true, force: true });
+
+    const buffer = await sharp({ create: { width: 1200, height: 900, channels: 3, background: "#ccd5e1" } }).png().toBuffer();
+    const result = await upload.processVehiclePhotoUpload(vehicleId, new File([new Uint8Array(buffer)], "car.png", { type: "image/png" }));
+
+    expect(result.ok).toBe(true);
+    await expect(fs.stat(paths.vehiclePhotoDir)).resolves.toBeTruthy();
     db.closeDbForTests();
   });
 

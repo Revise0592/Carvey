@@ -5,6 +5,7 @@ import path from "node:path";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { activateShowcaseDemoData, restorePreviousDebugDemoData, saveCurrentDataAsShowcaseDemo, syncShowcaseDemoBackupIfActive } from "@/lib/backup";
 import {
   completeReminder,
   createMaintenance,
@@ -127,6 +128,7 @@ export async function createVehicleAction(formData: FormData) {
     notes: nullableStr(formData, "notes")
   };
   const result = createVehicle(input);
+  await syncCurrentDemoAfterMutation();
   revalidatePath("/garage");
   redirect(`/vehicles/${result.lastInsertRowid}`);
 }
@@ -145,6 +147,7 @@ export async function updateVehicleAction(vehicleId: number, formData: FormData)
     notes: nullableStr(formData, "notes"),
     sold: str(formData, "sold") === "on"
   });
+  await syncCurrentDemoAfterMutation();
   revalidateVehicle(vehicleId);
 }
 
@@ -156,6 +159,7 @@ export async function deleteVehicleAction(vehicleId: number, formData: FormData)
   await removeUploadFile(vehicle.photoPath);
   await removeUploadFile(vehicle.thumbnailPath);
   deleteVehicle(vehicleId);
+  await syncCurrentDemoAfterMutation();
   revalidatePath("/garage");
   redirect("/garage");
 }
@@ -164,6 +168,7 @@ export async function updateVehicleDebugAction(vehicleId: number, formData: Form
   await requireUser();
   if (!debugEasterEggsEnabled()) return;
   setVehicleDebugDestroyed(vehicleId, str(formData, "debugDestroyed") === "on");
+  await syncCurrentDemoAfterMutation();
   revalidateVehicle(vehicleId);
 }
 
@@ -178,6 +183,7 @@ export async function createMaintenanceAction(vehicleId: number, formData: FormD
     cost: money(formData, "cost"),
     notes: nullableStr(formData, "notes")
   });
+  await syncCurrentDemoAfterMutation();
   revalidatePath(`/vehicles/${vehicleId}`);
 }
 
@@ -191,12 +197,14 @@ export async function updateMaintenanceAction(vehicleId: number, id: number, for
     cost: money(formData, "cost"),
     notes: nullableStr(formData, "notes")
   });
+  await syncCurrentDemoAfterMutation();
   revalidateVehicle(vehicleId);
 }
 
 export async function deleteMaintenanceAction(vehicleId: number, id: number) {
   await requireUser();
   deleteMaintenance(id, vehicleId);
+  await syncCurrentDemoAfterMutation();
   revalidateVehicle(vehicleId);
 }
 
@@ -213,6 +221,7 @@ export async function createRepairAction(vehicleId: number, formData: FormData) 
     cost: money(formData, "cost"),
     notes: nullableStr(formData, "notes")
   });
+  await syncCurrentDemoAfterMutation();
   revalidatePath(`/vehicles/${vehicleId}`);
 }
 
@@ -228,12 +237,14 @@ export async function updateRepairAction(vehicleId: number, id: number, formData
     cost: money(formData, "cost"),
     notes: nullableStr(formData, "notes")
   });
+  await syncCurrentDemoAfterMutation();
   revalidateVehicle(vehicleId);
 }
 
 export async function deleteRepairAction(vehicleId: number, id: number) {
   await requireUser();
   deleteRepair(id, vehicleId);
+  await syncCurrentDemoAfterMutation();
   revalidateVehicle(vehicleId);
 }
 
@@ -251,6 +262,7 @@ export async function createMotAction(vehicleId: number, formData: FormData) {
     certificateRef: nullableStr(formData, "certificateRef")
   });
   upsertMotReminder(vehicleId, expiryDate);
+  await syncCurrentDemoAfterMutation();
   revalidatePath("/garage");
   revalidatePath(`/vehicles/${vehicleId}`);
 }
@@ -268,12 +280,14 @@ export async function updateMotAction(vehicleId: number, id: number, formData: F
     certificateRef: nullableStr(formData, "certificateRef")
   });
   upsertMotReminder(vehicleId, expiryDate);
+  await syncCurrentDemoAfterMutation();
   revalidateVehicle(vehicleId);
 }
 
 export async function deleteMotAction(vehicleId: number, id: number) {
   await requireUser();
   deleteMot(id, vehicleId);
+  await syncCurrentDemoAfterMutation();
   revalidateVehicle(vehicleId);
 }
 
@@ -286,6 +300,7 @@ export async function createReminderAction(vehicleId: number, formData: FormData
     dueOdometer: nullableInt(formData, "dueOdometer"),
     recurrence: nullableStr(formData, "recurrence")
   });
+  await syncCurrentDemoAfterMutation();
   revalidatePath("/garage");
   revalidatePath(`/vehicles/${vehicleId}`);
 }
@@ -299,12 +314,14 @@ export async function updateReminderAction(vehicleId: number, id: number, formDa
     recurrence: nullableStr(formData, "recurrence"),
     completedAt: null
   });
+  await syncCurrentDemoAfterMutation();
   revalidateVehicle(vehicleId);
 }
 
 export async function deleteReminderAction(vehicleId: number, id: number) {
   await requireUser();
   deleteReminder(id, vehicleId);
+  await syncCurrentDemoAfterMutation();
   revalidateVehicle(vehicleId);
 }
 
@@ -312,6 +329,7 @@ export async function completeReminderAction(vehicleId: number, formData: FormDa
   await requireUser();
   const id = Number.parseInt(str(formData, "id"), 10);
   completeReminder(id, vehicleId);
+  await syncCurrentDemoAfterMutation();
   revalidatePath("/garage");
   revalidatePath(`/vehicles/${vehicleId}`);
 }
@@ -337,6 +355,7 @@ export async function updateCollectionNameAction(formData: FormData) {
   await requireUser();
   const collectionName = z.string().min(1).max(40).parse(str(formData, "collectionName"));
   updateCollectionName(collectionName);
+  await syncCurrentDemoAfterMutation();
   revalidatePath("/garage");
   revalidatePath("/settings");
   redirect("/settings?tab=personalisation&app=collection-updated");
@@ -345,6 +364,7 @@ export async function updateCollectionNameAction(formData: FormData) {
 export async function createWorkshopAction(formData: FormData) {
   await requireUser();
   createWorkshop(workshopInput(formData));
+  await syncCurrentDemoAfterMutation();
   revalidatePath("/settings");
   redirect("/settings?tab=workshops&workshop=created");
 }
@@ -352,6 +372,7 @@ export async function createWorkshopAction(formData: FormData) {
 export async function updateWorkshopAction(workshopId: number, formData: FormData) {
   await requireUser();
   updateWorkshop(workshopId, workshopInput(formData));
+  await syncCurrentDemoAfterMutation();
   revalidatePath("/settings");
   redirect("/settings?tab=workshops&workshop=updated");
 }
@@ -360,6 +381,7 @@ export async function deleteWorkshopAction(workshopId: number, formData: FormDat
   await requireUser();
   if (str(formData, "confirmed") !== "on") return;
   deleteWorkshop(workshopId);
+  await syncCurrentDemoAfterMutation();
   revalidatePath("/settings");
   redirect("/settings?tab=workshops&workshop=deleted");
 }
@@ -367,6 +389,7 @@ export async function deleteWorkshopAction(workshopId: number, formData: FormDat
 export async function createMaintenanceCategoryAction(formData: FormData) {
   await requireUser();
   createMaintenanceCategory(z.string().min(1).max(100).parse(str(formData, "name")));
+  await syncCurrentDemoAfterMutation();
   revalidatePath("/settings");
   redirect("/settings?tab=categories&category=created");
 }
@@ -374,6 +397,7 @@ export async function createMaintenanceCategoryAction(formData: FormData) {
 export async function updateMaintenanceCategoryAction(categoryId: number, formData: FormData) {
   await requireUser();
   updateMaintenanceCategory(categoryId, z.string().min(1).max(100).parse(str(formData, "name")));
+  await syncCurrentDemoAfterMutation();
   revalidatePath("/settings");
   redirect("/settings?tab=categories&category=updated");
 }
@@ -382,13 +406,69 @@ export async function deleteMaintenanceCategoryAction(categoryId: number, formDa
   await requireUser();
   if (str(formData, "confirmed") !== "on") return;
   deleteMaintenanceCategory(categoryId);
+  await syncCurrentDemoAfterMutation();
   revalidatePath("/settings");
   redirect("/settings?tab=categories&category=deleted");
+}
+
+export async function loadShowcaseDemoDataAction() {
+  await requireUser();
+  if (!debugEasterEggsEnabled()) {
+    redirect("/settings?tab=backup");
+  }
+
+  const result = await activateShowcaseDemoData();
+  revalidatePath("/garage");
+  revalidatePath("/settings");
+  if (!result.ok) {
+    redirect(debugSettingsUrl("error", result.message));
+  }
+  redirect(debugSettingsUrl("demo-loaded"));
+}
+
+export async function restorePreviousDemoDataAction() {
+  await requireUser();
+  if (!debugEasterEggsEnabled()) {
+    redirect("/settings?tab=backup");
+  }
+
+  const result = await restorePreviousDebugDemoData();
+  revalidatePath("/garage");
+  revalidatePath("/settings");
+  if (!result.ok) {
+    redirect(debugSettingsUrl(result.message === "No previous live data snapshot is available." ? "missing-rollback" : "error", result.message));
+  }
+  redirect(debugSettingsUrl("previous-restored"));
+}
+
+export async function saveCurrentShowcaseDemoDataAction() {
+  await requireUser();
+  if (!debugEasterEggsEnabled()) {
+    redirect("/settings?tab=backup");
+  }
+
+  const result = await saveCurrentDataAsShowcaseDemo();
+  revalidatePath("/garage");
+  revalidatePath("/settings");
+  if (!result.ok) {
+    redirect(debugSettingsUrl("error", result.message));
+  }
+  redirect(debugSettingsUrl("demo-saved"));
 }
 
 function revalidateVehicle(vehicleId: number) {
   revalidatePath("/garage");
   revalidatePath(`/vehicles/${vehicleId}`);
+}
+
+function debugSettingsUrl(debug: string, message?: string) {
+  const params = new URLSearchParams({ tab: "backup", debug });
+  if (message) params.set("message", message);
+  return `/settings?${params.toString()}`;
+}
+
+async function syncCurrentDemoAfterMutation() {
+  await syncShowcaseDemoBackupIfActive();
 }
 
 async function removeUploadFile(uploadPath: string | null) {

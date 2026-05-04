@@ -1,6 +1,7 @@
-import { CalendarDays, Check, Gauge, Hammer, ShieldCheck, Trash2, Wrench } from "lucide-react";
+import { CalendarDays, Check, Gauge, Hammer, Plus, ShieldCheck, Trash2, Wrench } from "lucide-react";
 import {
   completeReminderAction,
+  createVehicleAction,
   createMaintenanceAction,
   createMotAction,
   createReminderAction,
@@ -21,6 +22,25 @@ import type { MaintenanceCategory, MaintenanceRecord, MotRecord, Reminder, Repai
 import { todayIso } from "@/lib/format";
 import { EditPanel } from "./EditPanel";
 import { ModalPanel } from "./ModalPanel";
+
+export function CreateVehicleForm() {
+  return (
+    <ModalPanel trigger={<><Plus size={17} /> Add vehicle</>}>
+      <form action={createVehicleAction} className="record-form">
+        <Field label="Make"><input name="make" required /></Field>
+        <Field label="Model"><input name="model" required /></Field>
+        <Field label="Year"><input name="year" type="number" min="1886" max="2100" /></Field>
+        <Field label="Registration"><input name="registration" required /></Field>
+        <Field label="VIN"><input name="vin" /></Field>
+        <Field label="Current mileage"><input name="currentOdometer" type="number" min="0" /></Field>
+        <Field label="Purchase price"><input name="purchasePrice" type="number" min="0" step="0.01" /></Field>
+        <Field label="Purchase date"><input name="purchaseDate" type="date" /></Field>
+        <Field label="Notes"><textarea name="notes" /></Field>
+        <button className="primary-button" type="submit">Create vehicle</button>
+      </form>
+    </ModalPanel>
+  );
+}
 
 export function EditVehicleForm({ vehicle }: { vehicle: Vehicle }) {
   const updateAction = updateVehicleAction.bind(null, vehicle.id);
@@ -282,4 +302,3 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     </label>
   );
 }
-

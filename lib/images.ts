@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import path from "node:path";
 import sharp from "sharp";
-import { vehiclePhotoDir } from "./paths";
+import { ensureDataDirs, vehiclePhotoDir } from "./paths";
 
 const acceptedMimeTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/avif", "image/heic", "image/heif"]);
 const maxUploadBytes = 18 * 1024 * 1024;
@@ -24,6 +24,7 @@ export async function optimizeVehiclePhoto(file: File, vehicleId: number): Promi
   if (file.size > maxUploadBytes) {
     throw new Error("Use an image smaller than 18 MB.");
   }
+  ensureDataDirs();
   const buffer = Buffer.from(await file.arrayBuffer());
   const baseName = `${vehicleId}-${crypto.randomUUID()}`;
   const photoDiskPath = path.join(vehiclePhotoDir, `${baseName}.webp`);
