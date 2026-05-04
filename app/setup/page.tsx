@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { setupAction } from "../actions";
-import { BrandLogo } from "@/components/BrandLogo";
+import { BrandLogo, BrandWordmark } from "@/components/BrandLogo";
 import { hasAdminUser } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -13,6 +13,7 @@ export default function SetupPage() {
         <div className="auth-header">
           <div className="brand-mark auth-mark"><BrandLogo /></div>
           <div>
+            <BrandWordmark />
             <h1>Set up Carvey</h1>
             <p>Create your admin account.</p>
           </div>

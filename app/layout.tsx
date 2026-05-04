@@ -1,14 +1,15 @@
 import type { Metadata, Viewport } from "next";
 import { ThemeScript } from "@/components/ThemeScript";
+import { brandIconPaths } from "@/lib/theme-branding";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Carvey",
   description: "A self-hosted car maintenance dashboard.",
   icons: {
-    icon: "/icons/icon-light.png",
-    shortcut: "/icons/icon-light.png",
-    apple: "/icons/icon-light.png"
+    icon: "/icons/favicon.svg",
+    shortcut: "/icons/favicon.svg",
+    apple: brandIconPaths.light.png
   }
 };
 

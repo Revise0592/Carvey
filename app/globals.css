@@ -460,9 +460,8 @@ textarea:focus-visible {
 }
 
 .brand {
-  font-weight: 700;
-  font-size: 1.2rem;
-  letter-spacing: -0.03em;
+  gap: 0.7rem;
+  min-width: 0;
 }
 
 .brand-mark {
@@ -490,21 +489,36 @@ textarea:focus-visible {
 }
 
 :root[data-theme="light"] .brand-logo-light,
-:root[data-theme="dark"] .brand-logo-dark {
+:root[data-theme="dark"] .brand-logo-dark,
+:root[data-theme="light"] .brand-wordmark-light,
+:root[data-theme="dark"] .brand-wordmark-dark {
   display: block;
 }
 
 .brand-mark.small {
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  transform: scale(1.5);
+  transform-origin: left center;
 }
 
-.brand-wordmark {
+.brand-wordmark-image-wrap {
   position: relative;
-  top: -1px;
-  font-weight: 800;
-  letter-spacing: -0.04em;
+  display: block;
+  width: min(168px, 100%);
+  height: 40px;
+  flex: 0 0 auto;
+  transform: scale(1.5);
+  transform-origin: left center;
+}
+
+.brand-wordmark-image {
+  display: none;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: left center;
 }
 
 .top-actions {
@@ -685,7 +699,7 @@ textarea:focus-visible {
 .auth-header {
   display: grid;
   grid-template-columns: 48px 1fr;
-  align-items: center;
+  align-items: start;
   gap: 1rem;
   margin-bottom: 1.35rem;
 }
@@ -694,6 +708,38 @@ textarea:focus-visible {
   width: 48px;
   height: 48px;
   border-radius: 13px;
+}
+
+.auth-header > div:last-child {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.auth-header-copy {
+  display: grid;
+  gap: 0.6rem;
+  justify-items: start;
+}
+
+.auth-header-wordmark {
+  grid-template-columns: 1fr;
+  gap: 0.8rem;
+  justify-items: center;
+  text-align: center;
+}
+
+.auth-header-wordmark .auth-header-copy {
+  justify-items: center;
+}
+
+.auth-header .brand-wordmark-image-wrap {
+  width: min(168px, 100%);
+  height: 40px;
+}
+
+.auth-header-wordmark .brand-wordmark-image-wrap {
+  width: min(188px, 100%);
+  height: 46px;
 }
 
 .auth-card h1,
@@ -1774,7 +1820,7 @@ textarea:focus-visible {
   }
 
   .brand {
-    font-size: 1rem;
+    gap: 0.6rem;
   }
 
   .top-actions {
@@ -1939,12 +1985,18 @@ textarea:focus-visible {
   }
 
   .brand-mark.small {
-    width: 32px;
-    height: 32px;
+    width: 36px;
+    height: 36px;
   }
 
-  .brand {
-    font-size: 1.25rem;
+  .brand-wordmark-image-wrap {
+    width: min(146px, 100%);
+    height: 34px;
+  }
+
+  .auth-header .brand-wordmark-image-wrap {
+    width: min(152px, 100%);
+    height: 36px;
   }
 
   .vehicle-hero-copy {

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { loginAction } from "../actions";
-import { BrandLogo } from "@/components/BrandLogo";
+import { BrandWordmark } from "@/components/BrandLogo";
 import { currentUser } from "@/lib/auth";
 import { hasAdminUser } from "@/lib/db";
 
@@ -14,11 +14,10 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   return (
     <main className="auth-shell">
       <section className="auth-card">
-        <div className="auth-header">
-          <div className="brand-mark auth-mark"><BrandLogo /></div>
-          <div>
+        <div className="auth-header auth-header-wordmark">
+          <div className="auth-header-copy">
+            <BrandWordmark />
             <h1>Welcome back</h1>
-            <p>Sign in to Carvey.</p>
           </div>
         </div>
         {params.error ? <p className="error">Those details did not match.</p> : null}
