@@ -765,13 +765,14 @@ textarea:focus-visible {
 .stats-grid,
 .garage-grid,
 .split-grid,
+.dashboard-panels,
 .records-grid {
   display: grid;
   gap: 16px;
 }
 
 .stats-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   margin-bottom: 28px;
 }
 
@@ -1027,6 +1028,11 @@ textarea:focus-visible {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.dashboard-panels {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
+}
+
 .list-panel,
 .empty-state {
   padding: 20px;
@@ -1238,28 +1244,38 @@ textarea:focus-visible {
 }
 
 .modal-chrome {
-  position: sticky;
-  top: 0;
+  position: absolute;
+  top: 18px;
+  right: 18px;
   z-index: 2;
   display: flex;
   justify-content: flex-end;
-  padding: 16px 16px 10px;
-  background: color-mix(in srgb, var(--surface-raised) 90%, transparent);
-  backdrop-filter: blur(12px);
+}
+
+.modal-title {
+  margin: 0 46px 1rem 0;
+  min-width: 0;
+  color: var(--text);
+  font-size: 1.1rem;
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
 }
 
 .modal-close {
-  width: 40px;
-  min-height: 40px;
+  flex: 0 0 auto;
+  width: 34px;
+  min-height: 34px;
   background: color-mix(in srgb, var(--control-bg) 88%, var(--bg-elevated) 12%);
   color: var(--control-fg);
   border: 1px solid var(--line);
 }
 
 .modal-body {
-  max-height: calc(min(760px, 100vh - 44px) - 62px);
+  max-height: min(760px, calc(100vh - 44px));
   overflow: auto;
-  padding: 0 24px 24px;
+  padding: 24px;
 }
 
 .modal-divider {
@@ -1781,6 +1797,7 @@ textarea:focus-visible {
 
   .stats-grid,
   .split-grid,
+  .dashboard-panels,
   .vehicle-hero,
   .settings-grid {
     grid-template-columns: 1fr;
@@ -1889,7 +1906,16 @@ textarea:focus-visible {
   }
 
   .modal-body {
-    padding: 0 16px 16px;
+    padding: 16px;
+  }
+
+  .modal-chrome {
+    top: 14px;
+    right: 14px;
+  }
+
+  .modal-title {
+    margin-right: 44px;
   }
 
   .settings-tabs {

@@ -79,6 +79,24 @@ export type Reminder = {
   createdAt: string;
 };
 
+export type PlannedPurchase = {
+  id: number;
+  vehicleId: number;
+  itemName: string;
+  quantity: number;
+  estimatedCost: number;
+  actualCost: number | null;
+  supplier: string | null;
+  url: string | null;
+  dueDate: string | null;
+  dueOdometer: number | null;
+  notes: string | null;
+  reminderId: number | null;
+  purchasedDate: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type AdminUser = {
   id: number;
   username: string;
@@ -247,6 +265,24 @@ function migrate(database: Database.Database) {
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
 
+    CREATE TABLE IF NOT EXISTS planned_purchases (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      vehicle_id INTEGER NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
+      item_name TEXT NOT NULL,
+      quantity INTEGER NOT NULL DEFAULT 1,
+      estimated_cost REAL NOT NULL DEFAULT 0,
+      actual_cost REAL,
+      supplier TEXT,
+      url TEXT,
+      due_date TEXT,
+      due_odometer INTEGER,
+      notes TEXT,
+      reminder_id INTEGER REFERENCES reminders(id) ON DELETE SET NULL,
+      purchased_date TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
     CREATE INDEX IF NOT EXISTS idx_vehicles_archived ON vehicles(archived);
     CREATE INDEX IF NOT EXISTS idx_auth_sessions_admin ON auth_sessions(admin_user_id);
     CREATE INDEX IF NOT EXISTS idx_workshops_preferred ON workshops(preferred);
@@ -254,6 +290,8 @@ function migrate(database: Database.Database) {
     CREATE INDEX IF NOT EXISTS idx_repairs_vehicle ON repair_records(vehicle_id);
     CREATE INDEX IF NOT EXISTS idx_mot_vehicle ON mot_records(vehicle_id);
     CREATE INDEX IF NOT EXISTS idx_reminders_vehicle ON reminders(vehicle_id);
+    CREATE INDEX IF NOT EXISTS idx_planned_purchases_vehicle ON planned_purchases(vehicle_id);
+    CREATE INDEX IF NOT EXISTS idx_planned_purchases_reminder ON planned_purchases(reminder_id);
   `);
   ensureColumn(database, "vehicles", "purchase_price", "REAL");
   ensureColumn(database, "vehicles", "purchase_date", "TEXT");
@@ -600,6 +638,52 @@ export function listReminders(vehicleId: number) {
     .all(vehicleId) as Reminder[];
 }
 
+const plannedPurchaseSelect = `
+  id,
+  vehicle_id as vehicleId,
+  item_name as itemName,
+  quantity,
+  estimated_cost as estimatedCost,
+  actual_cost as actualCost,
+  supplier,
+  url,
+  due_date as dueDate,
+  due_odometer as dueOdometer,
+  notes,
+  reminder_id as reminderId,
+  purchased_date as purchasedDate,
+  created_at as createdAt,
+  updated_at as updatedAt
+`;
+
+export function listPlannedPurchases(vehicleId: number) {
+  return getDb()
+    .prepare(`
+      SELECT ${plannedPurchaseSelect}
+      FROM planned_purchases
+      WHERE vehicle_id = ?
+      ORDER BY purchased_date IS NOT NULL, due_date IS NULL, due_date ASC, due_odometer IS NULL, due_odometer ASC, id DESC
+    `)
+    .all(vehicleId) as PlannedPurchase[];
+}
+
+export function listActivePlannedPurchases(vehicleId: number) {
+  return getDb()
+    .prepare(`
+      SELECT ${plannedPurchaseSelect}
+      FROM planned_purchases
+      WHERE vehicle_id = ? AND purchased_date IS NULL
+      ORDER BY due_date IS NULL, due_date ASC, due_odometer IS NULL, due_odometer ASC, id DESC
+    `)
+    .all(vehicleId) as PlannedPurchase[];
+}
+
+export function getPlannedPurchase(id: number, vehicleId: number) {
+  return getDb()
+    .prepare(`SELECT ${plannedPurchaseSelect} FROM planned_purchases WHERE id = ? AND vehicle_id = ?`)
+    .get(id, vehicleId) as PlannedPurchase | undefined;
+}
+
 export function createMaintenance(input: Omit<MaintenanceRecord, "id" | "createdAt">) {
   return getDb()
     .prepare("INSERT INTO maintenance_records (vehicle_id, date, odometer, category, description, cost, notes) VALUES (@vehicleId, @date, @odometer, @category, @description, @cost, @notes)")
@@ -698,6 +782,125 @@ export function completeReminder(id: number, vehicleId: number) {
     .run(id, vehicleId);
 }
 
+export function createPlannedPurchase(input: Omit<PlannedPurchase, "id" | "reminderId" | "actualCost" | "purchasedDate" | "createdAt" | "updatedAt">) {
+  const result = getDb()
+    .prepare(`
+      INSERT INTO planned_purchases (vehicle_id, item_name, quantity, estimated_cost, supplier, url, due_date, due_odometer, notes)
+      VALUES (@vehicleId, @itemName, @quantity, @estimatedCost, @supplier, @url, @dueDate, @dueOdometer, @notes)
+    `)
+    .run(input);
+  syncPlannedPurchaseReminder(Number(result.lastInsertRowid), input.vehicleId);
+  return result;
+}
+
+export function updatePlannedPurchase(id: number, vehicleId: number, input: Omit<PlannedPurchase, "id" | "vehicleId" | "reminderId" | "actualCost" | "purchasedDate" | "createdAt" | "updatedAt">) {
+  const result = getDb()
+    .prepare(`
+      UPDATE planned_purchases
+      SET item_name = @itemName,
+          quantity = @quantity,
+          estimated_cost = @estimatedCost,
+          supplier = @supplier,
+          url = @url,
+          due_date = @dueDate,
+          due_odometer = @dueOdometer,
+          notes = @notes,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = @id AND vehicle_id = @vehicleId AND purchased_date IS NULL
+    `)
+    .run({ id, vehicleId, ...input });
+  if (result.changes) syncPlannedPurchaseReminder(id, vehicleId);
+  return result;
+}
+
+export function deletePlannedPurchase(id: number, vehicleId: number) {
+  const plannedPurchase = getPlannedPurchase(id, vehicleId);
+  if (plannedPurchase?.reminderId) deleteReminder(plannedPurchase.reminderId, vehicleId);
+  return getDb()
+    .prepare("DELETE FROM planned_purchases WHERE id = ? AND vehicle_id = ?")
+    .run(id, vehicleId);
+}
+
+export function markPlannedPurchaseBought(id: number, vehicleId: number, input: { purchasedDate: string; actualCost: number }) {
+  const plannedPurchase = getPlannedPurchase(id, vehicleId);
+  const result = getDb()
+    .prepare(`
+      UPDATE planned_purchases
+      SET purchased_date = @purchasedDate,
+          actual_cost = @actualCost,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = @id AND vehicle_id = @vehicleId
+    `)
+    .run({ id, vehicleId, ...input });
+  if (plannedPurchase?.reminderId) completeReminder(plannedPurchase.reminderId, vehicleId);
+  return result;
+}
+
+export function getVehicleLoggedSpend(vehicleId: number) {
+  const row = getDb()
+    .prepare(`
+      SELECT COALESCE(SUM(cost), 0) as total FROM (
+        SELECT cost FROM maintenance_records WHERE vehicle_id = ?
+        UNION ALL
+        SELECT cost FROM repair_records WHERE vehicle_id = ?
+        UNION ALL
+        SELECT cost FROM mot_records WHERE vehicle_id = ?
+        UNION ALL
+        SELECT COALESCE(actual_cost, estimated_cost) as cost FROM planned_purchases WHERE vehicle_id = ? AND purchased_date IS NOT NULL
+      )
+    `)
+    .get(vehicleId, vehicleId, vehicleId, vehicleId) as { total: number };
+  return row.total;
+}
+
+export function getVehicleActivePlannedPurchaseSummary(vehicleId: number) {
+  const row = getDb()
+    .prepare(`
+      SELECT COUNT(*) as count, COALESCE(SUM(estimated_cost), 0) as estimatedTotal
+      FROM planned_purchases
+      WHERE vehicle_id = ? AND purchased_date IS NULL
+    `)
+    .get(vehicleId) as { count: number; estimatedTotal: number };
+  return row;
+}
+
+function syncPlannedPurchaseReminder(id: number, vehicleId: number) {
+  const plannedPurchase = getPlannedPurchase(id, vehicleId);
+  if (!plannedPurchase || plannedPurchase.purchasedDate) return;
+
+  const hasDueTarget = Boolean(plannedPurchase.dueDate || plannedPurchase.dueOdometer !== null);
+  if (!hasDueTarget) {
+    if (plannedPurchase.reminderId) {
+      deleteReminder(plannedPurchase.reminderId, vehicleId);
+      getDb().prepare("UPDATE planned_purchases SET reminder_id = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND vehicle_id = ?").run(id, vehicleId);
+    }
+    return;
+  }
+
+  const title = `Buy: ${plannedPurchase.itemName}`;
+  if (plannedPurchase.reminderId) {
+    const result = updateReminder(plannedPurchase.reminderId, vehicleId, {
+      title,
+      dueDate: plannedPurchase.dueDate,
+      dueOdometer: plannedPurchase.dueOdometer,
+      recurrence: null,
+      completedAt: null
+    });
+    if (result.changes) return;
+  }
+
+  const result = createReminder({
+    vehicleId,
+    title,
+    dueDate: plannedPurchase.dueDate,
+    dueOdometer: plannedPurchase.dueOdometer,
+    recurrence: null
+  });
+  getDb()
+    .prepare("UPDATE planned_purchases SET reminder_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND vehicle_id = ?")
+    .run(result.lastInsertRowid, id, vehicleId);
+}
+
 export function getDashboardStats() {
   const vehicles = listVehicles();
   const yearlySpend = getDb()
@@ -708,6 +911,8 @@ export function getDashboardStats() {
         SELECT cost, date FROM repair_records
         UNION ALL
         SELECT cost, test_date as date FROM mot_records
+        UNION ALL
+        SELECT COALESCE(actual_cost, estimated_cost) as cost, purchased_date as date FROM planned_purchases WHERE purchased_date IS NOT NULL
       )
       WHERE date >= date('now', 'start of year')
     `)
@@ -743,5 +948,31 @@ export function getDashboardStats() {
       LIMIT 8
     `)
     .all() as Array<{ id: number; vehicleId: number; title: string; dueDate: string | null; dueOdometer: number | null; currentOdometer: number | null; make: string; model: string }>;
-  return { vehicles, yearlySpend: yearlySpend.total, upcomingMots, reminders };
+  const plannedPurchases = getDb()
+    .prepare(`
+      SELECT planned_purchases.id,
+             vehicle_id as vehicleId,
+             item_name as itemName,
+             quantity,
+             estimated_cost as estimatedCost,
+             due_date as dueDate,
+             due_odometer as dueOdometer,
+             make,
+             model
+      FROM planned_purchases
+      JOIN vehicles ON vehicles.id = planned_purchases.vehicle_id
+      WHERE purchased_date IS NULL AND vehicles.archived = 0
+      ORDER BY due_date IS NULL, due_date ASC, due_odometer IS NULL, due_odometer ASC, planned_purchases.id DESC
+      LIMIT 8
+    `)
+    .all() as Array<{ id: number; vehicleId: number; itemName: string; quantity: number; estimatedCost: number; dueDate: string | null; dueOdometer: number | null; make: string; model: string }>;
+  const plannedPurchaseCount = getDb()
+    .prepare(`
+      SELECT COUNT(*) as count
+      FROM planned_purchases
+      JOIN vehicles ON vehicles.id = planned_purchases.vehicle_id
+      WHERE purchased_date IS NULL AND vehicles.archived = 0
+    `)
+    .get() as { count: number };
+  return { vehicles, yearlySpend: yearlySpend.total, upcomingMots, reminders, plannedPurchases, plannedPurchaseCount: plannedPurchaseCount.count };
 }

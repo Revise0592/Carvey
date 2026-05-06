@@ -102,6 +102,17 @@ describe("backup and restore", () => {
       cost: 120,
       notes: null
     });
+    source.db.createPlannedPurchase({
+      vehicleId,
+      itemName: "Service parts",
+      quantity: 1,
+      estimatedCost: 75,
+      supplier: "Parts supplier",
+      url: null,
+      dueDate: "2026-07-01",
+      dueOdometer: null,
+      notes: null
+    });
     await fs.mkdir(source.paths.vehiclePhotoDir, { recursive: true });
     await fs.writeFile(path.join(source.paths.vehiclePhotoDir, "source.webp"), "source image");
     const sourceBackup = await source.backup.createBackupZip();
@@ -116,6 +127,7 @@ describe("backup and restore", () => {
     expect(preview.ok).toBe(true);
     if (!preview.ok) throw new Error("preview failed");
     expect(preview.summary.counts.vehicles).toBe(1);
+    expect(preview.summary.counts.plannedPurchases).toBe(1);
 
     const restored = await target.backup.confirmRestore(preview.summary.token);
     expect(restored.ok).toBe(true);
@@ -127,8 +139,39 @@ describe("backup and restore", () => {
     expect(target.db.listMaintenanceCategories()[0]).toMatchObject({ name: "Tyres" });
     expect(target.db.listWorkshops()[0]).toMatchObject({ name: "Preferred Autos", preferred: 1 });
     expect(target.db.listRepairs(vehicles[0].id)[0]).toMatchObject({ garage: "Preferred Autos", workshopId });
+    expect(target.db.listPlannedPurchases(vehicles[0].id)[0]).toMatchObject({ itemName: "Service parts", estimatedCost: 75 });
     await expect(fs.stat(path.join(target.paths.vehiclePhotoDir, "source.webp"))).resolves.toBeTruthy();
     await expect(fs.readdir(target.paths.restoreRollbackDir)).resolves.toHaveLength(1);
+    target.db.closeDbForTests();
+  });
+
+  it("restores older backups without planned purchases", async () => {
+    const source = await freshModules("carvey-legacy-source-");
+    source.db.createVehicle(vehicleInput("Legacy"));
+    const sourceBackup = await source.backup.createBackupZip();
+    const sourceZip = new AdmZip(sourceBackup.buffer);
+    const dbEntry = sourceZip.getEntry("carvey.sqlite");
+    const manifestEntry = sourceZip.getEntry("manifest.json");
+    if (!dbEntry || !manifestEntry) throw new Error("backup missing entries");
+    const legacyDbPath = path.join(source.paths.tempDir, "legacy.sqlite");
+    await fs.writeFile(legacyDbPath, dbEntry.getData());
+    const legacyDb = new Database(legacyDbPath);
+    legacyDb.prepare("DROP TABLE planned_purchases").run();
+    legacyDb.close();
+    const legacyZip = new AdmZip();
+    legacyZip.addLocalFile(legacyDbPath, "", "carvey.sqlite");
+    legacyZip.addFile("manifest.json", manifestEntry.getData());
+    source.db.closeDbForTests();
+
+    const target = await freshModules("carvey-legacy-target-");
+    const preview = await target.backup.stageRestorePreview(new File([legacyZip.toBuffer()], "legacy.zip", { type: "application/zip" }));
+    expect(preview.ok).toBe(true);
+    if (!preview.ok) throw new Error("preview failed");
+    expect(preview.summary.counts.plannedPurchases).toBe(0);
+    expect(await target.backup.confirmRestore(preview.summary.token)).toMatchObject({ ok: true });
+    const [vehicle] = target.db.listVehicles();
+    expect(vehicle.make).toBe("Legacy");
+    expect(target.db.listPlannedPurchases(vehicle.id)).toHaveLength(0);
     target.db.closeDbForTests();
   });
 

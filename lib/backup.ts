@@ -36,6 +36,7 @@ export type RestoreSummary = {
     repairs: number;
     mots: number;
     reminders: number;
+    plannedPurchases: number;
   };
 };
 
@@ -231,6 +232,10 @@ function restoreDatabaseContents(backupDbPath: string) {
     {
       name: "reminders",
       columns: ["id", "vehicle_id", "title", "due_date", "due_odometer", "recurrence", "completed_at", "created_at"]
+    },
+    {
+      name: "planned_purchases",
+      columns: ["id", "vehicle_id", "item_name", "quantity", "estimated_cost", "actual_cost", "supplier", "url", "due_date", "due_odometer", "notes", "reminder_id", "purchased_date", "created_at", "updated_at"]
     }
   ];
 
@@ -316,7 +321,8 @@ async function validateAndSummariseZip(buffer: Buffer, token: string, extractDir
       maintenance: countRows(backupDb, "maintenance_records"),
       repairs: countRows(backupDb, "repair_records"),
       mots: countRows(backupDb, "mot_records"),
-      reminders: countRows(backupDb, "reminders")
+      reminders: countRows(backupDb, "reminders"),
+      plannedPurchases: countRows(backupDb, "planned_purchases")
     };
     return {
       token,
@@ -332,6 +338,8 @@ async function validateAndSummariseZip(buffer: Buffer, token: string, extractDir
 }
 
 function countRows(database: Database.Database, table: string) {
+  const exists = database.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?").get(table);
+  if (!exists) return 0;
   const row = database.prepare(`SELECT COUNT(*) as count FROM ${table}`).get() as { count: number };
   return row.count;
 }

@@ -198,7 +198,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                 <span>Demo vehicles</span>
                 <strong>{debugDemoStatus.summary?.counts.vehicles ?? "Unavailable"}</strong>
                 <span>Logged records</span>
-                <strong>{debugDemoStatus.summary ? debugDemoStatus.summary.counts.maintenance + debugDemoStatus.summary.counts.repairs + debugDemoStatus.summary.counts.mots + debugDemoStatus.summary.counts.reminders : "Unavailable"}</strong>
+                <strong>{debugDemoStatus.summary ? debugDemoStatus.summary.counts.maintenance + debugDemoStatus.summary.counts.repairs + debugDemoStatus.summary.counts.mots + debugDemoStatus.summary.counts.reminders + debugDemoStatus.summary.counts.plannedPurchases : "Unavailable"}</strong>
                 <span>Demo photos/files</span>
                 <strong>{debugDemoStatus.summary?.uploadCount ?? "Unavailable"}</strong>
                 <span>Status</span>
@@ -236,6 +236,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                 <strong>{restoreSummary.counts.mots}</strong>
                 <span>Reminders</span>
                 <strong>{restoreSummary.counts.reminders}</strong>
+                <span>To buy</span>
+                <strong>{restoreSummary.counts.plannedPurchases}</strong>
                 <span>Images/files</span>
                 <strong>{restoreSummary.uploadCount}</strong>
               </dl>

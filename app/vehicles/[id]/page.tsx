@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { BadgeCheck, CalendarDays, Hammer, Printer, ShieldCheck, Wrench } from "lucide-react";
+import { BadgeCheck, CalendarDays, ExternalLink, Hammer, PackagePlus, Printer, ShieldCheck, Wrench } from "lucide-react";
 import { AppFrame } from "@/components/AppFrame";
 import { BackButton } from "@/components/BackButton";
 import {
@@ -9,11 +9,14 @@ import {
   EditVehicleForm,
   EditMaintenanceForm,
   EditMotForm,
+  EditPlannedPurchaseForm,
   EditReminderForm,
   EditRepairForm,
+  MarkPlannedPurchaseBoughtForm,
   MaintenanceForm,
   MileagePill,
   MotForm,
+  PlannedPurchaseForm,
   ReminderForm,
   RepairForm
 } from "@/components/Forms";
@@ -21,13 +24,13 @@ import { ExplosionEffect } from "@/components/ExplosionEffect";
 import { RegistrationPlate } from "@/components/RegistrationPlate";
 import { VehiclePhotoUploadForm } from "@/components/VehiclePhotoUploadForm";
 import { VehiclePhoto } from "@/components/VehiclePhoto";
-import { getCollectionName, getVehicle, listMaintenance, listMaintenanceCategories, listMots, listReminders, listRepairs, listWorkshops } from "@/lib/db";
+import { getCollectionName, getVehicle, getVehicleActivePlannedPurchaseSummary, getVehicleLoggedSpend, listMaintenance, listMaintenanceCategories, listMots, listPlannedPurchases, listReminders, listRepairs, listWorkshops } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { debugEasterEggsEnabled } from "@/lib/debug";
 import { formatCurrency, formatDate, formatMiles } from "@/lib/format";
 import { getReminderStatus } from "@/lib/reminders";
 
-const tabs = ["overview", "maintenance", "repairs", "mots", "reminders"] as const;
+const tabs = ["overview", "maintenance", "repairs", "mots", "to-buy", "reminders"] as const;
 type Tab = (typeof tabs)[number];
 
 export default async function VehiclePage({
@@ -49,9 +52,11 @@ export default async function VehiclePage({
   const repairs = listRepairs(vehicle.id);
   const mots = listMots(vehicle.id);
   const reminders = listReminders(vehicle.id);
+  const plannedPurchases = listPlannedPurchases(vehicle.id);
   const workshops = listWorkshops();
   const categories = listMaintenanceCategories();
-  const spent = [...maintenance, ...repairs, ...mots].reduce((total, record) => total + record.cost, 0);
+  const spent = getVehicleLoggedSpend(vehicle.id);
+  const activePlannedSummary = getVehicleActivePlannedPurchaseSummary(vehicle.id);
   const latestMot = mots[0];
   const debugEnabled = debugEasterEggsEnabled();
   const collectionName = getCollectionName();
@@ -96,7 +101,7 @@ export default async function VehiclePage({
       <nav className="tabs" aria-label="Vehicle sections">
         {tabs.map((tab) => (
           <Link className={activeTab === tab ? "active" : ""} href={`/vehicles/${vehicle.id}?tab=${tab}`} key={tab}>
-            {tab === "mots" ? "MOTs" : tab[0].toUpperCase() + tab.slice(1)}
+            {tab === "mots" ? "MOTs" : tab === "to-buy" ? "To Buy" : tab[0].toUpperCase() + tab.slice(1)}
           </Link>
         ))}
       </nav>
@@ -114,6 +119,10 @@ export default async function VehiclePage({
               <strong>{repairs.length}</strong>
               <span>Open reminders</span>
               <strong>{reminders.filter((reminder) => !reminder.completedAt).length}</strong>
+              <span>To buy</span>
+              <strong>{activePlannedSummary.count}</strong>
+              <span>Upcoming estimate</span>
+              <strong>{formatCurrency(activePlannedSummary.estimatedTotal)}</strong>
               <span>Purchase date</span>
               <strong>{formatDate(vehicle.purchaseDate)}</strong>
               <span>Purchase price</span>
@@ -224,6 +233,51 @@ export default async function VehiclePage({
                 <div className="record-actions">
                   {!record.completedAt ? <CompleteReminderButton vehicleId={vehicle.id} id={record.id} /> : null}
                   <EditReminderForm record={record} />
+                </div>
+              </article>
+            );
+          })}
+        </RecordSection>
+      ) : null}
+
+      {activeTab === "to-buy" ? (
+        <RecordSection
+          title="To Buy"
+          icon={<PackagePlus size={19} />}
+          form={<PlannedPurchaseForm vehicleId={vehicle.id} />}
+          emptyTitle="No planned purchases"
+          emptyMessage="Add parts or supplies you need to buy before the next job."
+          hasRecords={plannedPurchases.length > 0}
+        >
+          {plannedPurchases.map((record) => {
+            const bought = Boolean(record.purchasedDate);
+            const dueDetails = [
+              record.dueDate ? `Due ${formatDate(record.dueDate)}` : null,
+              record.dueOdometer ? formatMiles(record.dueOdometer) : null
+            ].filter(Boolean).join(" · ");
+            return (
+              <article className="record-card" key={record.id}>
+                <div className="record-header">
+                  <span className={`tag ${bought ? "done" : dueDetails ? "upcoming" : ""}`}>{bought ? "bought" : "to buy"}</span>
+                  <h3>{record.itemName}</h3>
+                </div>
+                <p className="record-meta">
+                  Qty {record.quantity}
+                  {dueDetails ? ` · ${dueDetails}` : ""}
+                  {record.purchasedDate ? ` · Bought ${formatDate(record.purchasedDate)}` : ""}
+                </p>
+                <strong>{formatCurrency(record.purchasedDate ? record.actualCost ?? record.estimatedCost : record.estimatedCost)}</strong>
+                {record.supplier ? <p>{record.supplier}</p> : null}
+                {record.url ? (
+                  <a className="secondary-button" href={record.url} target="_blank" rel="noreferrer">
+                    <ExternalLink size={17} />
+                    Open link
+                  </a>
+                ) : null}
+                {record.notes ? <p>{record.notes}</p> : null}
+                <div className="record-actions">
+                  {!bought ? <MarkPlannedPurchaseBoughtForm record={record} /> : null}
+                  <EditPlannedPurchaseForm record={record} />
                 </div>
               </article>
             );
