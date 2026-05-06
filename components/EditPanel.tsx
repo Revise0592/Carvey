@@ -2,13 +2,15 @@ import { ModalPanel } from "./ModalPanel";
 
 export function EditPanel({
   children,
-  deleteAction
+  deleteAction,
+  title = "Edit entry"
 }: {
   children: React.ReactNode;
   deleteAction: () => Promise<void>;
+  title?: string;
 }) {
   return (
-    <ModalPanel trigger="Edit">
+    <ModalPanel trigger="Edit" title={title}>
       <div className="edit-menu">
         {children}
         <form action={deleteAction} className="delete-confirm">

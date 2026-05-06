@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BadgeCheck, CalendarClock, PoundSterling, Wrench } from "lucide-react";
+import { BadgeCheck, CalendarClock, PackagePlus, PoundSterling, Wrench } from "lucide-react";
 import { AppFrame } from "@/components/AppFrame";
 import { CreateVehicleForm } from "@/components/Forms";
 import { RegistrationPlate } from "@/components/RegistrationPlate";
@@ -39,6 +39,11 @@ export default async function GaragePage() {
           <span>Open reminders</span>
           <strong>{stats.reminders.length}</strong>
         </article>
+        <article className="stat-card stat-card-reminders">
+          <PackagePlus size={20} />
+          <span>To buy</span>
+          <strong>{stats.plannedPurchaseCount}</strong>
+        </article>
       </section>
 
       <section className="garage-grid">
@@ -69,7 +74,7 @@ export default async function GaragePage() {
         ) : null}
       </section>
 
-      <section className="split-grid">
+      <section className="dashboard-panels">
         <div className="list-panel">
           <h2>MOTs due soon</h2>
           {stats.upcomingMots.length ? stats.upcomingMots.map((mot) => (
@@ -87,6 +92,16 @@ export default async function GaragePage() {
               <strong>{reminder.dueDate ? formatDate(reminder.dueDate) : formatMiles(reminder.dueOdometer)}</strong>
             </Link>
           )) : <p className="muted">No open reminders.</p>}
+        </div>
+
+        <div className="list-panel">
+          <h2>To buy</h2>
+          {stats.plannedPurchases.length ? stats.plannedPurchases.map((item) => (
+            <Link href={`/vehicles/${item.vehicleId}?tab=to-buy`} className="list-row" key={item.id}>
+              <span>{item.itemName} · {item.make} {item.model}</span>
+              <strong>{formatCurrency(item.estimatedCost)}</strong>
+            </Link>
+          )) : <p className="muted">No planned purchases.</p>}
         </div>
       </section>
     </AppFrame>

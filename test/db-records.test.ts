@@ -242,6 +242,7 @@ describe("record mutation helpers", () => {
     db.createRepair({ vehicleId, date: "2026-01-02", odometer: 18001, fault: "Puncture", garage: null, workshopId: null, cost: 25, notes: null });
     db.createMot({ vehicleId, testDate: "2026-01-03", expiryDate: "2027-01-03", odometer: 18002, result: "pass", advisories: null, cost: 54.85, certificateRef: null });
     db.createReminder({ vehicleId, title: "Check coolant", dueDate: "2026-02-01", dueOdometer: null, recurrence: null });
+    db.createPlannedPurchase({ vehicleId, itemName: "Oil filter", quantity: 1, estimatedCost: 12, supplier: null, url: null, dueDate: null, dueOdometer: null, notes: null });
 
     db.deleteVehicle(vehicleId);
 
@@ -249,6 +250,133 @@ describe("record mutation helpers", () => {
     expect(db.listMaintenance(vehicleId)).toHaveLength(0);
     expect(db.listRepairs(vehicleId)).toHaveLength(0);
     expect(db.listMots(vehicleId)).toHaveLength(0);
+    expect(db.listReminders(vehicleId)).toHaveLength(0);
+    expect(db.listPlannedPurchases(vehicleId)).toHaveLength(0);
+    db.closeDbForTests();
+  });
+
+  it("manages planned purchases and only counts bought items as spend", async () => {
+    const db = await freshDb();
+    const vehicleId = Number(db.createVehicle({
+      make: "BMW",
+      model: "330i",
+      year: 2021,
+      registration: "BM21 BUY",
+      vin: null,
+      currentOdometer: 30000,
+      purchasePrice: null,
+      purchaseDate: null,
+      notes: null
+    }).lastInsertRowid);
+
+    const plannedId = Number(db.createPlannedPurchase({
+      vehicleId,
+      itemName: "Major service kit",
+      quantity: 1,
+      estimatedCost: 180,
+      supplier: "Parts shop",
+      url: "https://example.com/service-kit",
+      dueDate: "2026-06-01",
+      dueOdometer: 32000,
+      notes: "Oil, plugs, filters"
+    }).lastInsertRowid);
+
+    expect(db.listPlannedPurchases(vehicleId)[0]).toMatchObject({
+      itemName: "Major service kit",
+      estimatedCost: 180,
+      supplier: "Parts shop"
+    });
+    expect(db.getVehicleActivePlannedPurchaseSummary(vehicleId)).toMatchObject({ count: 1, estimatedTotal: 180 });
+    expect(db.getVehicleLoggedSpend(vehicleId)).toBe(0);
+    expect(db.listReminders(vehicleId)[0]).toMatchObject({ title: "Buy: Major service kit", dueDate: "2026-06-01", dueOdometer: 32000 });
+
+    db.updatePlannedPurchase(plannedId, vehicleId, {
+      itemName: "Service parts bundle",
+      quantity: 2,
+      estimatedCost: 210,
+      supplier: "Dealer",
+      url: null,
+      dueDate: "2026-06-10",
+      dueOdometer: null,
+      notes: "Updated"
+    });
+    expect(db.listReminders(vehicleId)[0]).toMatchObject({ title: "Buy: Service parts bundle", dueDate: "2026-06-10", dueOdometer: null });
+
+    const currentYear = new Date().getFullYear();
+    db.markPlannedPurchaseBought(plannedId, vehicleId, { purchasedDate: `${currentYear}-05-01`, actualCost: 205 });
+    expect(db.listPlannedPurchases(vehicleId)[0]).toMatchObject({ purchasedDate: `${currentYear}-05-01`, actualCost: 205 });
+    expect(db.listReminders(vehicleId)[0].completedAt).toEqual(expect.any(String));
+    expect(db.getVehicleActivePlannedPurchaseSummary(vehicleId)).toMatchObject({ count: 0, estimatedTotal: 0 });
+    expect(db.getVehicleLoggedSpend(vehicleId)).toBe(205);
+
+    db.createPlannedPurchase({
+      vehicleId,
+      itemName: "Coolant",
+      quantity: 1,
+      estimatedCost: 15,
+      supplier: null,
+      url: null,
+      dueDate: "2026-05-20",
+      dueOdometer: null,
+      notes: null
+    });
+    expect(db.getDashboardStats().plannedPurchases[0]).toMatchObject({ itemName: "Coolant", estimatedCost: 15 });
+    expect(db.getDashboardStats().yearlySpend).toBe(205);
+    db.closeDbForTests();
+  });
+
+  it("clears and deletes linked reminders with planned purchases", async () => {
+    const db = await freshDb();
+    const vehicleId = Number(db.createVehicle({
+      make: "Ford",
+      model: "Focus",
+      year: 2016,
+      registration: "FD16 TODO",
+      vin: null,
+      currentOdometer: 76000,
+      purchasePrice: null,
+      purchaseDate: null,
+      notes: null
+    }).lastInsertRowid);
+    const plannedId = Number(db.createPlannedPurchase({
+      vehicleId,
+      itemName: "Brake pads",
+      quantity: 1,
+      estimatedCost: 45,
+      supplier: null,
+      url: null,
+      dueDate: "2026-07-01",
+      dueOdometer: null,
+      notes: null
+    }).lastInsertRowid);
+    expect(db.listReminders(vehicleId)).toHaveLength(1);
+
+    db.updatePlannedPurchase(plannedId, vehicleId, {
+      itemName: "Brake pads",
+      quantity: 1,
+      estimatedCost: 45,
+      supplier: null,
+      url: null,
+      dueDate: null,
+      dueOdometer: null,
+      notes: null
+    });
+    expect(db.listPlannedPurchases(vehicleId)[0].reminderId).toBeNull();
+    expect(db.listReminders(vehicleId)).toHaveLength(0);
+
+    db.updatePlannedPurchase(plannedId, vehicleId, {
+      itemName: "Brake pads",
+      quantity: 1,
+      estimatedCost: 45,
+      supplier: null,
+      url: null,
+      dueDate: null,
+      dueOdometer: 78000,
+      notes: null
+    });
+    expect(db.listReminders(vehicleId)).toHaveLength(1);
+    db.deletePlannedPurchase(plannedId, vehicleId);
+    expect(db.listPlannedPurchases(vehicleId)).toHaveLength(0);
     expect(db.listReminders(vehicleId)).toHaveLength(0);
     db.closeDbForTests();
   });

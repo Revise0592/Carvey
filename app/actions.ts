@@ -11,6 +11,7 @@ import {
   createMaintenance,
   createMaintenanceCategory,
   createMot,
+  createPlannedPurchase,
   createReminder,
   createRepair,
   createWorkshop,
@@ -18,10 +19,12 @@ import {
   deleteMaintenance,
   deleteMaintenanceCategory,
   deleteMot,
+  deletePlannedPurchase,
   deleteReminder,
   deleteRepair,
   deleteWorkshop,
   deleteVehicle,
+  markPlannedPurchaseBought,
   getOrCreateWorkshopByName,
   getVehicle,
   setVehicleDebugDestroyed,
@@ -29,6 +32,7 @@ import {
   updateMaintenance,
   updateMaintenanceCategory,
   updateMot,
+  updatePlannedPurchase,
   updateReminder,
   updateRepair,
   updateVehicle,
@@ -329,6 +333,58 @@ export async function completeReminderAction(vehicleId: number, formData: FormDa
   await requireUser();
   const id = Number.parseInt(str(formData, "id"), 10);
   completeReminder(id, vehicleId);
+  await syncCurrentDemoAfterMutation();
+  revalidatePath("/garage");
+  revalidatePath(`/vehicles/${vehicleId}`);
+}
+
+export async function createPlannedPurchaseAction(vehicleId: number, formData: FormData) {
+  await requireUser();
+  createPlannedPurchase({
+    vehicleId,
+    itemName: z.string().min(1).max(160).parse(str(formData, "itemName")),
+    quantity: nullableInt(formData, "quantity") ?? 1,
+    estimatedCost: money(formData, "estimatedCost"),
+    supplier: nullableStr(formData, "supplier"),
+    url: nullableStr(formData, "url"),
+    dueDate: nullableStr(formData, "dueDate"),
+    dueOdometer: nullableInt(formData, "dueOdometer"),
+    notes: nullableStr(formData, "notes")
+  });
+  await syncCurrentDemoAfterMutation();
+  revalidatePath("/garage");
+  revalidatePath(`/vehicles/${vehicleId}`);
+}
+
+export async function updatePlannedPurchaseAction(vehicleId: number, id: number, formData: FormData) {
+  await requireUser();
+  updatePlannedPurchase(id, vehicleId, {
+    itemName: z.string().min(1).max(160).parse(str(formData, "itemName")),
+    quantity: nullableInt(formData, "quantity") ?? 1,
+    estimatedCost: money(formData, "estimatedCost"),
+    supplier: nullableStr(formData, "supplier"),
+    url: nullableStr(formData, "url"),
+    dueDate: nullableStr(formData, "dueDate"),
+    dueOdometer: nullableInt(formData, "dueOdometer"),
+    notes: nullableStr(formData, "notes")
+  });
+  await syncCurrentDemoAfterMutation();
+  revalidateVehicle(vehicleId);
+}
+
+export async function deletePlannedPurchaseAction(vehicleId: number, id: number) {
+  await requireUser();
+  deletePlannedPurchase(id, vehicleId);
+  await syncCurrentDemoAfterMutation();
+  revalidateVehicle(vehicleId);
+}
+
+export async function markPlannedPurchaseBoughtAction(vehicleId: number, id: number, formData: FormData) {
+  await requireUser();
+  markPlannedPurchaseBought(id, vehicleId, {
+    purchasedDate: z.string().min(1).parse(str(formData, "purchasedDate")),
+    actualCost: money(formData, "actualCost")
+  });
   await syncCurrentDemoAfterMutation();
   revalidatePath("/garage");
   revalidatePath(`/vehicles/${vehicleId}`);

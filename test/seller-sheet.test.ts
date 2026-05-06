@@ -38,6 +38,8 @@ describe("seller sheet data", () => {
     db.createReminder({ vehicleId, title: "MOT due", dueDate: "2027-03-01", dueOdometer: null, recurrence: "12 months" });
     const completedId = Number(db.createReminder({ vehicleId, title: "Completed service", dueDate: "2026-05-01", dueOdometer: null, recurrence: null }).lastInsertRowid);
     db.completeReminder(completedId, vehicleId);
+    const plannedId = Number(db.createPlannedPurchase({ vehicleId, itemName: "Private spare parts", quantity: 1, estimatedCost: 200, supplier: null, url: null, dueDate: null, dueOdometer: null, notes: null }).lastInsertRowid);
+    db.markPlannedPurchaseBought(plannedId, vehicleId, { purchasedDate: "2026-04-01", actualCost: 195 });
 
     const report = sellerSheet.getSellerSheetData(vehicleId);
     expect(report).toBeTruthy();
@@ -67,6 +69,7 @@ describe("seller sheet data", () => {
       openReminderCount: 1
     });
     expect(report.totals.loggedSpend).toBe(254.85);
+    expect(db.getVehicleLoggedSpend(vehicleId)).toBe(449.85);
     db.closeDbForTests();
   });
 
