@@ -88,7 +88,7 @@ export default async function GaragePage() {
           <h2>Reminders</h2>
           {stats.reminders.length ? stats.reminders.map((reminder) => (
             <Link href={`/vehicles/${reminder.vehicleId}?tab=reminders`} className="list-row" key={reminder.id}>
-              <span>{reminder.title}</span>
+              <span>{reminder.title} · {reminder.make} {reminder.model}</span>
               <strong>{reminder.dueDate ? formatDate(reminder.dueDate) : formatMiles(reminder.dueOdometer)}</strong>
             </Link>
           )) : <p className="muted">No open reminders.</p>}

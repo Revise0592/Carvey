@@ -251,19 +251,14 @@ export default async function VehiclePage({
         >
           {plannedPurchases.map((record) => {
             const bought = Boolean(record.purchasedDate);
-            const dueDetails = [
-              record.dueDate ? `Due ${formatDate(record.dueDate)}` : null,
-              record.dueOdometer ? formatMiles(record.dueOdometer) : null
-            ].filter(Boolean).join(" · ");
             return (
-              <article className="record-card" key={record.id}>
+              <article className="record-card to-buy-card" key={record.id}>
                 <div className="record-header">
-                  <span className={`tag ${bought ? "done" : dueDetails ? "upcoming" : ""}`}>{bought ? "bought" : "to buy"}</span>
+                  <span className={`tag ${bought ? "done" : ""}`}>{bought ? "bought" : "to buy"}</span>
                   <h3>{record.itemName}</h3>
                 </div>
                 <p className="record-meta">
                   Qty {record.quantity}
-                  {dueDetails ? ` · ${dueDetails}` : ""}
                   {record.purchasedDate ? ` · Bought ${formatDate(record.purchasedDate)}` : ""}
                 </p>
                 <strong>{formatCurrency(record.purchasedDate ? record.actualCost ?? record.estimatedCost : record.estimatedCost)}</strong>

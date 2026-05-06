@@ -1176,6 +1176,19 @@ textarea:focus-visible {
   grid-template-columns: 1fr;
 }
 
+.to-buy-card {
+  gap: 0.72rem;
+}
+
+.to-buy-card .record-header {
+  gap: 0.45rem;
+  padding-bottom: 0.7rem;
+}
+
+.to-buy-card .record-actions {
+  margin-top: 0;
+}
+
 .record-header {
   display: grid;
   gap: 0.55rem;
