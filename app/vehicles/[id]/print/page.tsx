@@ -23,7 +23,7 @@ export default async function VehiclePrintPage({ params }: { params: Promise<{ i
   return (
     <main className="print-sheet">
       <header className="print-toolbar print-hide">
-        <Link className="secondary-button" href={`/vehicles/${vehicle.id}`}>
+        <Link className="secondary-button" href={`/vehicles/${vehicle.id}`} replace>
           Back to vehicle
         </Link>
         <PrintButton />
