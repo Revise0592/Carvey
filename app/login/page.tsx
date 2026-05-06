@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { loginAction } from "../actions";
-import { BrandWordmark } from "@/components/BrandLogo";
+import { BrandLogo } from "@/components/BrandLogo";
 import { currentUser } from "@/lib/auth";
 import { hasAdminUser } from "@/lib/db";
 
@@ -16,7 +16,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       <section className="auth-card">
         <div className="auth-header auth-header-wordmark">
           <div className="auth-header-copy">
-            <BrandWordmark />
+            <BrandLogo />
             <h1>Welcome back</h1>
           </div>
         </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { Monitor, Moon, Sun } from "lucide-react";
-import { getBrandIconPath, resolveThemeMode } from "@/lib/theme-branding";
+import { resolveThemeMode } from "@/lib/theme-branding";
 import { themePalettes, type ThemeMode, type ThemePalette } from "@/lib/theme-options";
 
 const modeOptions: Array<{ mode: ThemeMode; label: string; icon: React.ReactNode }> = [
@@ -11,22 +11,12 @@ const modeOptions: Array<{ mode: ThemeMode; label: string; icon: React.ReactNode
 ];
 
 export function ThemeControls() {
-  function updateFaviconLinks(resolved: "light" | "dark") {
-    const href = getBrandIconPath(resolved, "png");
-    document
-      .querySelectorAll<HTMLLinkElement>('link[rel="icon"], link[rel="shortcut icon"], link[rel="apple-touch-icon"]')
-      .forEach((link) => {
-        link.href = href;
-      });
-  }
-
   function applyTheme(nextMode: ThemeMode) {
     window.localStorage.setItem("carvey-theme", nextMode);
     const systemDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     const resolved = resolveThemeMode(nextMode, systemDark);
     document.documentElement.setAttribute("data-theme", resolved);
     document.documentElement.setAttribute("data-theme-mode", nextMode);
-    updateFaviconLinks(resolved);
   }
 
   function applyPalette(nextPalette: ThemePalette) {

@@ -466,25 +466,15 @@ textarea:focus-visible {
 }
 
 .brand {
-  gap: 0.7rem;
   min-width: 0;
-}
-
-.brand-mark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 14px;
-  overflow: hidden;
 }
 
 .brand-logo {
   position: relative;
   display: block;
-  width: 100%;
-  height: 100%;
+  width: min(214px, 52vw);
+  aspect-ratio: 1766 / 396;
+  flex: 0 0 auto;
 }
 
 .brand-logo-image {
@@ -492,39 +482,12 @@ textarea:focus-visible {
   width: 100%;
   height: 100%;
   object-fit: contain;
+  object-position: left center;
 }
 
 :root[data-theme="light"] .brand-logo-light,
-:root[data-theme="dark"] .brand-logo-dark,
-:root[data-theme="light"] .brand-wordmark-light,
-:root[data-theme="dark"] .brand-wordmark-dark {
+:root[data-theme="dark"] .brand-logo-dark {
   display: block;
-}
-
-.brand-mark.small {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  transform: scale(1.5);
-  transform-origin: left center;
-}
-
-.brand-wordmark-image-wrap {
-  position: relative;
-  display: block;
-  width: min(168px, 100%);
-  height: 40px;
-  flex: 0 0 auto;
-  transform: scale(1.5);
-  transform-origin: left center;
-}
-
-.brand-wordmark-image {
-  display: none;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  object-position: left center;
 }
 
 .top-actions {
@@ -704,21 +667,9 @@ textarea:focus-visible {
 
 .auth-header {
   display: grid;
-  grid-template-columns: 48px 1fr;
   align-items: start;
   gap: 1rem;
   margin-bottom: 1.35rem;
-}
-
-.auth-mark {
-  width: 48px;
-  height: 48px;
-  border-radius: 13px;
-}
-
-.auth-header > div:last-child {
-  display: grid;
-  gap: 0.6rem;
 }
 
 .auth-header-copy {
@@ -738,14 +689,8 @@ textarea:focus-visible {
   justify-items: center;
 }
 
-.auth-header .brand-wordmark-image-wrap {
-  width: min(168px, 100%);
-  height: 40px;
-}
-
-.auth-header-wordmark .brand-wordmark-image-wrap {
-  width: min(188px, 100%);
-  height: 46px;
+.auth-header .brand-logo {
+  width: min(224px, 100%);
 }
 
 .auth-card h1,
@@ -1991,19 +1936,12 @@ textarea:focus-visible {
     padding: 11px 12px;
   }
 
-  .brand-mark.small {
-    width: 36px;
-    height: 36px;
+  .brand-logo {
+    width: min(156px, 50vw);
   }
 
-  .brand-wordmark-image-wrap {
-    width: min(146px, 100%);
-    height: 34px;
-  }
-
-  .auth-header .brand-wordmark-image-wrap {
-    width: min(152px, 100%);
-    height: 36px;
+  .auth-header .brand-logo {
+    width: min(176px, 100%);
   }
 
   .vehicle-hero-copy {
