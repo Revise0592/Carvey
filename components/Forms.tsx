@@ -353,8 +353,6 @@ function PlannedPurchaseFields({ record, disabled = false }: { record?: PlannedP
       <Field label="Estimated cost"><input name="estimatedCost" type="number" min="0" step="0.01" defaultValue={record?.estimatedCost ?? ""} disabled={disabled} /></Field>
       <Field label="Supplier"><input name="supplier" defaultValue={record?.supplier ?? ""} disabled={disabled} /></Field>
       <Field label="Link"><input name="url" type="url" defaultValue={record?.url ?? ""} disabled={disabled} /></Field>
-      <Field label="Due date"><input name="dueDate" type="date" defaultValue={record?.dueDate ?? ""} disabled={disabled} /></Field>
-      <Field label="Due mileage"><input name="dueOdometer" type="number" min="0" defaultValue={record?.dueOdometer ?? ""} disabled={disabled} /></Field>
       <Field label="Notes"><textarea name="notes" defaultValue={record?.notes ?? ""} disabled={disabled} /></Field>
     </>
   );
