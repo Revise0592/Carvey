@@ -5,6 +5,8 @@ import { AppFrame } from "@/components/AppFrame";
 import { BackButton } from "@/components/BackButton";
 import {
   CompleteReminderButton,
+  CreateMaintenanceFromPurchaseForm,
+  CreateRepairFromPurchaseForm,
   DebugVehicleForm,
   EditVehicleForm,
   EditMaintenanceForm,
@@ -53,6 +55,8 @@ export default async function VehiclePage({
   const mots = listMots(vehicle.id);
   const reminders = listReminders(vehicle.id);
   const plannedPurchases = listPlannedPurchases(vehicle.id);
+  const toBuyPurchases = plannedPurchases.filter((record) => !record.purchasedDate);
+  const purchasedItems = plannedPurchases.filter((record) => record.purchasedDate);
   const workshops = listWorkshops();
   const categories = listMaintenanceCategories();
   const spent = getVehicleLoggedSpend(vehicle.id);
@@ -249,19 +253,16 @@ export default async function VehiclePage({
           emptyMessage="Add parts or supplies you need to buy before the next job."
           hasRecords={plannedPurchases.length > 0}
         >
-          {plannedPurchases.map((record) => {
-            const bought = Boolean(record.purchasedDate);
-            return (
+          <div className="record-subsection">
+            <h3>To buy</h3>
+            {toBuyPurchases.length ? toBuyPurchases.map((record) => (
               <article className="record-card to-buy-card" key={record.id}>
                 <div className="record-header">
-                  <span className={`tag ${bought ? "done" : ""}`}>{bought ? "bought" : "to buy"}</span>
+                  <span className="tag">to buy</span>
                   <h3>{record.itemName}</h3>
                 </div>
-                <p className="record-meta">
-                  Qty {record.quantity}
-                  {record.purchasedDate ? ` · Bought ${formatDate(record.purchasedDate)}` : ""}
-                </p>
-                <strong>{formatCurrency(record.purchasedDate ? record.actualCost ?? record.estimatedCost : record.estimatedCost)}</strong>
+                <p className="record-meta">Qty {record.quantity}</p>
+                <strong>{formatCurrency(record.estimatedCost)}</strong>
                 {record.supplier ? <p>{record.supplier}</p> : null}
                 {record.url ? (
                   <a className="secondary-button" href={record.url} target="_blank" rel="noreferrer">
@@ -271,12 +272,48 @@ export default async function VehiclePage({
                 ) : null}
                 {record.notes ? <p>{record.notes}</p> : null}
                 <div className="record-actions">
-                  {!bought ? <MarkPlannedPurchaseBoughtForm record={record} /> : null}
+                  <MarkPlannedPurchaseBoughtForm record={record} />
                   <EditPlannedPurchaseForm record={record} />
                 </div>
               </article>
-            );
-          })}
+            )) : <p className="muted">Nothing left to buy.</p>}
+          </div>
+
+          <div className="record-subsection">
+            <h3>Purchased</h3>
+            {purchasedItems.length ? purchasedItems.map((record) => (
+              <article className="record-card to-buy-card" key={record.id}>
+                <div className="record-header">
+                  <span className={`tag ${record.convertedAt ? "done" : ""}`}>
+                    {record.convertedAt ? `logged as ${record.convertedToType}` : "purchased"}
+                  </span>
+                  <h3>{record.itemName}</h3>
+                </div>
+                <p className="record-meta">
+                  Qty {record.quantity} · Bought {formatDate(record.purchasedDate)}
+                  {record.convertedAt ? ` · Logged ${formatDate(record.convertedAt)}` : ""}
+                </p>
+                <strong>{formatCurrency(record.actualCost ?? record.estimatedCost)}</strong>
+                {record.supplier ? <p>{record.supplier}</p> : null}
+                {record.url ? (
+                  <a className="secondary-button" href={record.url} target="_blank" rel="noreferrer">
+                    <ExternalLink size={17} />
+                    Open link
+                  </a>
+                ) : null}
+                {record.notes ? <p>{record.notes}</p> : null}
+                <div className="record-actions">
+                  {!record.convertedAt ? (
+                    <>
+                      <CreateMaintenanceFromPurchaseForm record={record} categories={categories} />
+                      <CreateRepairFromPurchaseForm record={record} workshops={workshops} />
+                    </>
+                  ) : null}
+                  <EditPlannedPurchaseForm record={record} />
+                </div>
+              </article>
+            )) : <p className="muted">Purchased items will appear here once bought.</p>}
+          </div>
         </RecordSection>
       ) : null}
     </AppFrame>

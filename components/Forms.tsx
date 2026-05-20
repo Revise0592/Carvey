@@ -1,11 +1,13 @@
 import { CalendarDays, Check, Gauge, Hammer, PackagePlus, Plus, ShieldCheck, ShoppingCart, Trash2, Wrench } from "lucide-react";
 import {
   completeReminderAction,
+  createMaintenanceFromPurchaseAction,
   createPlannedPurchaseAction,
   createVehicleAction,
   createMaintenanceAction,
   createMotAction,
   createReminderAction,
+  createRepairFromPurchaseAction,
   createRepairAction,
   deletePlannedPurchaseAction,
   deleteVehicleAction,
@@ -313,6 +315,60 @@ export function MarkPlannedPurchaseBoughtForm({ record }: { record: PlannedPurch
       </form>
     </ModalPanel>
   );
+}
+
+export function CreateMaintenanceFromPurchaseForm({ record, categories }: { record: PlannedPurchase; categories: MaintenanceCategory[] }) {
+  const action = createMaintenanceFromPurchaseAction.bind(null, record.vehicleId, record.id);
+  return (
+    <ModalPanel trigger={<><Wrench size={17} /> Add to maintenance</>} title="Add purchase to maintenance">
+      <form action={action} className="record-form">
+        <Field label="Date"><input name="date" type="date" defaultValue={record.purchasedDate ?? todayIso()} required /></Field>
+        <Field label="Mileage"><input name="odometer" type="number" min="0" /></Field>
+        <Field label="Category">
+          <input name="category" list="category-suggestions" autoComplete="off" required />
+          <datalist id="category-suggestions">
+            {categories.map((c) => <option value={c.name} key={c.id} />)}
+          </datalist>
+        </Field>
+        <Field label="Cost"><input name="cost" type="number" min="0" step="0.01" defaultValue={record.actualCost ?? record.estimatedCost} /></Field>
+        <Field label="Description"><input name="description" defaultValue={record.itemName} required /></Field>
+        <Field label="Notes"><textarea name="notes" defaultValue={purchaseRecordNotes(record)} /></Field>
+        <button className="primary-button" type="submit">Save maintenance</button>
+      </form>
+    </ModalPanel>
+  );
+}
+
+export function CreateRepairFromPurchaseForm({ record, workshops }: { record: PlannedPurchase; workshops: Workshop[] }) {
+  const action = createRepairFromPurchaseAction.bind(null, record.vehicleId, record.id);
+  return (
+    <ModalPanel trigger={<><Hammer size={17} /> Add to repairs</>} title="Add purchase to repairs">
+      <form action={action} className="record-form">
+        <Field label="Date"><input name="date" type="date" defaultValue={record.purchasedDate ?? todayIso()} required /></Field>
+        <Field label="Mileage"><input name="odometer" type="number" min="0" /></Field>
+        <Field label="Fault or repair"><input name="fault" defaultValue={record.itemName} required /></Field>
+        <Field label="Garage/workshop">
+          <input name="garage" list="workshop-suggestions" autoComplete="off" />
+          <datalist id="workshop-suggestions">
+            {workshops.map((w) => <option value={w.name} key={w.id} />)}
+          </datalist>
+        </Field>
+        <Field label="Cost"><input name="cost" type="number" min="0" step="0.01" defaultValue={record.actualCost ?? record.estimatedCost} /></Field>
+        <Field label="Notes"><textarea name="notes" defaultValue={purchaseRecordNotes(record)} /></Field>
+        <button className="primary-button" type="submit">Save repair</button>
+      </form>
+    </ModalPanel>
+  );
+}
+
+function purchaseRecordNotes(record: PlannedPurchase) {
+  return [
+    record.notes,
+    `Purchased item: ${record.itemName}`,
+    `Quantity: ${record.quantity}`,
+    record.supplier ? `Supplier: ${record.supplier}` : null,
+    record.url ? `URL: ${record.url}` : null
+  ].filter(Boolean).join("\n");
 }
 
 export function CompleteReminderButton({ vehicleId, id }: { vehicleId: number; id: number }) {

@@ -93,6 +93,9 @@ export type PlannedPurchase = {
   notes: string | null;
   reminderId: number | null;
   purchasedDate: string | null;
+  convertedToType: "maintenance" | "repair" | null;
+  convertedRecordId: number | null;
+  convertedAt: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -279,6 +282,9 @@ function migrate(database: Database.Database) {
       notes TEXT,
       reminder_id INTEGER REFERENCES reminders(id) ON DELETE SET NULL,
       purchased_date TEXT,
+      converted_to_type TEXT CHECK (converted_to_type IN ('maintenance', 'repair')),
+      converted_record_id INTEGER,
+      converted_at TEXT,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
@@ -298,6 +304,9 @@ function migrate(database: Database.Database) {
   ensureColumn(database, "vehicles", "debug_destroyed", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn(database, "vehicles", "sold", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn(database, "repair_records", "workshop_id", "INTEGER REFERENCES workshops(id) ON DELETE SET NULL");
+  ensureColumn(database, "planned_purchases", "converted_to_type", "TEXT CHECK (converted_to_type IN ('maintenance', 'repair'))");
+  ensureColumn(database, "planned_purchases", "converted_record_id", "INTEGER");
+  ensureColumn(database, "planned_purchases", "converted_at", "TEXT");
 }
 
 function ensureColumn(database: Database.Database, table: string, column: string, definition: string) {
@@ -652,6 +661,9 @@ const plannedPurchaseSelect = `
   notes,
   reminder_id as reminderId,
   purchased_date as purchasedDate,
+  converted_to_type as convertedToType,
+  converted_record_id as convertedRecordId,
+  converted_at as convertedAt,
   created_at as createdAt,
   updated_at as updatedAt
 `;
@@ -782,7 +794,7 @@ export function completeReminder(id: number, vehicleId: number) {
     .run(id, vehicleId);
 }
 
-export function createPlannedPurchase(input: Omit<PlannedPurchase, "id" | "reminderId" | "actualCost" | "purchasedDate" | "createdAt" | "updatedAt">) {
+export function createPlannedPurchase(input: Omit<PlannedPurchase, "id" | "reminderId" | "actualCost" | "purchasedDate" | "convertedToType" | "convertedRecordId" | "convertedAt" | "createdAt" | "updatedAt">) {
   const result = getDb()
     .prepare(`
       INSERT INTO planned_purchases (vehicle_id, item_name, quantity, estimated_cost, supplier, url, due_date, due_odometer, notes)
@@ -793,7 +805,7 @@ export function createPlannedPurchase(input: Omit<PlannedPurchase, "id" | "remin
   return result;
 }
 
-export function updatePlannedPurchase(id: number, vehicleId: number, input: Omit<PlannedPurchase, "id" | "vehicleId" | "reminderId" | "actualCost" | "purchasedDate" | "createdAt" | "updatedAt">) {
+export function updatePlannedPurchase(id: number, vehicleId: number, input: Omit<PlannedPurchase, "id" | "vehicleId" | "reminderId" | "actualCost" | "purchasedDate" | "convertedToType" | "convertedRecordId" | "convertedAt" | "createdAt" | "updatedAt">) {
   const result = getDb()
     .prepare(`
       UPDATE planned_purchases
@@ -836,6 +848,58 @@ export function markPlannedPurchaseBought(id: number, vehicleId: number, input: 
   return result;
 }
 
+export function convertPlannedPurchaseToMaintenance(
+  id: number,
+  vehicleId: number,
+  input: Omit<MaintenanceRecord, "id" | "vehicleId" | "createdAt">
+) {
+  return getDb().transaction(() => {
+    const plannedPurchase = getPlannedPurchase(id, vehicleId);
+    if (!plannedPurchase?.purchasedDate || plannedPurchase.convertedAt) return { changes: 0 };
+    const result = createMaintenance({ vehicleId, ...input });
+    getDb()
+      .prepare(`
+        UPDATE planned_purchases
+        SET converted_to_type = 'maintenance',
+            converted_record_id = @recordId,
+            converted_at = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = @id
+          AND vehicle_id = @vehicleId
+          AND purchased_date IS NOT NULL
+          AND converted_at IS NULL
+      `)
+      .run({ id, vehicleId, recordId: Number(result.lastInsertRowid) });
+    return result;
+  })();
+}
+
+export function convertPlannedPurchaseToRepair(
+  id: number,
+  vehicleId: number,
+  input: Omit<RepairRecord, "id" | "vehicleId" | "createdAt">
+) {
+  return getDb().transaction(() => {
+    const plannedPurchase = getPlannedPurchase(id, vehicleId);
+    if (!plannedPurchase?.purchasedDate || plannedPurchase.convertedAt) return { changes: 0 };
+    const result = createRepair({ vehicleId, ...input });
+    getDb()
+      .prepare(`
+        UPDATE planned_purchases
+        SET converted_to_type = 'repair',
+            converted_record_id = @recordId,
+            converted_at = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = @id
+          AND vehicle_id = @vehicleId
+          AND purchased_date IS NOT NULL
+          AND converted_at IS NULL
+      `)
+      .run({ id, vehicleId, recordId: Number(result.lastInsertRowid) });
+    return result;
+  })();
+}
+
 export function getVehicleLoggedSpend(vehicleId: number) {
   const row = getDb()
     .prepare(`
@@ -846,7 +910,7 @@ export function getVehicleLoggedSpend(vehicleId: number) {
         UNION ALL
         SELECT cost FROM mot_records WHERE vehicle_id = ?
         UNION ALL
-        SELECT COALESCE(actual_cost, estimated_cost) as cost FROM planned_purchases WHERE vehicle_id = ? AND purchased_date IS NOT NULL
+        SELECT COALESCE(actual_cost, estimated_cost) as cost FROM planned_purchases WHERE vehicle_id = ? AND purchased_date IS NOT NULL AND converted_at IS NULL
       )
     `)
     .get(vehicleId, vehicleId, vehicleId, vehicleId) as { total: number };
@@ -912,7 +976,7 @@ export function getDashboardStats() {
         UNION ALL
         SELECT cost, test_date as date FROM mot_records
         UNION ALL
-        SELECT COALESCE(actual_cost, estimated_cost) as cost, purchased_date as date FROM planned_purchases WHERE purchased_date IS NOT NULL
+        SELECT COALESCE(actual_cost, estimated_cost) as cost, purchased_date as date FROM planned_purchases WHERE purchased_date IS NOT NULL AND converted_at IS NULL
       )
       WHERE date >= date('now', 'start of year')
     `)

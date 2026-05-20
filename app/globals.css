@@ -1147,6 +1147,24 @@ textarea:focus-visible {
   align-items: start;
 }
 
+.record-subsection {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.record-subsection > h3,
+.record-subsection > .muted {
+  grid-column: 1 / -1;
+}
+
+.record-subsection > h3 {
+  margin: 8px 0 0;
+  font-size: 1rem;
+}
+
 .record-card {
   position: relative;
   padding: 18px;
