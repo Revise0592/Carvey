@@ -30,7 +30,7 @@ import { VehiclePhoto } from "@/components/VehiclePhoto";
 import { getCollectionName, getVehicle, getVehicleActivePlannedPurchaseSummary, getVehicleLoggedSpend, listMaintenance, listMaintenanceCategories, listMots, listPlannedPurchases, listReminders, listRepairs, listWorkshops } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { debugEasterEggsEnabled } from "@/lib/debug";
-import { formatCurrency, formatDate, formatMiles } from "@/lib/format";
+import { formatCurrency, formatDate, formatMiles, formatMotResult, formatPlannedPurchaseStatus, formatReminderStatus, type MotResult, type PlannedPurchaseStatus, type ReminderStatusLabel } from "@/lib/format";
 import { getReminderStatus } from "@/lib/reminders";
 
 const tabs = ["overview", "maintenance", "repairs", "mots", "to-buy", "reminders"] as const;
@@ -124,7 +124,7 @@ export default async function VehiclePage({
               <strong>{repairs.length}</strong>
               <span>Open reminders</span>
               <strong>{reminders.filter((reminder) => !reminder.completedAt).length}</strong>
-              <span>To buy</span>
+              <span>To Buy</span>
               <strong>{activePlannedSummary.count}</strong>
               <span>Upcoming estimate</span>
               <strong>{formatCurrency(activePlannedSummary.estimatedTotal)}</strong>
@@ -204,7 +204,7 @@ export default async function VehiclePage({
         >
           {mots.map((record) => (
             <article className="record-card" key={record.id}>
-              <div className="record-header"><span className={`tag ${record.result}`}>{record.result}</span><h3>Expires {formatDate(record.expiryDate)}</h3></div>
+              <div className="record-header"><span className={`tag ${motResultTone(record.result)}`}>{formatMotResult(record.result)}</span><h3>Expires {formatDate(record.expiryDate)}</h3></div>
               <p className="record-meta">Tested {formatDate(record.testDate)} · Mileage: {formatMiles(record.odometer)}</p>
               <strong>{formatCurrency(record.cost)}</strong>
               {record.certificateRef ? <p>Reference: {record.certificateRef}</p> : null}
@@ -232,7 +232,7 @@ export default async function VehiclePage({
             ].filter(Boolean).join(" · ");
             return (
               <article className="record-card reminder-card" key={record.id}>
-                <div className="record-header"><span className={`tag ${status}`}>{status}</span><h3>{record.title}</h3></div>
+                <div className="record-header"><span className={`tag ${reminderStatusTone(status)}`}>{formatReminderStatus(status)}</span><h3>{record.title}</h3></div>
                 <p className="record-meta">{reminderDetails}</p>
                 {record.recurrence ? <p>Repeats {record.recurrence}</p> : null}
                 <div className="record-actions">
@@ -255,11 +255,11 @@ export default async function VehiclePage({
           hasRecords={plannedPurchases.length > 0}
         >
           <div className="record-subsection">
-            <h3>To buy</h3>
+            <h3>To Buy</h3>
             {toBuyPurchases.length ? toBuyPurchases.map((record) => (
               <article className="record-card to-buy-card" key={record.id}>
                 <div className="record-header">
-                  <span className="tag">to buy</span>
+                  <span className="tag tag-neutral">{formatPlannedPurchaseStatus("to-buy")}</span>
                   <h3>{record.itemName}</h3>
                 </div>
                 <p className="record-meta">Qty {record.quantity}</p>
@@ -285,8 +285,8 @@ export default async function VehiclePage({
             {purchasedItems.length ? purchasedItems.map((record) => (
               <article className="record-card to-buy-card" key={record.id}>
                 <div className="record-header">
-                  <span className={`tag ${record.convertedAt ? "done" : ""}`}>
-                    {record.convertedAt ? `logged as ${record.convertedToType}` : "purchased"}
+                  <span className={`tag ${record.convertedAt ? "tag-success" : "tag-neutral"}`}>
+                    {formatPlannedPurchaseStatus(plannedPurchaseStatus(record.convertedAt, record.convertedToType))}
                   </span>
                   <h3>{record.itemName}</h3>
                 </div>
@@ -319,6 +319,30 @@ export default async function VehiclePage({
       ) : null}
     </AppFrame>
   );
+}
+
+function motResultTone(result: MotResult) {
+  const tones: Record<MotResult, string> = {
+    pass: "tag-success",
+    fail: "tag-danger",
+    advisory: "tag-warning"
+  };
+  return tones[result];
+}
+
+function reminderStatusTone(status: ReminderStatusLabel) {
+  const tones: Record<ReminderStatusLabel, string> = {
+    done: "tag-success",
+    overdue: "tag-danger",
+    upcoming: "tag-warning",
+    open: "tag-neutral"
+  };
+  return tones[status];
+}
+
+function plannedPurchaseStatus(convertedAt: string | null, convertedToType: "maintenance" | "repair" | null): PlannedPurchaseStatus {
+  if (!convertedAt) return "purchased";
+  return convertedToType === "repair" ? "logged-as-repair" : "logged-as-maintenance";
 }
 
 function RecordSection({

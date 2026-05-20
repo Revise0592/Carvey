@@ -41,7 +41,7 @@ export default async function GaragePage() {
         </article>
         <article className="stat-card stat-card-reminders">
           <PackagePlus size={20} />
-          <span>To buy</span>
+          <span>To Buy</span>
           <strong>{stats.plannedPurchaseCount}</strong>
         </article>
       </section>
@@ -95,7 +95,7 @@ export default async function GaragePage() {
         </div>
 
         <div className="list-panel">
-          <h2>To buy</h2>
+          <h2>To Buy</h2>
           {stats.plannedPurchases.length ? stats.plannedPurchases.map((item) => (
             <Link href={`/vehicles/${item.vehicleId}?tab=to-buy`} className="list-row" key={item.id}>
               <span>{item.itemName} · {item.make} {item.model}</span>

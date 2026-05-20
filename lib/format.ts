@@ -27,3 +27,36 @@ export function formatDate(value: string | null | undefined) {
 export function todayIso() {
   return new Date().toISOString().slice(0, 10);
 }
+
+export type MotResult = "pass" | "fail" | "advisory";
+export type ReminderStatusLabel = "done" | "overdue" | "upcoming" | "open";
+export type PlannedPurchaseStatus = "to-buy" | "purchased" | "logged-as-maintenance" | "logged-as-repair";
+
+export function formatMotResult(value: MotResult) {
+  const labels: Record<MotResult, string> = {
+    pass: "Pass",
+    fail: "Fail",
+    advisory: "Pass with Advisories"
+  };
+  return labels[value];
+}
+
+export function formatReminderStatus(value: ReminderStatusLabel) {
+  const labels: Record<ReminderStatusLabel, string> = {
+    done: "Done",
+    overdue: "Overdue",
+    upcoming: "Upcoming",
+    open: "Open"
+  };
+  return labels[value];
+}
+
+export function formatPlannedPurchaseStatus(value: PlannedPurchaseStatus) {
+  const labels: Record<PlannedPurchaseStatus, string> = {
+    "to-buy": "To Buy",
+    purchased: "Purchased",
+    "logged-as-maintenance": "Logged as Maintenance",
+    "logged-as-repair": "Logged as Repair"
+  };
+  return labels[value];
+}

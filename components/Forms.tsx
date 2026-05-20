@@ -131,7 +131,7 @@ export function EditRepairForm({ record, workshops }: { record: RepairRecord; wo
         <Field label="Date"><input name="date" type="date" defaultValue={record.date} required /></Field>
         <Field label="Mileage"><input name="odometer" type="number" min="0" defaultValue={record.odometer ?? ""} /></Field>
         <Field label="Fault or repair"><input name="fault" defaultValue={record.fault} required /></Field>
-        <Field label="Garage/workshop">
+        <Field label="Garage/Workshop">
           <input name="garage" list="workshop-suggestions" defaultValue={record.garage ?? ""} autoComplete="off" />
           <datalist id="workshop-suggestions">
             {workshops.map((w) => <option value={w.name} key={w.id} />)}
@@ -197,7 +197,7 @@ export function EditPlannedPurchaseForm({ record }: { record: PlannedPurchase })
   const updateAction = updatePlannedPurchaseAction.bind(null, record.vehicleId, record.id);
   const deleteAction = deletePlannedPurchaseAction.bind(null, record.vehicleId, record.id);
   return (
-    <EditPanel deleteAction={deleteAction} title="Edit to-buy item">
+    <EditPanel deleteAction={deleteAction} title="Edit To Buy Item">
       <form action={updateAction} className="record-form">
         <PlannedPurchaseFields record={record} disabled={Boolean(record.purchasedDate)} />
         <button className="primary-button" type="submit" disabled={Boolean(record.purchasedDate)}>Save changes</button>
@@ -236,7 +236,7 @@ export function RepairForm({ vehicleId, workshops }: { vehicleId: number; worksh
         <Field label="Date"><input name="date" type="date" defaultValue={todayIso()} required /></Field>
         <Field label="Mileage"><input name="odometer" type="number" min="0" /></Field>
         <Field label="Fault or repair"><input name="fault" required /></Field>
-        <Field label="Garage/workshop">
+        <Field label="Garage/Workshop">
           <input name="garage" list="workshop-suggestions" autoComplete="off" />
           <datalist id="workshop-suggestions">
             {workshops.map((w) => <option value={w.name} key={w.id} />)}
@@ -296,7 +296,7 @@ export function ReminderForm({ vehicleId }: { vehicleId: number }) {
 export function PlannedPurchaseForm({ vehicleId }: { vehicleId: number }) {
   const action = createPlannedPurchaseAction.bind(null, vehicleId);
   return (
-    <ModalPanel trigger={<><PackagePlus size={17} /> Add item</>} title="Add to-buy item">
+    <ModalPanel trigger={<><PackagePlus size={17} /> Add item</>} title="Add To Buy Item">
       <form action={action} className="record-form">
         <PlannedPurchaseFields />
         <button className="primary-button" type="submit">Save item</button>
@@ -360,7 +360,7 @@ export function CreateRepairFromPurchaseForm({ record, workshops }: { record: Pl
         <Field label="Date"><input name="date" type="date" defaultValue={record.purchasedDate ?? todayIso()} required /></Field>
         <Field label="Mileage"><input name="odometer" type="number" min="0" /></Field>
         <Field label="Fault or repair"><input name="fault" defaultValue={record.itemName} required /></Field>
-        <Field label="Garage/workshop">
+        <Field label="Garage/Workshop">
           <input name="garage" list="workshop-suggestions" autoComplete="off" />
           <datalist id="workshop-suggestions">
             {workshops.map((w) => <option value={w.name} key={w.id} />)}
