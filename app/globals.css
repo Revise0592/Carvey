@@ -964,23 +964,28 @@ textarea:focus-visible {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
-.tag.pass,
-.tag.done {
+.tag-success {
+  border-color: color-mix(in srgb, var(--accent) 34%, var(--line));
   background: color-mix(in srgb, var(--accent) 18%, transparent);
   color: var(--accent-strong);
 }
 
-.tag.fail,
-.tag.overdue {
+.tag-danger {
+  border-color: color-mix(in srgb, var(--danger) 34%, var(--line));
   background: color-mix(in srgb, var(--danger) 16%, transparent);
   color: var(--danger);
 }
 
-.tag.advisory,
-.tag.upcoming {
+.tag-warning {
   border-color: color-mix(in srgb, var(--warning) 30%, var(--line));
   background: var(--warning-soft);
   color: var(--warning-strong);
+}
+
+.tag-neutral {
+  border-color: color-mix(in srgb, var(--line) 88%, transparent);
+  background: color-mix(in srgb, var(--surface-soft) 78%, var(--surface) 22%);
+  color: var(--text);
 }
 
 .sold-pill,
@@ -1221,6 +1226,30 @@ textarea:focus-visible {
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.1),
     0 6px 14px rgba(23, 24, 28, 0.05);
+}
+
+.record-header .tag-success {
+  border-color: color-mix(in srgb, var(--accent) 34%, var(--line));
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent-strong);
+}
+
+.record-header .tag-danger {
+  border-color: color-mix(in srgb, var(--danger) 34%, var(--line));
+  background: color-mix(in srgb, var(--danger) 16%, transparent);
+  color: var(--danger);
+}
+
+.record-header .tag-warning {
+  border-color: color-mix(in srgb, var(--warning) 30%, var(--line));
+  background: var(--warning-soft);
+  color: var(--warning-strong);
+}
+
+.record-header .tag-neutral {
+  border-color: color-mix(in srgb, var(--line) 88%, transparent);
+  background: color-mix(in srgb, var(--surface-soft) 78%, var(--surface) 22%);
+  color: var(--text);
 }
 
 .record-header h3 {

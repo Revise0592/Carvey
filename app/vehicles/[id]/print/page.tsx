@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { PrintButton } from "@/components/PrintButton";
 import { RegistrationPlate } from "@/components/RegistrationPlate";
 import { requireUser } from "@/lib/auth";
-import { formatCurrency, formatDate, formatMiles } from "@/lib/format";
+import { formatCurrency, formatDate, formatMiles, formatMotResult } from "@/lib/format";
 import { getSellerSheetData } from "@/lib/seller-sheet";
 
 export default async function VehiclePrintPage({ params }: { params: Promise<{ id: string }> }) {
@@ -106,7 +106,7 @@ export default async function VehiclePrintPage({ params }: { params: Promise<{ i
                   <td>{formatDate(record.testDate)}</td>
                   <td>{formatDate(record.expiryDate)}</td>
                   <td>{formatMiles(record.odometer)}</td>
-                  <td>{record.result}</td>
+                  <td>{formatMotResult(record.result)}</td>
                   <td>{record.certificateRef ?? "Not recorded"}{record.advisories ? <p>{record.advisories}</p> : null}</td>
                   <td>{formatCurrency(record.cost)}</td>
                 </tr>

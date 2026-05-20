@@ -37,9 +37,9 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       <nav className="tabs settings-tabs" aria-label="Settings sections">
         <Link className={activeTab === "personalisation" ? "active" : ""} href="/settings?tab=personalisation">Personalisation</Link>
         <Link className={activeTab === "admin" ? "active" : ""} href="/settings?tab=admin">Admin</Link>
-        <Link className={activeTab === "workshops" ? "active" : ""} href="/settings?tab=workshops">Garages & workshops</Link>
-        <Link className={activeTab === "categories" ? "active" : ""} href="/settings?tab=categories">Maintenance categories</Link>
-        <Link className={activeTab === "backup" ? "active" : ""} href="/settings?tab=backup">Backup & restore</Link>
+        <Link className={activeTab === "workshops" ? "active" : ""} href="/settings?tab=workshops">Garages & Workshops</Link>
+        <Link className={activeTab === "categories" ? "active" : ""} href="/settings?tab=categories">Maintenance Categories</Link>
+        <Link className={activeTab === "backup" ? "active" : ""} href="/settings?tab=backup">Backup & Restore</Link>
       </nav>
 
       {activeTab === "personalisation" ? (
@@ -101,15 +101,15 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       {activeTab === "workshops" ? (
         <section className="settings-grid">
           <article className="settings-panel">
-            <h2><Building2 size={19} /> Add garage/workshop</h2>
-            {params.workshop === "created" ? <p className="success">Garage/workshop saved.</p> : null}
-            {params.workshop === "updated" ? <p className="success">Garage/workshop updated.</p> : null}
-            {params.workshop === "deleted" ? <p className="success">Garage/workshop deleted.</p> : null}
-            <WorkshopForm action={createWorkshopAction} button="Save garage/workshop" />
+            <h2><Building2 size={19} /> Add Garage/Workshop</h2>
+            {params.workshop === "created" ? <p className="success">Garage/Workshop saved.</p> : null}
+            {params.workshop === "updated" ? <p className="success">Garage/Workshop updated.</p> : null}
+            {params.workshop === "deleted" ? <p className="success">Garage/Workshop deleted.</p> : null}
+            <WorkshopForm action={createWorkshopAction} button="Save Garage/Workshop" />
           </article>
 
           <article className="settings-panel workshop-list-panel">
-            <h2>Saved garages & workshops</h2>
+            <h2>Saved Garages & Workshops</h2>
             {workshops.length ? (
               <div className="workshop-list">
                 {workshops.map((workshop) => (
@@ -124,7 +124,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       {activeTab === "categories" ? (
         <section className="settings-grid">
           <article className="settings-panel">
-            <h2>Add category</h2>
+            <h2>Add Category</h2>
             {params.category === "created" ? <p className="success">Category saved.</p> : null}
             {params.category === "updated" ? <p className="success">Category updated.</p> : null}
             {params.category === "deleted" ? <p className="success">Category deleted.</p> : null}
@@ -138,7 +138,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           </article>
 
           <article className="settings-panel workshop-list-panel">
-            <h2>Saved categories</h2>
+            <h2>Saved Categories</h2>
             {categories.length ? (
               <div className="workshop-list">
                 {categories.map((category) => (
@@ -187,7 +187,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
 
           {debugEnabled && debugDemoStatus ? (
             <article className="settings-panel">
-              <h2>Debug tools</h2>
+              <h2>Debug Tools</h2>
               <p className="muted">Load a curated screenshot garage for demos and GitHub screenshots. This temporarily replaces the live view until you restore the saved snapshot.</p>
               {params.debug === "demo-loaded" ? <p className="success">Showcase demo data loaded.</p> : null}
               {params.debug === "demo-saved" ? <p className="success">Current demo data saved as the showcase backup.</p> : null}
@@ -221,7 +221,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
 
           {restoreSummary ? (
             <article className="settings-panel restore-preview">
-              <h2><RotateCcw size={19} /> Restore preview</h2>
+              <h2><RotateCcw size={19} /> Restore Preview</h2>
               <p className="muted">This backup will replace all current Carvey data if confirmed.</p>
               <dl className="metric-list">
                 <span>Created</span>
@@ -236,7 +236,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                 <strong>{restoreSummary.counts.mots}</strong>
                 <span>Reminders</span>
                 <strong>{restoreSummary.counts.reminders}</strong>
-                <span>To buy</span>
+                <span>To Buy</span>
                 <strong>{restoreSummary.counts.plannedPurchases}</strong>
                 <span>Images/files</span>
                 <strong>{restoreSummary.uploadCount}</strong>
@@ -264,7 +264,7 @@ function WorkshopCard({ workshop }: { workshop: Workshop }) {
     <article className="workshop-card">
       <div>
         <h3>{workshop.name}</h3>
-        {workshop.preferred ? <span className="tag pass">Preferred</span> : null}
+        {workshop.preferred ? <span className="tag tag-success">Preferred</span> : null}
       </div>
       {workshop.address ? <p>{workshop.address}</p> : null}
       {[workshop.phone, workshop.email, workshop.website].filter(Boolean).length ? (
@@ -315,7 +315,7 @@ function WorkshopForm({ workshop, action, button }: { workshop?: Workshop; actio
       </label>
       <label className="checkbox-field">
         <input name="preferred" type="checkbox" defaultChecked={Boolean(workshop?.preferred)} />
-        Preferred garage/workshop
+        Preferred Garage/Workshop
       </label>
       <button className="primary-button" type="submit">{button}</button>
     </form>
