@@ -35,6 +35,7 @@ import {
   updateMaintenanceCategory,
   updateMot,
   updatePlannedPurchase,
+  updatePlannedPurchasePurchasedDate,
   updateReminder,
   updateRepair,
   updateVehicle,
@@ -402,6 +403,14 @@ export async function updatePlannedPurchaseAction(vehicleId: number, id: number,
   });
   await syncCurrentDemoAfterMutation();
   revalidateVehicle(vehicleId);
+}
+
+export async function updatePlannedPurchasePurchasedDateAction(vehicleId: number, id: number, formData: FormData) {
+  await requireUser();
+  updatePlannedPurchasePurchasedDate(id, vehicleId, z.string().min(1).parse(str(formData, "purchasedDate")));
+  await syncCurrentDemoAfterMutation();
+  revalidatePath("/garage");
+  revalidatePath(`/vehicles/${vehicleId}`);
 }
 
 export async function deletePlannedPurchaseAction(vehicleId: number, id: number) {

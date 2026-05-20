@@ -8,6 +8,7 @@ import {
   CreateMaintenanceFromPurchaseForm,
   CreateRepairFromPurchaseForm,
   DebugVehicleForm,
+  EditPlannedPurchaseBoughtDateForm,
   EditVehicleForm,
   EditMaintenanceForm,
   EditMotForm,
@@ -309,7 +310,7 @@ export default async function VehiclePage({
                       <CreateRepairFromPurchaseForm record={record} workshops={workshops} />
                     </>
                   ) : null}
-                  <EditPlannedPurchaseForm record={record} />
+                  <EditPlannedPurchaseBoughtDateForm record={record} />
                 </div>
               </article>
             )) : <p className="muted">Purchased items will appear here once bought.</p>}
