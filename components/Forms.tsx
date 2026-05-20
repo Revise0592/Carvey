@@ -20,6 +20,7 @@ import {
   updateMaintenanceAction,
   updateMotAction,
   updatePlannedPurchaseAction,
+  updatePlannedPurchasePurchasedDateAction,
   updateReminderAction,
   updateRepairAction,
   updateVehicleAction
@@ -312,6 +313,18 @@ export function MarkPlannedPurchaseBoughtForm({ record }: { record: PlannedPurch
         <Field label="Purchase date"><input name="purchasedDate" type="date" defaultValue={todayIso()} required /></Field>
         <Field label="Actual cost"><input name="actualCost" type="number" min="0" step="0.01" defaultValue={record.actualCost ?? record.estimatedCost} /></Field>
         <button className="primary-button" type="submit">Mark bought</button>
+      </form>
+    </ModalPanel>
+  );
+}
+
+export function EditPlannedPurchaseBoughtDateForm({ record }: { record: PlannedPurchase }) {
+  const action = updatePlannedPurchasePurchasedDateAction.bind(null, record.vehicleId, record.id);
+  return (
+    <ModalPanel trigger={<><CalendarDays size={17} /> Edit bought date</>} title="Edit bought date">
+      <form action={action} className="record-form">
+        <Field label="Bought date"><input name="purchasedDate" type="date" defaultValue={record.purchasedDate ?? todayIso()} required /></Field>
+        <button className="primary-button" type="submit">Save bought date</button>
       </form>
     </ModalPanel>
   );

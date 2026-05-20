@@ -308,6 +308,8 @@ describe("record mutation helpers", () => {
     expect(db.listReminders(vehicleId)[0].completedAt).toEqual(expect.any(String));
     expect(db.getVehicleActivePlannedPurchaseSummary(vehicleId)).toMatchObject({ count: 0, estimatedTotal: 0 });
     expect(db.getVehicleLoggedSpend(vehicleId)).toBe(205);
+    expect(db.updatePlannedPurchasePurchasedDate(plannedId, vehicleId, `${currentYear}-05-04`).changes).toBe(1);
+    expect(db.listPlannedPurchases(vehicleId)[0]).toMatchObject({ purchasedDate: `${currentYear}-05-04` });
 
     db.convertPlannedPurchaseToMaintenance(plannedId, vehicleId, {
       date: `${currentYear}-05-02`,
@@ -318,6 +320,9 @@ describe("record mutation helpers", () => {
       notes: "Fitted at home"
     });
     expect(db.listMaintenance(vehicleId)).toHaveLength(1);
+    expect(db.updatePlannedPurchasePurchasedDate(plannedId, vehicleId, `${currentYear}-05-05`).changes).toBe(1);
+    expect(db.listPlannedPurchases(vehicleId)[0]).toMatchObject({ purchasedDate: `${currentYear}-05-05` });
+    expect(db.listMaintenance(vehicleId)[0]).toMatchObject({ date: `${currentYear}-05-02` });
     expect(db.listPlannedPurchases(vehicleId)[0]).toMatchObject({
       convertedToType: "maintenance",
       convertedRecordId: expect.any(Number),
@@ -334,7 +339,7 @@ describe("record mutation helpers", () => {
     });
     expect(db.listMaintenance(vehicleId)).toHaveLength(1);
 
-    db.createPlannedPurchase({
+    const unboughtId = Number(db.createPlannedPurchase({
       vehicleId,
       itemName: "Coolant",
       quantity: 1,
@@ -344,7 +349,9 @@ describe("record mutation helpers", () => {
       dueDate: "2026-05-20",
       dueOdometer: null,
       notes: null
-    });
+    }).lastInsertRowid);
+    expect(db.updatePlannedPurchasePurchasedDate(unboughtId, vehicleId, "2026-05-21").changes).toBe(0);
+    expect(db.listPlannedPurchases(vehicleId).find((purchase) => purchase.id === unboughtId)?.purchasedDate).toBeNull();
     expect(db.getDashboardStats().plannedPurchases[0]).toMatchObject({ itemName: "Coolant", estimatedCost: 15 });
     expect(db.getDashboardStats().yearlySpend).toBe(205);
     db.closeDbForTests();

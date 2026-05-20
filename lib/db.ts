@@ -848,6 +848,19 @@ export function markPlannedPurchaseBought(id: number, vehicleId: number, input: 
   return result;
 }
 
+export function updatePlannedPurchasePurchasedDate(id: number, vehicleId: number, purchasedDate: string) {
+  return getDb()
+    .prepare(`
+      UPDATE planned_purchases
+      SET purchased_date = @purchasedDate,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = @id
+        AND vehicle_id = @vehicleId
+        AND purchased_date IS NOT NULL
+    `)
+    .run({ id, vehicleId, purchasedDate });
+}
+
 export function convertPlannedPurchaseToMaintenance(
   id: number,
   vehicleId: number,
