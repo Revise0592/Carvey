@@ -8,6 +8,8 @@ import { z } from "zod";
 import { activateShowcaseDemoData, restorePreviousDebugDemoData, saveCurrentDataAsShowcaseDemo, syncShowcaseDemoBackupIfActive } from "@/lib/backup";
 import {
   completeReminder,
+  convertPlannedPurchaseToMaintenance,
+  convertPlannedPurchaseToRepair,
   createMaintenance,
   createMaintenanceCategory,
   createMot,
@@ -191,6 +193,20 @@ export async function createMaintenanceAction(vehicleId: number, formData: FormD
   revalidatePath(`/vehicles/${vehicleId}`);
 }
 
+export async function createMaintenanceFromPurchaseAction(vehicleId: number, purchaseId: number, formData: FormData) {
+  await requireUser();
+  convertPlannedPurchaseToMaintenance(purchaseId, vehicleId, {
+    date: z.string().min(1).parse(str(formData, "date")),
+    odometer: nullableInt(formData, "odometer"),
+    category: z.string().min(1).parse(str(formData, "category")),
+    description: z.string().min(1).parse(str(formData, "description")),
+    cost: money(formData, "cost"),
+    notes: nullableStr(formData, "notes")
+  });
+  await syncCurrentDemoAfterMutation();
+  revalidateVehicle(vehicleId);
+}
+
 export async function updateMaintenanceAction(vehicleId: number, id: number, formData: FormData) {
   await requireUser();
   updateMaintenance(id, vehicleId, {
@@ -227,6 +243,22 @@ export async function createRepairAction(vehicleId: number, formData: FormData) 
   });
   await syncCurrentDemoAfterMutation();
   revalidatePath(`/vehicles/${vehicleId}`);
+}
+
+export async function createRepairFromPurchaseAction(vehicleId: number, purchaseId: number, formData: FormData) {
+  await requireUser();
+  const workshop = repairWorkshopInput(formData);
+  convertPlannedPurchaseToRepair(purchaseId, vehicleId, {
+    date: z.string().min(1).parse(str(formData, "date")),
+    odometer: nullableInt(formData, "odometer"),
+    fault: z.string().min(1).parse(str(formData, "fault")),
+    garage: workshop.garage,
+    workshopId: workshop.workshopId,
+    cost: money(formData, "cost"),
+    notes: nullableStr(formData, "notes")
+  });
+  await syncCurrentDemoAfterMutation();
+  revalidateVehicle(vehicleId);
 }
 
 export async function updateRepairAction(vehicleId: number, id: number, formData: FormData) {

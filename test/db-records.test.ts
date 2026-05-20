@@ -309,6 +309,31 @@ describe("record mutation helpers", () => {
     expect(db.getVehicleActivePlannedPurchaseSummary(vehicleId)).toMatchObject({ count: 0, estimatedTotal: 0 });
     expect(db.getVehicleLoggedSpend(vehicleId)).toBe(205);
 
+    db.convertPlannedPurchaseToMaintenance(plannedId, vehicleId, {
+      date: `${currentYear}-05-02`,
+      odometer: 32100,
+      category: "Service",
+      description: "Service parts bundle",
+      cost: 205,
+      notes: "Fitted at home"
+    });
+    expect(db.listMaintenance(vehicleId)).toHaveLength(1);
+    expect(db.listPlannedPurchases(vehicleId)[0]).toMatchObject({
+      convertedToType: "maintenance",
+      convertedRecordId: expect.any(Number),
+      convertedAt: expect.any(String)
+    });
+    expect(db.getVehicleLoggedSpend(vehicleId)).toBe(205);
+    db.convertPlannedPurchaseToMaintenance(plannedId, vehicleId, {
+      date: `${currentYear}-05-03`,
+      odometer: null,
+      category: "Service",
+      description: "Duplicate",
+      cost: 205,
+      notes: null
+    });
+    expect(db.listMaintenance(vehicleId)).toHaveLength(1);
+
     db.createPlannedPurchase({
       vehicleId,
       itemName: "Coolant",
@@ -322,6 +347,62 @@ describe("record mutation helpers", () => {
     });
     expect(db.getDashboardStats().plannedPurchases[0]).toMatchObject({ itemName: "Coolant", estimatedCost: 15 });
     expect(db.getDashboardStats().yearlySpend).toBe(205);
+    db.closeDbForTests();
+  });
+
+  it("converts purchased items into repairs without double-counting spend", async () => {
+    const db = await freshDb();
+    const vehicleId = Number(db.createVehicle({
+      make: "Ford",
+      model: "Fiesta",
+      year: 2018,
+      registration: "RE18 PAY",
+      vin: null,
+      currentOdometer: 50000,
+      purchasePrice: null,
+      purchaseDate: null,
+      notes: null
+    }).lastInsertRowid);
+    const plannedId = Number(db.createPlannedPurchase({
+      vehicleId,
+      itemName: "Front spring",
+      quantity: 1,
+      estimatedCost: 80,
+      supplier: null,
+      url: null,
+      dueDate: null,
+      dueOdometer: null,
+      notes: null
+    }).lastInsertRowid);
+
+    db.markPlannedPurchaseBought(plannedId, vehicleId, { purchasedDate: "2026-05-01", actualCost: 75 });
+    db.convertPlannedPurchaseToRepair(plannedId, vehicleId, {
+      date: "2026-05-02",
+      odometer: 50100,
+      fault: "Front spring",
+      garage: "Preferred Autos",
+      workshopId: null,
+      cost: 75,
+      notes: "Part supplied by owner"
+    });
+
+    expect(db.listRepairs(vehicleId)).toHaveLength(1);
+    expect(db.listPlannedPurchases(vehicleId)[0]).toMatchObject({
+      convertedToType: "repair",
+      convertedRecordId: expect.any(Number),
+      convertedAt: expect.any(String)
+    });
+    expect(db.getVehicleLoggedSpend(vehicleId)).toBe(75);
+    db.convertPlannedPurchaseToRepair(plannedId, vehicleId, {
+      date: "2026-05-03",
+      odometer: null,
+      fault: "Duplicate spring",
+      garage: null,
+      workshopId: null,
+      cost: 75,
+      notes: null
+    });
+    expect(db.listRepairs(vehicleId)).toHaveLength(1);
     db.closeDbForTests();
   });
 

@@ -16,11 +16,12 @@ export function formatMiles(value: number | null | undefined) {
 
 export function formatDate(value: string | null | undefined) {
   if (!value) return "Not set";
+  const dateValue = value.includes("T") || value.includes(" ") ? value : `${value}T12:00:00`;
   return new Intl.DateTimeFormat("en-GB", {
     day: "2-digit",
     month: "short",
     year: "numeric"
-  }).format(new Date(`${value}T12:00:00`));
+  }).format(new Date(dateValue));
 }
 
 export function todayIso() {

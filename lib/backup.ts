@@ -235,7 +235,7 @@ function restoreDatabaseContents(backupDbPath: string) {
     },
     {
       name: "planned_purchases",
-      columns: ["id", "vehicle_id", "item_name", "quantity", "estimated_cost", "actual_cost", "supplier", "url", "due_date", "due_odometer", "notes", "reminder_id", "purchased_date", "created_at", "updated_at"]
+      columns: ["id", "vehicle_id", "item_name", "quantity", "estimated_cost", "actual_cost", "supplier", "url", "due_date", "due_odometer", "notes", "reminder_id", "purchased_date", "converted_to_type", "converted_record_id", "converted_at", "created_at", "updated_at"]
     }
   ];
 
@@ -247,6 +247,9 @@ function restoreDatabaseContents(backupDbPath: string) {
     const restoreTables = new Set((database.prepare("SELECT name FROM restore_backup.sqlite_master WHERE type = 'table'").all() as Array<{ name: string }>).map((table) => table.name));
     const restoreRepairColumns = restoreTables.has("repair_records")
       ? new Set((database.prepare("PRAGMA restore_backup.table_info(repair_records)").all() as Array<{ name: string }>).map((column) => column.name))
+      : new Set<string>();
+    const restorePlannedPurchaseColumns = restoreTables.has("planned_purchases")
+      ? new Set((database.prepare("PRAGMA restore_backup.table_info(planned_purchases)").all() as Array<{ name: string }>).map((column) => column.name))
       : new Set<string>();
     database.exec("BEGIN");
     database.exec("DELETE FROM auth_sessions");
@@ -261,6 +264,7 @@ function restoreDatabaseContents(backupDbPath: string) {
         if (table.name === "vehicles" && column === "debug_destroyed" && !restoreVehicleColumns.has(column)) return "0 AS debug_destroyed";
         if (table.name === "vehicles" && column === "sold" && !restoreVehicleColumns.has(column)) return "0 AS sold";
         if (table.name === "repair_records" && column === "workshop_id" && !restoreRepairColumns.has(column)) return "NULL AS workshop_id";
+        if (table.name === "planned_purchases" && !restorePlannedPurchaseColumns.has(column)) return `NULL AS ${column}`;
         return column;
       }).join(", ");
       database.exec(`INSERT INTO ${table.name} (${columns}) SELECT ${sourceColumns} FROM restore_backup.${table.name}`);

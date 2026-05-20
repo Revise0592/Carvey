@@ -1,3 +1,4 @@
+import Script from "next/script";
 import { themePalettes } from "@/lib/theme-options";
 
 export function ThemeScript() {
@@ -23,5 +24,5 @@ export function ThemeScript() {
       });
     })();
   `;
-  return <script dangerouslySetInnerHTML={{ __html: script }} />;
+  return <Script id="carvey-theme-script" strategy="afterInteractive" dangerouslySetInnerHTML={{ __html: script }} />;
 }
