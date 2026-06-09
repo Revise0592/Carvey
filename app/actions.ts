@@ -10,6 +10,7 @@ import {
   completeReminder,
   convertPlannedPurchaseToMaintenance,
   convertPlannedPurchaseToRepair,
+  createAttachment,
   createMaintenance,
   createMaintenanceCategory,
   createMot,
@@ -18,6 +19,7 @@ import {
   createRepair,
   createWorkshop,
   createVehicle,
+  deleteAttachment,
   deleteMaintenance,
   deleteMaintenanceCategory,
   deleteMot,
@@ -26,6 +28,8 @@ import {
   deleteRepair,
   deleteWorkshop,
   deleteVehicle,
+  getAttachment,
+  listAndDeleteAttachmentsForRecord,
   markPlannedPurchaseBought,
   getOrCreateWorkshopByName,
   getVehicle,
@@ -43,6 +47,7 @@ import {
   upsertMotReminder
 } from "@/lib/db";
 import { changePassword, changeUsername, createFirstAdmin, login, logout, requireUser } from "@/lib/auth";
+import { updateRegionalSettings } from "@/lib/regional-settings";
 import { debugEasterEggsEnabled } from "@/lib/debug";
 import { safeUploadPath } from "@/lib/paths";
 
@@ -224,6 +229,8 @@ export async function updateMaintenanceAction(vehicleId: number, id: number, for
 
 export async function deleteMaintenanceAction(vehicleId: number, id: number) {
   await requireUser();
+  const orphaned = listAndDeleteAttachmentsForRecord("maintenance", id);
+  for (const a of orphaned) await removeUploadFile(a.filePath);
   deleteMaintenance(id, vehicleId);
   await syncCurrentDemoAfterMutation();
   revalidateVehicle(vehicleId);
@@ -280,6 +287,8 @@ export async function updateRepairAction(vehicleId: number, id: number, formData
 
 export async function deleteRepairAction(vehicleId: number, id: number) {
   await requireUser();
+  const orphaned = listAndDeleteAttachmentsForRecord("repair", id);
+  for (const a of orphaned) await removeUploadFile(a.filePath);
   deleteRepair(id, vehicleId);
   await syncCurrentDemoAfterMutation();
   revalidateVehicle(vehicleId);
@@ -323,6 +332,8 @@ export async function updateMotAction(vehicleId: number, id: number, formData: F
 
 export async function deleteMotAction(vehicleId: number, id: number) {
   await requireUser();
+  const orphaned = listAndDeleteAttachmentsForRecord("mot", id);
+  for (const a of orphaned) await removeUploadFile(a.filePath);
   deleteMot(id, vehicleId);
   await syncCurrentDemoAfterMutation();
   revalidateVehicle(vehicleId);
@@ -433,6 +444,7 @@ export async function markPlannedPurchaseBoughtAction(vehicleId: number, id: num
 
 export async function updateUsernameAction(formData: FormData) {
   const user = await requireUser();
+  if (user.id === 0) redirect("/settings?tab=admin&account=auth-disabled");
   const username = z.string().min(2).max(48).parse(str(formData, "username"));
   changeUsername(user.id, username);
   revalidatePath("/settings");
@@ -441,6 +453,7 @@ export async function updateUsernameAction(formData: FormData) {
 
 export async function updatePasswordAction(formData: FormData) {
   const user = await requireUser();
+  if (user.id === 0) redirect("/settings?tab=admin&account=auth-disabled");
   const currentPassword = z.string().min(1).parse(str(formData, "currentPassword"));
   const nextPassword = z.string().min(8).max(256).parse(str(formData, "nextPassword"));
   const ok = await changePassword(user.id, currentPassword, nextPassword);
@@ -551,6 +564,38 @@ export async function saveCurrentShowcaseDemoDataAction() {
     redirect(debugSettingsUrl("error", result.message));
   }
   redirect(debugSettingsUrl("demo-saved"));
+}
+
+export async function updateRegionalSettingsAction(formData: FormData) {
+  await requireUser();
+  const currency = z.enum(["GBP", "USD"]).parse(str(formData, "currency"));
+  const registrationLabel = z.enum(["registration", "plateNumber"]).parse(str(formData, "registrationLabel"));
+  const motFeature = z.enum(["mot", "emissionsTest", "disabled"]).parse(str(formData, "motFeature"));
+  const dateFormat = z.enum(["dd-mon-yyyy", "iso"]).parse(str(formData, "dateFormat"));
+  const distanceUnit = z.enum(["miles", "km"]).parse(str(formData, "distanceUnit"));
+  updateRegionalSettings({ currency, registrationLabel, motFeature, dateFormat, distanceUnit });
+  revalidatePath("/");
+  redirect("/settings?tab=regional&app=regional-updated");
+}
+
+export async function updateAuthSettingsAction(formData: FormData) {
+  await requireUser();
+  const authDisabled = str(formData, "authDisabled") === "on";
+  const confirmed = str(formData, "confirmed") === "on";
+  if (authDisabled && !confirmed) redirect("/settings?tab=regional&app=auth-confirm-required");
+  updateRegionalSettings({ authDisabled });
+  revalidatePath("/");
+  redirect("/settings?tab=regional&app=auth-updated");
+}
+
+export async function deleteAttachmentAction(vehicleId: number, formData: FormData) {
+  await requireUser();
+  const attachmentId = z.coerce.number().int().positive().parse(str(formData, "attachmentId"));
+  const attachment = getAttachment(attachmentId, vehicleId);
+  if (!attachment) return;
+  deleteAttachment(attachmentId, vehicleId);
+  await removeUploadFile(attachment.filePath);
+  revalidateVehicle(vehicleId);
 }
 
 function revalidateVehicle(vehicleId: number) {

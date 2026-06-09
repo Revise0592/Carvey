@@ -1,17 +1,18 @@
 import Link from "next/link";
-import { Building2, Download, KeyRound, RotateCcw, Settings2, Trash2, Upload, UserRound } from "lucide-react";
+import { Building2, Download, Globe, KeyRound, RotateCcw, Settings2, Trash2, Upload, UserRound } from "lucide-react";
 import { AppFrame } from "@/components/AppFrame";
 import { ThemeControls } from "@/components/ThemeControls";
-import { createMaintenanceCategoryAction, createWorkshopAction, deleteMaintenanceCategoryAction, deleteWorkshopAction, loadShowcaseDemoDataAction, restorePreviousDemoDataAction, saveCurrentShowcaseDemoDataAction, updateCollectionNameAction, updateMaintenanceCategoryAction, updatePasswordAction, updateUsernameAction, updateWorkshopAction } from "@/app/actions";
+import { createMaintenanceCategoryAction, createWorkshopAction, deleteMaintenanceCategoryAction, deleteWorkshopAction, loadShowcaseDemoDataAction, restorePreviousDemoDataAction, saveCurrentShowcaseDemoDataAction, updateAuthSettingsAction, updateCollectionNameAction, updateMaintenanceCategoryAction, updatePasswordAction, updateRegionalSettingsAction, updateUsernameAction, updateWorkshopAction } from "@/app/actions";
 import { requireUser } from "@/lib/auth";
 import { getShowcaseDemoStatus, readRestoreSummary } from "@/lib/backup";
 import { debugEasterEggsEnabled } from "@/lib/debug";
 import { getCollectionName, listMaintenanceCategories, listWorkshops, type MaintenanceCategory, type Workshop } from "@/lib/db";
 import { formatDate } from "@/lib/format";
+import { getRegionalSettings } from "@/lib/regional-settings";
 
 export const dynamic = "force-dynamic";
 
-const settingsTabs = ["personalisation", "admin", "workshops", "categories", "backup"] as const;
+const settingsTabs = ["personalisation", "admin", "regional", "workshops", "categories", "backup"] as const;
 type SettingsTab = (typeof settingsTabs)[number];
 
 export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ tab?: string; account?: string; app?: string; workshop?: string; category?: string; restore?: string; token?: string; debug?: string; message?: string }> }) {
@@ -24,6 +25,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const collectionName = getCollectionName();
   const workshops = listWorkshops();
   const categories = listMaintenanceCategories();
+  const regionalSettings = getRegionalSettings();
 
   return (
     <AppFrame>
@@ -37,6 +39,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       <nav className="tabs settings-tabs" aria-label="Settings sections">
         <Link className={activeTab === "personalisation" ? "active" : ""} href="/settings?tab=personalisation">Personalisation</Link>
         <Link className={activeTab === "admin" ? "active" : ""} href="/settings?tab=admin">Admin</Link>
+        <Link className={activeTab === "regional" ? "active" : ""} href="/settings?tab=regional"><Globe size={15} /> Regional</Link>
         <Link className={activeTab === "workshops" ? "active" : ""} href="/settings?tab=workshops">Garages & Workshops</Link>
         <Link className={activeTab === "categories" ? "active" : ""} href="/settings?tab=categories">Maintenance Categories</Link>
         <Link className={activeTab === "backup" ? "active" : ""} href="/settings?tab=backup">Backup & Restore</Link>
@@ -67,32 +70,109 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
 
       {activeTab === "admin" ? (
         <section className="settings-grid">
+          {regionalSettings.authDisabled ? (
+            <article className="settings-panel">
+              <p className="error">Authentication is disabled. Account settings are unavailable. Enable authentication in the Regional tab to manage your account.</p>
+            </article>
+          ) : null}
+          {!regionalSettings.authDisabled ? (
+            <article className="settings-panel">
+              <h2><UserRound size={19} /> Account</h2>
+              {params.account === "username-updated" ? <p className="success">Username updated.</p> : null}
+              <form action={updateUsernameAction} className="record-form">
+                <label>
+                  Username
+                  <input name="username" defaultValue={user.username} required minLength={2} />
+                </label>
+                <button className="primary-button" type="submit">Save username</button>
+              </form>
+            </article>
+          ) : null}
+
+          {!regionalSettings.authDisabled ? (
+            <article className="settings-panel">
+              <h2><KeyRound size={19} /> Password</h2>
+              {params.account === "password-updated" ? <p className="success">Password updated.</p> : null}
+              {params.account === "password-error" ? <p className="error">Current password did not match.</p> : null}
+              <form action={updatePasswordAction} className="record-form">
+                <label>
+                  Current password
+                  <input name="currentPassword" type="password" autoComplete="current-password" required />
+                </label>
+                <label>
+                  New password
+                  <input name="nextPassword" type="password" autoComplete="new-password" required minLength={8} />
+                </label>
+                <button className="primary-button" type="submit">Change password</button>
+              </form>
+            </article>
+          ) : null}
+        </section>
+      ) : null}
+
+      {activeTab === "regional" ? (
+        <section className="settings-grid">
           <article className="settings-panel">
-            <h2><UserRound size={19} /> Account</h2>
-            {params.account === "username-updated" ? <p className="success">Username updated.</p> : null}
-            <form action={updateUsernameAction} className="record-form">
+            <h2><Globe size={19} /> Regional Settings</h2>
+            <p className="muted">Customise Carvey for your region.</p>
+            {params.app === "regional-updated" ? <p className="success">Regional settings saved.</p> : null}
+            <form action={updateRegionalSettingsAction} className="record-form">
               <label>
-                Username
-                <input name="username" defaultValue={user.username} required minLength={2} />
+                Currency
+                <select name="currency" defaultValue={regionalSettings.currency}>
+                  <option value="GBP">GBP (£) — British Pound</option>
+                  <option value="USD">USD ($) — US Dollar</option>
+                </select>
               </label>
-              <button className="primary-button" type="submit">Save username</button>
+              <label>
+                Vehicle identifier label
+                <select name="registrationLabel" defaultValue={regionalSettings.registrationLabel}>
+                  <option value="registration">Registration</option>
+                  <option value="plateNumber">Plate Number</option>
+                </select>
+              </label>
+              <label>
+                Annual vehicle test
+                <select name="motFeature" defaultValue={regionalSettings.motFeature}>
+                  <option value="mot">MOT (UK)</option>
+                  <option value="emissionsTest">Emissions Test (US)</option>
+                  <option value="disabled">Disabled (hide feature)</option>
+                </select>
+              </label>
+              <label>
+                Date format
+                <select name="dateFormat" defaultValue={regionalSettings.dateFormat}>
+                  <option value="dd-mon-yyyy">DD Mon YYYY (e.g. 01 Jan 2026)</option>
+                  <option value="iso">ISO 8601 (e.g. 2026-01-01)</option>
+                </select>
+              </label>
+              <label>
+                Distance unit
+                <select name="distanceUnit" defaultValue={regionalSettings.distanceUnit}>
+                  <option value="miles">Miles</option>
+                  <option value="km">Kilometres (km)</option>
+                </select>
+              </label>
+              <button className="primary-button" type="submit">Save regional settings</button>
             </form>
           </article>
 
           <article className="settings-panel">
-            <h2><KeyRound size={19} /> Password</h2>
-            {params.account === "password-updated" ? <p className="success">Password updated.</p> : null}
-            {params.account === "password-error" ? <p className="error">Current password did not match.</p> : null}
-            <form action={updatePasswordAction} className="record-form">
-              <label>
-                Current password
-                <input name="currentPassword" type="password" autoComplete="current-password" required />
+            <h2>Authentication</h2>
+            <p className="muted">Disable login when Carvey is deployed behind a trusted reverse proxy that handles authentication.</p>
+            {regionalSettings.authDisabled ? <p className="error">Warning: authentication is currently disabled. Anyone who can reach this URL has full access.</p> : null}
+            {params.app === "auth-updated" ? <p className="success">Authentication setting saved.</p> : null}
+            {params.app === "auth-confirm-required" ? <p className="error">Confirm the change before saving.</p> : null}
+            <form action={updateAuthSettingsAction} className="record-form">
+              <label className="checkbox-field">
+                <input name="authDisabled" type="checkbox" defaultChecked={regionalSettings.authDisabled} />
+                Disable authentication
               </label>
-              <label>
-                New password
-                <input name="nextPassword" type="password" autoComplete="new-password" required minLength={8} />
+              <label className="checkbox-field">
+                <input name="confirmed" type="checkbox" required={!regionalSettings.authDisabled} />
+                I understand this removes all login protection
               </label>
-              <button className="primary-button" type="submit">Change password</button>
+              <button className="primary-button" type="submit">Save authentication settings</button>
             </form>
           </article>
         </section>
@@ -158,7 +238,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
               <span>Data directory</span>
               <strong>{process.env.CARVEY_DATA_DIR ?? "./data"}</strong>
               <span>Region defaults</span>
-              <strong>UK, miles, GBP</strong>
+              <strong>{regionalSettings.currency}, {regionalSettings.distanceUnit}, {regionalSettings.dateFormat === "iso" ? "ISO dates" : "UK dates"}</strong>
               <span>Version</span>
               <strong>0.1.0</strong>
             </dl>

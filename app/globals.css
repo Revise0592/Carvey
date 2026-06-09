@@ -1278,6 +1278,51 @@ textarea:focus-visible {
   margin: 0;
 }
 
+.attachment-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.attachment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.attachment-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.attachment-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--accent);
+  text-decoration: none;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.attachment-link span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.attachment-link:hover {
+  text-decoration: underline;
+}
+
+.file-button-small {
+  min-height: 32px;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.78rem;
+}
+
 .modal-backdrop {
   position: fixed;
   inset: 0;
