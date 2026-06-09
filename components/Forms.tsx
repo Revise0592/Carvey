@@ -39,7 +39,7 @@ export function CreateVehicleForm({ registrationLabel = "Registration" }: { regi
         <Field label="Year"><input name="year" type="number" min="1886" max="2100" /></Field>
         <Field label={registrationLabel}><input name="registration" required /></Field>
         <Field label="VIN"><input name="vin" /></Field>
-        <Field label="Current mileage"><input name="currentOdometer" type="number" min="0" /></Field>
+        <Field label="Odometer"><input name="currentOdometer" type="number" min="0" /></Field>
         <Field label="Purchase price"><input name="purchasePrice" type="number" min="0" step="0.01" /></Field>
         <Field label="Purchase date"><input name="purchaseDate" type="date" /></Field>
         <Field label="Notes"><textarea name="notes" /></Field>
@@ -60,7 +60,7 @@ export function EditVehicleForm({ vehicle, registrationLabel = "Registration" }:
         <Field label="Year"><input name="year" type="number" min="1886" max="2100" defaultValue={vehicle.year ?? ""} /></Field>
         <Field label={registrationLabel}><input name="registration" defaultValue={vehicle.registration} required /></Field>
         <Field label="VIN"><input name="vin" defaultValue={vehicle.vin ?? ""} /></Field>
-        <Field label="Current mileage"><input name="currentOdometer" type="number" min="0" defaultValue={vehicle.currentOdometer ?? ""} /></Field>
+        <Field label="Odometer"><input name="currentOdometer" type="number" min="0" defaultValue={vehicle.currentOdometer ?? ""} /></Field>
         <Field label="Purchase price"><input name="purchasePrice" type="number" min="0" step="0.01" defaultValue={vehicle.purchasePrice ?? ""} /></Field>
         <Field label="Purchase date"><input name="purchaseDate" type="date" defaultValue={vehicle.purchaseDate ?? ""} /></Field>
         <Field label="Notes"><textarea name="notes" defaultValue={vehicle.notes ?? ""} /></Field>
@@ -106,7 +106,7 @@ export function EditMaintenanceForm({ record, categories }: { record: Maintenanc
     <EditPanel deleteAction={deleteAction} title="Edit maintenance">
       <form action={updateAction} className="record-form">
         <Field label="Date"><input name="date" type="date" defaultValue={record.date} required /></Field>
-        <Field label="Mileage"><input name="odometer" type="number" min="0" defaultValue={record.odometer ?? ""} /></Field>
+        <Field label="Odometer"><input name="odometer" type="number" min="0" defaultValue={record.odometer ?? ""} /></Field>
         <Field label="Category">
           <input name="category" list="category-suggestions-edit" defaultValue={record.category} autoComplete="off" required />
           <datalist id="category-suggestions-edit">
@@ -129,7 +129,7 @@ export function EditRepairForm({ record, workshops }: { record: RepairRecord; wo
     <EditPanel deleteAction={deleteAction} title="Edit repair">
       <form action={updateAction} className="record-form">
         <Field label="Date"><input name="date" type="date" defaultValue={record.date} required /></Field>
-        <Field label="Mileage"><input name="odometer" type="number" min="0" defaultValue={record.odometer ?? ""} /></Field>
+        <Field label="Odometer"><input name="odometer" type="number" min="0" defaultValue={record.odometer ?? ""} /></Field>
         <Field label="Fault or repair"><input name="fault" defaultValue={record.fault} required /></Field>
         <Field label="Garage/Workshop">
           <input name="garage" list="workshop-suggestions" defaultValue={record.garage ?? ""} autoComplete="off" />
@@ -153,7 +153,7 @@ export function EditMotForm({ record, motLabel = "MOT" }: { record: MotRecord; m
       <form action={updateAction} className="record-form">
         <Field label="Test date"><input name="testDate" type="date" defaultValue={record.testDate} required /></Field>
         <Field label="Expiry date"><input name="expiryDate" type="date" defaultValue={record.expiryDate} required /></Field>
-        <Field label="Mileage"><input name="odometer" type="number" min="0" defaultValue={record.odometer ?? ""} /></Field>
+        <Field label="Odometer"><input name="odometer" type="number" min="0" defaultValue={record.odometer ?? ""} /></Field>
         <Field label="Result"><select name="result" defaultValue={record.result} required>
             <option value="pass">Pass</option>
             <option value="advisory">Pass with advisories</option>
@@ -178,7 +178,7 @@ export function EditReminderForm({ record }: { record: Reminder }) {
         <Field label="Title"><input name="title" defaultValue={record.title} required /></Field>
         <Field label="Due date"><input name="dueDate" type="date" defaultValue={record.dueDate ?? ""} /></Field>
         {!isMotReminder ? (
-          <Field label="Due mileage"><input name="dueOdometer" type="number" min="0" defaultValue={record.dueOdometer ?? ""} /></Field>
+          <Field label="Due odometer"><input name="dueOdometer" type="number" min="0" defaultValue={record.dueOdometer ?? ""} /></Field>
         ) : null}
         <Field label="Recurrence"><select name="recurrence" defaultValue={record.recurrence ?? ""}>
             <option value="">No recurrence</option>
@@ -212,7 +212,7 @@ export function MaintenanceForm({ vehicleId, categories }: { vehicleId: number; 
     <ModalPanel trigger={<><Wrench size={17} /> Add maintenance</>} title="Add maintenance">
       <form action={action} className="record-form">
         <Field label="Date"><input name="date" type="date" defaultValue={todayIso()} required /></Field>
-        <Field label="Mileage"><input name="odometer" type="number" min="0" /></Field>
+        <Field label="Odometer"><input name="odometer" type="number" min="0" /></Field>
         <Field label="Category">
           <input name="category" list="category-suggestions" autoComplete="off" required />
           <datalist id="category-suggestions">
@@ -234,7 +234,7 @@ export function RepairForm({ vehicleId, workshops }: { vehicleId: number; worksh
     <ModalPanel trigger={<><Hammer size={17} /> Add repair</>} title="Add repair">
       <form action={action} className="record-form">
         <Field label="Date"><input name="date" type="date" defaultValue={todayIso()} required /></Field>
-        <Field label="Mileage"><input name="odometer" type="number" min="0" /></Field>
+        <Field label="Odometer"><input name="odometer" type="number" min="0" /></Field>
         <Field label="Fault or repair"><input name="fault" required /></Field>
         <Field label="Garage/Workshop">
           <input name="garage" list="workshop-suggestions" autoComplete="off" />
@@ -257,7 +257,7 @@ export function MotForm({ vehicleId, motLabel = "MOT" }: { vehicleId: number; mo
       <form action={action} className="record-form">
         <Field label="Test date"><input name="testDate" type="date" defaultValue={todayIso()} required /></Field>
         <Field label="Expiry date"><input name="expiryDate" type="date" required /></Field>
-        <Field label="Mileage"><input name="odometer" type="number" min="0" /></Field>
+        <Field label="Odometer"><input name="odometer" type="number" min="0" /></Field>
         <Field label="Result"><select name="result" defaultValue="pass" required>
             <option value="pass">Pass</option>
             <option value="advisory">Pass with advisories</option>
@@ -279,7 +279,7 @@ export function ReminderForm({ vehicleId }: { vehicleId: number }) {
       <form action={action} className="record-form">
         <Field label="Title"><input name="title" required /></Field>
         <Field label="Due date"><input name="dueDate" type="date" /></Field>
-        <Field label="Due mileage"><input name="dueOdometer" type="number" min="0" /></Field>
+        <Field label="Due odometer"><input name="dueOdometer" type="number" min="0" /></Field>
         <Field label="Recurrence"><select name="recurrence" defaultValue="">
             <option value="">No recurrence</option>
             <option value="12 months">Every 12 months</option>
@@ -336,7 +336,7 @@ export function CreateMaintenanceFromPurchaseForm({ record, categories }: { reco
     <ModalPanel trigger={<><Wrench size={17} /> Add to maintenance</>} title="Add purchase to maintenance">
       <form action={action} className="record-form">
         <Field label="Date"><input name="date" type="date" defaultValue={record.purchasedDate ?? todayIso()} required /></Field>
-        <Field label="Mileage"><input name="odometer" type="number" min="0" /></Field>
+        <Field label="Odometer"><input name="odometer" type="number" min="0" /></Field>
         <Field label="Category">
           <input name="category" list="category-suggestions" autoComplete="off" required />
           <datalist id="category-suggestions">
@@ -358,7 +358,7 @@ export function CreateRepairFromPurchaseForm({ record, workshops }: { record: Pl
     <ModalPanel trigger={<><Hammer size={17} /> Add to repairs</>} title="Add purchase to repairs">
       <form action={action} className="record-form">
         <Field label="Date"><input name="date" type="date" defaultValue={record.purchasedDate ?? todayIso()} required /></Field>
-        <Field label="Mileage"><input name="odometer" type="number" min="0" /></Field>
+        <Field label="Odometer"><input name="odometer" type="number" min="0" /></Field>
         <Field label="Fault or repair"><input name="fault" defaultValue={record.itemName} required /></Field>
         <Field label="Garage/Workshop">
           <input name="garage" list="workshop-suggestions" autoComplete="off" />

@@ -146,6 +146,13 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                   <option value="iso">ISO 8601 (e.g. 2026-01-01)</option>
                 </select>
               </label>
+              <label>
+                Distance unit
+                <select name="distanceUnit" defaultValue={regionalSettings.distanceUnit}>
+                  <option value="miles">Miles</option>
+                  <option value="km">Kilometres (km)</option>
+                </select>
+              </label>
               <button className="primary-button" type="submit">Save regional settings</button>
             </form>
           </article>
@@ -231,7 +238,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
               <span>Data directory</span>
               <strong>{process.env.CARVEY_DATA_DIR ?? "./data"}</strong>
               <span>Region defaults</span>
-              <strong>{regionalSettings.currency}, miles, {regionalSettings.dateFormat === "iso" ? "ISO dates" : "UK dates"}</strong>
+              <strong>{regionalSettings.currency}, {regionalSettings.distanceUnit}, {regionalSettings.dateFormat === "iso" ? "ISO dates" : "UK dates"}</strong>
               <span>Version</span>
               <strong>0.1.0</strong>
             </dl>

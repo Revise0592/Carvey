@@ -13,8 +13,13 @@ export function formatCurrency(value: number | null | undefined, settings?: { cu
   return currencyFormatter.format(value ?? 0);
 }
 
-export function formatMiles(value: number | null | undefined) {
-  if (value === null || value === undefined) return "No mileage";
+export function formatMiles(value: number | null | undefined, settings?: { distanceUnit?: "miles" | "km" }) {
+  if (value === null || value === undefined) {
+    return settings?.distanceUnit === "km" ? "No distance" : "No mileage";
+  }
+  if (settings?.distanceUnit === "km") {
+    return `${numberFormatter.format(value)} km`;
+  }
   return `${numberFormatter.format(value)} miles`;
 }
 

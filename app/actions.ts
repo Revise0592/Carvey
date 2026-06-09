@@ -572,7 +572,8 @@ export async function updateRegionalSettingsAction(formData: FormData) {
   const registrationLabel = z.enum(["registration", "plateNumber"]).parse(str(formData, "registrationLabel"));
   const motFeature = z.enum(["mot", "emissionsTest", "disabled"]).parse(str(formData, "motFeature"));
   const dateFormat = z.enum(["dd-mon-yyyy", "iso"]).parse(str(formData, "dateFormat"));
-  updateRegionalSettings({ currency, registrationLabel, motFeature, dateFormat });
+  const distanceUnit = z.enum(["miles", "km"]).parse(str(formData, "distanceUnit"));
+  updateRegionalSettings({ currency, registrationLabel, motFeature, dateFormat, distanceUnit });
   revalidatePath("/");
   redirect("/settings?tab=regional&app=regional-updated");
 }

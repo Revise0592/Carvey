@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatCurrency, formatDate, formatMotResult, formatPlannedPurchaseStatus, formatReminderStatus } from "@/lib/format";
+import { formatCurrency, formatDate, formatMiles, formatMotResult, formatPlannedPurchaseStatus, formatReminderStatus } from "@/lib/format";
 
 describe("format helpers", () => {
   it("formats plain dates and SQLite timestamps", () => {
@@ -21,6 +21,17 @@ describe("format helpers", () => {
   it("formats currency in GBP mode (default)", () => {
     expect(formatCurrency(100)).toBe("£100.00");
     expect(formatCurrency(100, { currency: "GBP" })).toBe("£100.00");
+  });
+
+  it("formats distance in km mode", () => {
+    expect(formatMiles(100000, { distanceUnit: "km" })).toBe("100,000 km");
+    expect(formatMiles(0, { distanceUnit: "km" })).toBe("0 km");
+    expect(formatMiles(null, { distanceUnit: "km" })).toBe("No distance");
+  });
+
+  it("formats distance in miles mode (default)", () => {
+    expect(formatMiles(50000)).toBe("50,000 miles");
+    expect(formatMiles(null)).toBe("No mileage");
   });
 
   it("formats MOT results for display", () => {

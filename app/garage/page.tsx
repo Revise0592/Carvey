@@ -65,7 +65,7 @@ export default async function GaragePage() {
             <div className="vehicle-card-body">
               <RegistrationPlate value={vehicle.registration} mode={regMode} />
               <h2>{vehicle.make} {vehicle.model}</h2>
-              <p>{vehicle.year ?? "Year unknown"} · {formatMiles(vehicle.effectiveOdometer)}</p>
+              <p>{vehicle.year ?? "Year unknown"} · {formatMiles(vehicle.effectiveOdometer, settings)}</p>
               {vehicle.purchasePrice ? <p>Bought for {formatCurrency(vehicle.purchasePrice, settings)}</p> : null}
             </div>
           </Link>
@@ -95,7 +95,7 @@ export default async function GaragePage() {
           {stats.reminders.length ? stats.reminders.map((reminder) => (
             <Link href={`/vehicles/${reminder.vehicleId}?tab=reminders`} className="list-row" key={reminder.id}>
               <span>{reminder.title} · {reminder.make} {reminder.model}</span>
-              <strong>{reminder.dueDate ? formatDate(reminder.dueDate, settings) : formatMiles(reminder.dueOdometer)}</strong>
+              <strong>{reminder.dueDate ? formatDate(reminder.dueDate, settings) : formatMiles(reminder.dueOdometer, settings)}</strong>
             </Link>
           )) : <p className="muted">No open reminders.</p>}
         </div>
