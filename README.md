@@ -14,18 +14,32 @@ Carvey is a self-hosted, local-first car maintenance tracker for managing vehicl
 ## What It Does
 
 - Tracks multiple vehicles in one garage
-- Stores vehicle details, mileage and notes
-- Logs maintenance, repairs, MOTs, and reminders
-- Shows a dashboard with costs, reminders, and MOTs due soon
-- Backup & restore your config / data.
+- Stores vehicle details, odometer readings, and notes
+- Logs maintenance, repairs, MOTs/emissions tests, and reminders
+- Attaches receipts and documents (PDF, images) to any record
+- Shows a dashboard with costs, reminders, and upcoming tests
+- Configurable regional settings for currency, distance, dates, and more
+- Backup & restore your config / data
+
+## Regional Settings
+
+Carvey is configurable for different regions under **Settings → Regional**. All options default to UK values.
+
+| Setting | Options |
+|---|---|
+| Currency | GBP (£) · USD ($) |
+| Distance unit | Miles · Kilometres (km) |
+| Date format | DD Mon YYYY · ISO 8601 (YYYY-MM-DD) |
+| Vehicle identifier | Registration · Plate Number |
+| Annual vehicle test | MOT · Emissions Test · Disabled |
 
 ## How It Works
 
 - Built as a Next.js app with a server-rendered UI
 - Stores data in SQLite under `/app/data`
-- Saves uploaded vehicle images alongside the database
+- Saves uploaded vehicle images and file attachments alongside the database
 - Packages the database and uploads together for backup and restore
-- Uses UK-first defaults for miles, GBP, date formatting, and MOT records
+- Authentication can be disabled for deployments behind a trusted reverse proxy
 
 ## Quick Start
 
@@ -45,7 +59,6 @@ Example local env:
 ```bash
 CARVEY_DATA_DIR=./data
 TZ=Europe/London
-CARVEY_DEBUG_EASTER_EGGS=false
 ```
 
 Docker Compose:
