@@ -96,7 +96,7 @@ export default async function VehiclePage({
           <RegistrationPlate value={vehicle.registration} className="large" mode={regMode} />
           <h1>{vehicle.make} {vehicle.model}</h1>
           <div className="hero-meta">
-            <MileagePill>{formatMiles(vehicle.effectiveOdometer)}</MileagePill>
+            <MileagePill>{formatMiles(vehicle.effectiveOdometer, settings)}</MileagePill>
             <span className="pill">{vehicle.year ?? "Year unknown"}</span>
             <span className="pill">{formatCurrency(spent, settings)} logged</span>
             {vehicle.purchasePrice ? <span className="pill">{formatCurrency(vehicle.purchasePrice, settings)} paid</span> : null}
@@ -178,7 +178,7 @@ export default async function VehiclePage({
           {maintenance.map((record) => (
             <article className="record-card" key={record.id}>
               <div className="record-header"><span className="tag">{record.category}</span><h3>{record.description}</h3></div>
-              <p className="record-meta">{formatDate(record.date, settings)} · {formatMiles(record.odometer)}</p>
+              <p className="record-meta">{formatDate(record.date, settings)} · {formatMiles(record.odometer, settings)}</p>
               <strong>{formatCurrency(record.cost, settings)}</strong>
               {record.notes ? <p>{record.notes}</p> : null}
               <AttachmentSection attachments={listAttachments("maintenance", record.id)} deleteAction={boundDeleteAttachment} recordType="maintenance" recordId={record.id} vehicleId={vehicle.id} />
@@ -200,7 +200,7 @@ export default async function VehiclePage({
           {repairs.map((record) => (
             <article className="record-card" key={record.id}>
               <div className="record-header"><span className="tag">{record.garage ?? "Repair"}</span><h3>{record.fault}</h3></div>
-              <p className="record-meta">{formatDate(record.date, settings)} · {formatMiles(record.odometer)}</p>
+              <p className="record-meta">{formatDate(record.date, settings)} · {formatMiles(record.odometer, settings)}</p>
               <strong>{formatCurrency(record.cost, settings)}</strong>
               {record.notes ? <p>{record.notes}</p> : null}
               <AttachmentSection attachments={listAttachments("repair", record.id)} deleteAction={boundDeleteAttachment} recordType="repair" recordId={record.id} vehicleId={vehicle.id} />
@@ -222,7 +222,7 @@ export default async function VehiclePage({
           {mots.map((record) => (
             <article className="record-card" key={record.id}>
               <div className="record-header"><span className={`tag ${motResultTone(record.result)}`}>{formatMotResult(record.result)}</span><h3>Expires {formatDate(record.expiryDate, settings)}</h3></div>
-              <p className="record-meta">Tested {formatDate(record.testDate, settings)} · Mileage: {formatMiles(record.odometer)}</p>
+              <p className="record-meta">Tested {formatDate(record.testDate, settings)} · Mileage: {formatMiles(record.odometer, settings)}</p>
               <strong>{formatCurrency(record.cost, settings)}</strong>
               {record.certificateRef ? <p>Reference: {record.certificateRef}</p> : null}
               {record.advisories ? <p>{record.advisories}</p> : null}
@@ -246,7 +246,7 @@ export default async function VehiclePage({
             const status = getReminderStatus(record, vehicle);
             const reminderDetails = [
               record.dueDate ? `Due ${formatDate(record.dueDate, settings)}` : "No date",
-              record.title.toLowerCase() === "mot due" ? null : formatMiles(record.dueOdometer)
+              record.title.toLowerCase() === "mot due" ? null : formatMiles(record.dueOdometer, settings)
             ].filter(Boolean).join(" · ");
             return (
               <article className="record-card reminder-card" key={record.id}>

@@ -41,7 +41,7 @@ export default async function VehiclePrintPage({ params }: { params: Promise<{ i
           <RegistrationPlate value={vehicle.registration} mode={regMode} />
         </div>
         <dl className="print-facts">
-          <div><dt>Current mileage</dt><dd>{formatMiles(vehicle.effectiveOdometer)}</dd></div>
+          <div><dt>{settings.distanceUnit === "km" ? "Current distance" : "Current mileage"}</dt><dd>{formatMiles(vehicle.effectiveOdometer, settings)}</dd></div>
           <div><dt>VIN</dt><dd>{vehicle.vin ?? "Not recorded"}</dd></div>
           <div><dt>Generated</dt><dd>{generatedAt}</dd></div>
           <div><dt>Total logged spend</dt><dd>{formatCurrency(totals.loggedSpend, settings)}</dd></div>
@@ -68,7 +68,7 @@ export default async function VehiclePrintPage({ params }: { params: Promise<{ i
         {maintenance.map((record) => (
           <tr key={record.id}>
             <td>{formatDate(record.date, settings)}</td>
-            <td>{formatMiles(record.odometer)}</td>
+            <td>{formatMiles(record.odometer, settings)}</td>
             <td>{record.category}</td>
             <td>{record.description}{record.notes ? <p>{record.notes}</p> : null}</td>
             <td>{formatCurrency(record.cost, settings)}</td>
@@ -80,7 +80,7 @@ export default async function VehiclePrintPage({ params }: { params: Promise<{ i
         {repairs.map((record) => (
           <tr key={record.id}>
             <td>{formatDate(record.date, settings)}</td>
-            <td>{formatMiles(record.odometer)}</td>
+            <td>{formatMiles(record.odometer, settings)}</td>
             <td>{record.garage ?? "Not recorded"}</td>
             <td>{record.fault}{record.notes ? <p>{record.notes}</p> : null}</td>
             <td>{formatCurrency(record.cost, settings)}</td>
@@ -108,7 +108,7 @@ export default async function VehiclePrintPage({ params }: { params: Promise<{ i
                   <tr key={record.id}>
                     <td>{formatDate(record.testDate, settings)}</td>
                     <td>{formatDate(record.expiryDate, settings)}</td>
-                    <td>{formatMiles(record.odometer)}</td>
+                    <td>{formatMiles(record.odometer, settings)}</td>
                     <td>{formatMotResult(record.result)}</td>
                     <td>{record.certificateRef ?? "Not recorded"}{record.advisories ? <p>{record.advisories}</p> : null}</td>
                     <td>{formatCurrency(record.cost, settings)}</td>
