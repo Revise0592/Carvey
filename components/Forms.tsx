@@ -30,14 +30,14 @@ import { todayIso } from "@/lib/format";
 import { EditPanel } from "./EditPanel";
 import { ModalPanel } from "./ModalPanel";
 
-export function CreateVehicleForm() {
+export function CreateVehicleForm({ registrationLabel = "Registration" }: { registrationLabel?: string }) {
   return (
     <ModalPanel trigger={<><Plus size={17} /> Add vehicle</>} title="Add vehicle">
       <form action={createVehicleAction} className="record-form">
         <Field label="Make"><input name="make" required /></Field>
         <Field label="Model"><input name="model" required /></Field>
         <Field label="Year"><input name="year" type="number" min="1886" max="2100" /></Field>
-        <Field label="Registration"><input name="registration" required /></Field>
+        <Field label={registrationLabel}><input name="registration" required /></Field>
         <Field label="VIN"><input name="vin" /></Field>
         <Field label="Current mileage"><input name="currentOdometer" type="number" min="0" /></Field>
         <Field label="Purchase price"><input name="purchasePrice" type="number" min="0" step="0.01" /></Field>
@@ -49,7 +49,7 @@ export function CreateVehicleForm() {
   );
 }
 
-export function EditVehicleForm({ vehicle }: { vehicle: Vehicle }) {
+export function EditVehicleForm({ vehicle, registrationLabel = "Registration" }: { vehicle: Vehicle; registrationLabel?: string }) {
   const updateAction = updateVehicleAction.bind(null, vehicle.id);
   const deleteAction = deleteVehicleAction.bind(null, vehicle.id);
   return (
@@ -58,7 +58,7 @@ export function EditVehicleForm({ vehicle }: { vehicle: Vehicle }) {
         <Field label="Make"><input name="make" defaultValue={vehicle.make} required /></Field>
         <Field label="Model"><input name="model" defaultValue={vehicle.model} required /></Field>
         <Field label="Year"><input name="year" type="number" min="1886" max="2100" defaultValue={vehicle.year ?? ""} /></Field>
-        <Field label="Registration"><input name="registration" defaultValue={vehicle.registration} required /></Field>
+        <Field label={registrationLabel}><input name="registration" defaultValue={vehicle.registration} required /></Field>
         <Field label="VIN"><input name="vin" defaultValue={vehicle.vin ?? ""} /></Field>
         <Field label="Current mileage"><input name="currentOdometer" type="number" min="0" defaultValue={vehicle.currentOdometer ?? ""} /></Field>
         <Field label="Purchase price"><input name="purchasePrice" type="number" min="0" step="0.01" defaultValue={vehicle.purchasePrice ?? ""} /></Field>
@@ -145,11 +145,11 @@ export function EditRepairForm({ record, workshops }: { record: RepairRecord; wo
   );
 }
 
-export function EditMotForm({ record }: { record: MotRecord }) {
+export function EditMotForm({ record, motLabel = "MOT" }: { record: MotRecord; motLabel?: string }) {
   const updateAction = updateMotAction.bind(null, record.vehicleId, record.id);
   const deleteAction = deleteMotAction.bind(null, record.vehicleId, record.id);
   return (
-    <EditPanel deleteAction={deleteAction} title="Edit MOT">
+    <EditPanel deleteAction={deleteAction} title={`Edit ${motLabel}`}>
       <form action={updateAction} className="record-form">
         <Field label="Test date"><input name="testDate" type="date" defaultValue={record.testDate} required /></Field>
         <Field label="Expiry date"><input name="expiryDate" type="date" defaultValue={record.expiryDate} required /></Field>
@@ -250,10 +250,10 @@ export function RepairForm({ vehicleId, workshops }: { vehicleId: number; worksh
   );
 }
 
-export function MotForm({ vehicleId }: { vehicleId: number }) {
+export function MotForm({ vehicleId, motLabel = "MOT" }: { vehicleId: number; motLabel?: string }) {
   const action = createMotAction.bind(null, vehicleId);
   return (
-    <ModalPanel trigger={<><ShieldCheck size={17} /> Add MOT</>} title="Add MOT">
+    <ModalPanel trigger={<><ShieldCheck size={17} /> Add {motLabel}</>} title={`Add ${motLabel}`}>
       <form action={action} className="record-form">
         <Field label="Test date"><input name="testDate" type="date" defaultValue={todayIso()} required /></Field>
         <Field label="Expiry date"><input name="expiryDate" type="date" required /></Field>

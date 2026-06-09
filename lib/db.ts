@@ -107,6 +107,19 @@ export type AdminUser = {
   createdAt: string;
 };
 
+export type RecordAttachment = {
+  id: number;
+  recordType: "maintenance" | "repair" | "mot";
+  recordId: number;
+  vehicleId: number;
+  filename: string;
+  originalFilename: string;
+  mimeType: string;
+  fileSize: number;
+  filePath: string;
+  createdAt: string;
+};
+
 export type AuthSession = {
   id: string;
   adminUserId: number;
@@ -289,6 +302,19 @@ function migrate(database: Database.Database) {
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
 
+    CREATE TABLE IF NOT EXISTS record_attachments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      record_type TEXT NOT NULL CHECK (record_type IN ('maintenance', 'repair', 'mot')),
+      record_id INTEGER NOT NULL,
+      vehicle_id INTEGER NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
+      filename TEXT NOT NULL,
+      original_filename TEXT NOT NULL,
+      mime_type TEXT NOT NULL,
+      file_size INTEGER NOT NULL,
+      file_path TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
     CREATE INDEX IF NOT EXISTS idx_vehicles_archived ON vehicles(archived);
     CREATE INDEX IF NOT EXISTS idx_auth_sessions_admin ON auth_sessions(admin_user_id);
     CREATE INDEX IF NOT EXISTS idx_workshops_preferred ON workshops(preferred);
@@ -298,6 +324,8 @@ function migrate(database: Database.Database) {
     CREATE INDEX IF NOT EXISTS idx_reminders_vehicle ON reminders(vehicle_id);
     CREATE INDEX IF NOT EXISTS idx_planned_purchases_vehicle ON planned_purchases(vehicle_id);
     CREATE INDEX IF NOT EXISTS idx_planned_purchases_reminder ON planned_purchases(reminder_id);
+    CREATE INDEX IF NOT EXISTS idx_attachments_record ON record_attachments(record_type, record_id);
+    CREATE INDEX IF NOT EXISTS idx_attachments_vehicle ON record_attachments(vehicle_id);
   `);
   ensureColumn(database, "vehicles", "purchase_price", "REAL");
   ensureColumn(database, "vehicles", "purchase_date", "TEXT");
@@ -1052,4 +1080,62 @@ export function getDashboardStats() {
     `)
     .get() as { count: number };
   return { vehicles, yearlySpend: yearlySpend.total, upcomingMots, reminders, plannedPurchases, plannedPurchaseCount: plannedPurchaseCount.count };
+}
+
+const attachmentSelect = `
+  id,
+  record_type as recordType,
+  record_id as recordId,
+  vehicle_id as vehicleId,
+  filename,
+  original_filename as originalFilename,
+  mime_type as mimeType,
+  file_size as fileSize,
+  file_path as filePath,
+  created_at as createdAt
+`;
+
+export function listAttachments(recordType: string, recordId: number): RecordAttachment[] {
+  return getDb()
+    .prepare(`SELECT ${attachmentSelect} FROM record_attachments WHERE record_type = ? AND record_id = ? ORDER BY id`)
+    .all(recordType, recordId) as RecordAttachment[];
+}
+
+export function getAttachment(id: number, vehicleId: number): RecordAttachment | null {
+  return (getDb()
+    .prepare(`SELECT ${attachmentSelect} FROM record_attachments WHERE id = ? AND vehicle_id = ?`)
+    .get(id, vehicleId) as RecordAttachment | undefined) ?? null;
+}
+
+export function getAttachmentByFilename(filename: string): RecordAttachment | null {
+  return (getDb()
+    .prepare(`SELECT ${attachmentSelect} FROM record_attachments WHERE filename = ?`)
+    .get(filename) as RecordAttachment | undefined) ?? null;
+}
+
+export function createAttachment(input: Omit<RecordAttachment, "id" | "createdAt">) {
+  return getDb()
+    .prepare(`
+      INSERT INTO record_attachments (record_type, record_id, vehicle_id, filename, original_filename, mime_type, file_size, file_path)
+      VALUES (@recordType, @recordId, @vehicleId, @filename, @originalFilename, @mimeType, @fileSize, @filePath)
+    `)
+    .run(input);
+}
+
+export function deleteAttachment(id: number, vehicleId: number) {
+  return getDb()
+    .prepare("DELETE FROM record_attachments WHERE id = ? AND vehicle_id = ?")
+    .run(id, vehicleId);
+}
+
+export function listAndDeleteAttachmentsForRecord(recordType: string, recordId: number): RecordAttachment[] {
+  const attachments = getDb()
+    .prepare(`SELECT ${attachmentSelect} FROM record_attachments WHERE record_type = ? AND record_id = ?`)
+    .all(recordType, recordId) as RecordAttachment[];
+  if (attachments.length) {
+    getDb()
+      .prepare("DELETE FROM record_attachments WHERE record_type = ? AND record_id = ?")
+      .run(recordType, recordId);
+  }
+  return attachments;
 }

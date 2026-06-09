@@ -1,10 +1,26 @@
 import { describe, expect, it } from "vitest";
-import { formatDate, formatMotResult, formatPlannedPurchaseStatus, formatReminderStatus } from "@/lib/format";
+import { formatCurrency, formatDate, formatMotResult, formatPlannedPurchaseStatus, formatReminderStatus } from "@/lib/format";
 
 describe("format helpers", () => {
   it("formats plain dates and SQLite timestamps", () => {
     expect(formatDate("2026-05-20")).toBe("20 May 2026");
     expect(formatDate("2026-05-20 11:35:00")).toBe("20 May 2026");
+  });
+
+  it("formats dates in ISO mode", () => {
+    expect(formatDate("2026-05-20", { dateFormat: "iso" })).toBe("2026-05-20");
+    expect(formatDate("2026-05-20 11:35:00", { dateFormat: "iso" })).toBe("2026-05-20");
+    expect(formatDate(null, { dateFormat: "iso" })).toBe("Not set");
+  });
+
+  it("formats currency in USD mode", () => {
+    expect(formatCurrency(100, { currency: "USD" })).toBe("$100.00");
+    expect(formatCurrency(0, { currency: "USD" })).toBe("$0.00");
+  });
+
+  it("formats currency in GBP mode (default)", () => {
+    expect(formatCurrency(100)).toBe("£100.00");
+    expect(formatCurrency(100, { currency: "GBP" })).toBe("£100.00");
   });
 
   it("formats MOT results for display", () => {

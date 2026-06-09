@@ -2,11 +2,12 @@ import { redirect } from "next/navigation";
 import { loginAction } from "../actions";
 import { BrandLogo } from "@/components/BrandLogo";
 import { currentUser } from "@/lib/auth";
-import { hasAdminUser } from "@/lib/db";
+import { getAppSetting, hasAdminUser } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+  if (getAppSetting("authDisabled") === "true") redirect("/garage");
   if (!hasAdminUser()) redirect("/setup");
   const user = await currentUser();
   if (user) redirect("/garage");
