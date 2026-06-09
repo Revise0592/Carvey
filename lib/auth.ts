@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 import crypto from "node:crypto";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { createAdminUser, createAuthSession, getAdminById, getAdminByUsername, getAuthSession, hasAdminUser, revokeAuthSession } from "./db";
+import { createAdminUser, createAuthSession, getAdminById, getAdminByUsername, getAppSetting, getAuthSession, hasAdminUser, revokeAuthSession } from "./db";
 import { changePasswordForAdmin, changeUsernameForAdmin } from "./account";
 
 const cookieName = "carvey_session";
@@ -94,6 +94,9 @@ export async function currentUser() {
 }
 
 export async function requireUser() {
+  if (getAppSetting("authDisabled") === "true") {
+    return { id: 0, username: "guest", passwordHash: "", createdAt: "" };
+  }
   const user = await currentUser();
   if (!user) {
     if (!hasAdminUser()) redirect("/setup");

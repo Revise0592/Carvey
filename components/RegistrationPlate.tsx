@@ -1,4 +1,11 @@
-export function RegistrationPlate({ value, className }: { value: string; className?: string }) {
+export function RegistrationPlate({ value, className, mode = "uk" }: { value: string; className?: string; mode?: "uk" | "plain" }) {
+  if (mode === "plain") {
+    return (
+      <span className={className} aria-label={`Plate number ${value}`}>
+        {value.toUpperCase()}
+      </span>
+    );
+  }
   const classes = ["reg", className].filter(Boolean).join(" ");
   return (
     <span className={classes} aria-label={`Registration ${value}`}>

@@ -5,7 +5,11 @@ export const currencyFormatter = new Intl.NumberFormat("en-GB", {
 
 export const numberFormatter = new Intl.NumberFormat("en-GB");
 
-export function formatCurrency(value: number | null | undefined) {
+export function formatCurrency(value: number | null | undefined, settings?: { currency?: "GBP" | "USD" }) {
+  const currency = settings?.currency ?? "GBP";
+  if (currency === "USD") {
+    return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value ?? 0);
+  }
   return currencyFormatter.format(value ?? 0);
 }
 
@@ -14,8 +18,11 @@ export function formatMiles(value: number | null | undefined) {
   return `${numberFormatter.format(value)} miles`;
 }
 
-export function formatDate(value: string | null | undefined) {
+export function formatDate(value: string | null | undefined, settings?: { dateFormat?: "dd-mon-yyyy" | "iso" }) {
   if (!value) return "Not set";
+  if (settings?.dateFormat === "iso") {
+    return value.slice(0, 10);
+  }
   const dateValue = value.includes("T") || value.includes(" ") ? value : `${value}T12:00:00`;
   return new Intl.DateTimeFormat("en-GB", {
     day: "2-digit",
