@@ -74,7 +74,7 @@ export default async function VehiclePage({
   const debugEnabled = debugEasterEggsEnabled();
   const collectionName = getCollectionName();
   const registrationLabel = settings.registrationLabel === "plateNumber" ? "Plate Number" : "Registration";
-  const regMode = settings.registrationLabel === "plateNumber" ? "plain" : "uk" as const;
+  const regMode = (settings.registrationLabel === "plateNumber" ? "plain" : "uk") as "plain" | "uk";
   const boundDeleteAttachment = deleteAttachmentAction.bind(null, vehicle.id);
 
   return (
