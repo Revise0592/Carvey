@@ -14,7 +14,7 @@ export default async function GaragePage() {
   const stats = getDashboardStats();
   const collectionName = getCollectionName();
   const settings = getRegionalSettings();
-  const regMode = (settings.registrationLabel === "plateNumber" ? "plain" : "uk") as "plain" | "uk";
+  const regMode = settings.plateStyle === "us" ? "us" : "uk";
   const motLabel = settings.motFeature === "emissionsTest" ? "Emissions Test" : "MOT";
 
   return (
@@ -24,7 +24,7 @@ export default async function GaragePage() {
           <p className="eyebrow">Overview</p>
           <h1>{collectionName}</h1>
         </div>
-        <CreateVehicleForm registrationLabel={settings.registrationLabel === "plateNumber" ? "Plate Number" : "Registration"} />
+        <CreateVehicleForm registrationLabel={settings.plateStyle === "us" ? "Plate Number" : "Registration"} />
       </section>
 
       <section className="stats-grid">
