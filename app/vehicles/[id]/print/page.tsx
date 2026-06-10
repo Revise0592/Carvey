@@ -17,7 +17,7 @@ export default async function VehiclePrintPage({ params }: { params: Promise<{ i
   const { vehicle, maintenance, repairs, mots, reminders, totals } = report;
   const settings = getRegionalSettings();
   const motLabel = settings.motFeature === "emissionsTest" ? "Emissions Test" : "MOT";
-  const regMode = (settings.registrationLabel === "plateNumber" ? "plain" : "uk") as "plain" | "uk";
+  const regMode = settings.plateStyle === "us" ? "us" : "uk";
   const generatedAt = settings.dateFormat === "iso"
     ? new Date().toISOString().slice(0, 10)
     : new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" }).format(new Date());

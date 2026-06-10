@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Building2, Download, Globe, KeyRound, RotateCcw, Settings2, Trash2, Upload, UserRound } from "lucide-react";
+import { Bug, Building2, Download, Globe, HardDrive, KeyRound, Monitor, Palette, RotateCcw, Server, Settings2, ShieldCheck, Tag, Trash2, Upload, UserRound } from "lucide-react";
 import { AppFrame } from "@/components/AppFrame";
 import { ThemeControls } from "@/components/ThemeControls";
 import { createMaintenanceCategoryAction, createWorkshopAction, deleteMaintenanceCategoryAction, deleteWorkshopAction, loadShowcaseDemoDataAction, restorePreviousDemoDataAction, saveCurrentShowcaseDemoDataAction, updateAuthSettingsAction, updateCollectionNameAction, updateMaintenanceCategoryAction, updatePasswordAction, updateRegionalSettingsAction, updateUsernameAction, updateWorkshopAction } from "@/app/actions";
@@ -37,18 +37,18 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       </section>
 
       <nav className="tabs settings-tabs" aria-label="Settings sections">
-        <Link className={activeTab === "personalisation" ? "active" : ""} href="/settings?tab=personalisation">Personalisation</Link>
-        <Link className={activeTab === "admin" ? "active" : ""} href="/settings?tab=admin">Admin</Link>
+        <Link className={activeTab === "personalisation" ? "active" : ""} href="/settings?tab=personalisation"><Palette size={15} /> Personalisation</Link>
+        <Link className={activeTab === "admin" ? "active" : ""} href="/settings?tab=admin"><UserRound size={15} /> Admin</Link>
         <Link className={activeTab === "regional" ? "active" : ""} href="/settings?tab=regional"><Globe size={15} /> Regional</Link>
-        <Link className={activeTab === "workshops" ? "active" : ""} href="/settings?tab=workshops">Garages & Workshops</Link>
-        <Link className={activeTab === "categories" ? "active" : ""} href="/settings?tab=categories">Maintenance Categories</Link>
-        <Link className={activeTab === "backup" ? "active" : ""} href="/settings?tab=backup">Backup & Restore</Link>
+        <Link className={activeTab === "workshops" ? "active" : ""} href="/settings?tab=workshops"><Building2 size={15} /> Garages & Workshops</Link>
+        <Link className={activeTab === "categories" ? "active" : ""} href="/settings?tab=categories"><Tag size={15} /> Maintenance Categories</Link>
+        <Link className={activeTab === "backup" ? "active" : ""} href="/settings?tab=backup"><HardDrive size={15} /> Backup & Restore</Link>
       </nav>
 
       {activeTab === "personalisation" ? (
         <section className="settings-grid">
           <article className="settings-panel">
-            <h2>Appearance</h2>
+            <h2><Monitor size={19} /> Appearance</h2>
             <p className="muted">Choose how Carvey looks on this device.</p>
             <ThemeControls />
           </article>
@@ -125,10 +125,10 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                 </select>
               </label>
               <label>
-                Vehicle identifier label
-                <select name="registrationLabel" defaultValue={regionalSettings.registrationLabel}>
-                  <option value="registration">Registration</option>
-                  <option value="plateNumber">Plate Number</option>
+                Plate style
+                <select name="plateStyle" defaultValue={regionalSettings.plateStyle}>
+                  <option value="uk">UK — Yellow/White rectangular</option>
+                  <option value="us">US — White plate</option>
                 </select>
               </label>
               <label>
@@ -158,7 +158,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           </article>
 
           <article className="settings-panel">
-            <h2>Authentication</h2>
+            <h2><ShieldCheck size={19} /> Authentication</h2>
             <p className="muted">Disable login when Carvey is deployed behind a trusted reverse proxy that handles authentication.</p>
             {regionalSettings.authDisabled ? <p className="error">Warning: authentication is currently disabled. Anyone who can reach this URL has full access.</p> : null}
             {params.app === "auth-updated" ? <p className="success">Authentication setting saved.</p> : null}
@@ -189,7 +189,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           </article>
 
           <article className="settings-panel workshop-list-panel">
-            <h2>Saved Garages & Workshops</h2>
+            <h2><Building2 size={19} /> Saved Garages & Workshops</h2>
             {workshops.length ? (
               <div className="workshop-list">
                 {workshops.map((workshop) => (
@@ -204,7 +204,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       {activeTab === "categories" ? (
         <section className="settings-grid">
           <article className="settings-panel">
-            <h2>Add Category</h2>
+            <h2><Tag size={19} /> Add Category</h2>
             {params.category === "created" ? <p className="success">Category saved.</p> : null}
             {params.category === "updated" ? <p className="success">Category updated.</p> : null}
             {params.category === "deleted" ? <p className="success">Category deleted.</p> : null}
@@ -218,7 +218,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           </article>
 
           <article className="settings-panel workshop-list-panel">
-            <h2>Saved Categories</h2>
+            <h2><Tag size={19} /> Saved Categories</h2>
             {categories.length ? (
               <div className="workshop-list">
                 {categories.map((category) => (
@@ -233,7 +233,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       {activeTab === "backup" ? (
         <section className="settings-grid">
           <article className="settings-panel">
-            <h2>App</h2>
+            <h2><Server size={19} /> App</h2>
             <dl className="metric-list">
               <span>Data directory</span>
               <strong>{process.env.CARVEY_DATA_DIR ?? "./data"}</strong>
@@ -267,7 +267,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
 
           {debugEnabled && debugDemoStatus ? (
             <article className="settings-panel">
-              <h2>Debug Tools</h2>
+              <h2><Bug size={19} /> Debug Tools</h2>
               <p className="muted">Load a curated screenshot garage for demos and GitHub screenshots. This temporarily replaces the live view until you restore the saved snapshot.</p>
               {params.debug === "demo-loaded" ? <p className="success">Showcase demo data loaded.</p> : null}
               {params.debug === "demo-saved" ? <p className="success">Current demo data saved as the showcase backup.</p> : null}
