@@ -24,7 +24,7 @@ export default async function GaragePage() {
           <p className="eyebrow">Overview</p>
           <h1>{collectionName}</h1>
         </div>
-        <CreateVehicleForm registrationLabel={settings.plateStyle === "us" ? "Plate Number" : "Registration"} />
+        <CreateVehicleForm registrationLabel="Registration" />
       </section>
 
       <section className="stats-grid">
