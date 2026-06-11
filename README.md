@@ -27,10 +27,10 @@ Carvey is configurable for different regions under **Settings → Regional**. Al
 
 | Setting | Options |
 |---|---|
-| Currency | GBP (£) · USD ($) |
+| Currency | GBP (£) · USD ($) · EUR (€) |
 | Distance unit | Miles · Kilometres (km) |
 | Date format | DD Mon YYYY · ISO 8601 (YYYY-MM-DD) |
-| Vehicle identifier | Registration · Plate Number |
+| Plate colour | Yellow (rear) · White (front) |
 | Annual vehicle test | MOT · Emissions Test · Disabled |
 
 ## How It Works
