@@ -2,12 +2,17 @@
 
 import { Monitor, Moon, Sun } from "lucide-react";
 import { resolveThemeMode } from "@/lib/theme-branding";
-import { themePalettes, type ThemeMode, type ThemePalette } from "@/lib/theme-options";
+import { themePalettes, themeShapes, type ThemeMode, type ThemePalette, type ThemeShape } from "@/lib/theme-options";
 
 const modeOptions: Array<{ mode: ThemeMode; label: string; icon: React.ReactNode }> = [
   { mode: "system", label: "System", icon: <Monitor size={17} /> },
   { mode: "light", label: "Light", icon: <Sun size={17} /> },
   { mode: "dark", label: "Dark", icon: <Moon size={17} /> }
+];
+
+const shapeOptions: Array<{ shape: ThemeShape; label: string }> = [
+  { shape: "rounded", label: "Rounded" },
+  { shape: "boxy", label: "Boxy" }
 ];
 
 export function ThemeControls() {
@@ -22,6 +27,11 @@ export function ThemeControls() {
   function applyPalette(nextPalette: ThemePalette) {
     window.localStorage.setItem("carvey-palette", nextPalette);
     document.documentElement.setAttribute("data-palette", nextPalette);
+  }
+
+  function applyShape(nextShape: ThemeShape) {
+    window.localStorage.setItem("carvey-shape", nextShape);
+    document.documentElement.setAttribute("data-shape", nextShape);
   }
 
   return (
@@ -59,6 +69,22 @@ export function ThemeControls() {
                 ))}
               </span>
               <span>{palette.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="appearance-group">
+        <span className="appearance-label">Style</span>
+        <div className="segmented-control segmented-control--2" role="group" aria-label="Shape style">
+          {shapeOptions.map((option) => (
+            <button
+              className={`shape-option shape-${option.shape}`}
+              key={option.shape}
+              type="button"
+              onClick={() => applyShape(option.shape)}
+            >
+              {option.label}
             </button>
           ))}
         </div>

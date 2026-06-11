@@ -582,10 +582,10 @@ export async function updateAuthSettingsAction(formData: FormData) {
   await requireUser();
   const authDisabled = str(formData, "authDisabled") === "on";
   const confirmed = str(formData, "confirmed") === "on";
-  if (authDisabled && !confirmed) redirect("/settings?tab=regional&app=auth-confirm-required");
+  if (authDisabled && !confirmed) redirect("/settings?tab=admin&app=auth-confirm-required");
   updateRegionalSettings({ authDisabled });
   revalidatePath("/");
-  redirect("/settings?tab=regional&app=auth-updated");
+  redirect("/settings?tab=admin&app=auth-updated");
 }
 
 export async function deleteAttachmentAction(vehicleId: number, formData: FormData) {
