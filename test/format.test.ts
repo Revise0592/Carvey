@@ -18,6 +18,11 @@ describe("format helpers", () => {
     expect(formatCurrency(0, { currency: "USD" })).toBe("$0.00");
   });
 
+  it("formats currency in EUR mode", () => {
+    expect(formatCurrency(100, { currency: "EUR" })).toBe("€100.00");
+    expect(formatCurrency(0, { currency: "EUR" })).toBe("€0.00");
+  });
+
   it("formats currency in GBP mode (default)", () => {
     expect(formatCurrency(100)).toBe("£100.00");
     expect(formatCurrency(100, { currency: "GBP" })).toBe("£100.00");

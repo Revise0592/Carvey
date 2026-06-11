@@ -5,10 +5,13 @@ export const currencyFormatter = new Intl.NumberFormat("en-GB", {
 
 export const numberFormatter = new Intl.NumberFormat("en-GB");
 
-export function formatCurrency(value: number | null | undefined, settings?: { currency?: "GBP" | "USD" }) {
+export function formatCurrency(value: number | null | undefined, settings?: { currency?: "GBP" | "USD" | "EUR" }) {
   const currency = settings?.currency ?? "GBP";
   if (currency === "USD") {
     return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value ?? 0);
+  }
+  if (currency === "EUR") {
+    return new Intl.NumberFormat("en-IE", { style: "currency", currency: "EUR" }).format(value ?? 0);
   }
   return currencyFormatter.format(value ?? 0);
 }

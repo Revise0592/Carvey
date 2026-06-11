@@ -568,11 +568,11 @@ export async function saveCurrentShowcaseDemoDataAction() {
 
 export async function updateRegionalSettingsAction(formData: FormData) {
   await requireUser();
-  const currency = z.enum(["GBP", "USD"]).parse(str(formData, "currency"));
+  const currency = z.enum(["GBP", "USD", "EUR"]).parse(str(formData, "currency"));
   const motFeature = z.enum(["mot", "emissionsTest", "disabled"]).parse(str(formData, "motFeature"));
   const dateFormat = z.enum(["dd-mon-yyyy", "iso"]).parse(str(formData, "dateFormat"));
   const distanceUnit = z.enum(["miles", "km"]).parse(str(formData, "distanceUnit"));
-  const plateStyle = z.enum(["uk", "us"]).parse(str(formData, "plateStyle"));
+  const plateStyle = z.enum(["uk-yellow", "uk-white"]).parse(str(formData, "plateStyle"));
   updateRegionalSettings({ currency, motFeature, dateFormat, distanceUnit, plateStyle });
   revalidatePath("/");
   redirect("/settings?tab=regional&app=regional-updated");

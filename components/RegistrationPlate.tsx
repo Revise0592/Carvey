@@ -1,4 +1,4 @@
-export function RegistrationPlate({ value, className, mode = "uk" }: { value: string; className?: string; mode?: "uk" | "us" | "plain" }) {
+export function RegistrationPlate({ value, className, mode = "uk-yellow" }: { value: string; className?: string; mode?: "uk-yellow" | "uk-white" | "plain" }) {
   if (mode === "plain") {
     return (
       <span className={className} aria-label={`Plate number ${value}`}>
@@ -6,15 +6,7 @@ export function RegistrationPlate({ value, className, mode = "uk" }: { value: st
       </span>
     );
   }
-  if (mode === "us") {
-    const classes = ["reg", "us", className].filter(Boolean).join(" ");
-    return (
-      <span className={classes} aria-label={`Plate number ${value}`}>
-        {value.toUpperCase()}
-      </span>
-    );
-  }
-  const classes = ["reg", className].filter(Boolean).join(" ");
+  const classes = ["reg", mode === "uk-white" ? "white" : null, className].filter(Boolean).join(" ");
   return (
     <span className={classes} aria-label={`Registration ${value}`}>
       {formatRegistration(value)}
