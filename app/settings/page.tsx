@@ -135,8 +135,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
               <label>
                 Annual vehicle test
                 <select name="motFeature" defaultValue={regionalSettings.motFeature}>
-                  <option value="mot">MOT (UK)</option>
-                  <option value="emissionsTest">Emissions Test (US)</option>
+                  <option value="mot">MOT</option>
+                  <option value="emissionsTest">Emissions Test</option>
                   <option value="disabled">Disabled (hide feature)</option>
                 </select>
               </label>
