@@ -56,6 +56,17 @@ export const themePalettes = [
 
 export type ThemePalette = (typeof themePalettes)[number]["id"];
 
+export const themeShapes = ["rounded", "boxy"] as const;
+export type ThemeShape = (typeof themeShapes)[number];
+
+export function isThemeShape(value: string | null): value is ThemeShape {
+  return themeShapes.includes(value as ThemeShape);
+}
+
+export function normalizeThemeShape(value: string | null): ThemeShape {
+  return isThemeShape(value) ? value : "rounded";
+}
+
 export function isThemeMode(value: string | null): value is ThemeMode {
   return themeModes.includes(value as ThemeMode);
 }

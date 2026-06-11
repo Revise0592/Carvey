@@ -70,11 +70,6 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
 
       {activeTab === "admin" ? (
         <section className="settings-grid">
-          {regionalSettings.authDisabled ? (
-            <article className="settings-panel">
-              <p className="error">Authentication is disabled. Account settings are unavailable. Enable authentication in the Regional tab to manage your account.</p>
-            </article>
-          ) : null}
           {!regionalSettings.authDisabled ? (
             <article className="settings-panel">
               <h2><UserRound size={19} /> Account</h2>
@@ -107,6 +102,25 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
               </form>
             </article>
           ) : null}
+
+          <article className="settings-panel" style={!regionalSettings.authDisabled ? { gridColumn: 2, gridRow: "1 / span 2" } : undefined}>
+            <h2><ShieldCheck size={19} /> Authentication</h2>
+            <p className="muted">Disable login when Carvey is deployed behind a trusted reverse proxy that handles authentication.</p>
+            {regionalSettings.authDisabled ? <p className="error">Warning: authentication is currently disabled. Anyone who can reach this URL has full access.</p> : null}
+            {params.app === "auth-updated" ? <p className="success">Authentication setting saved.</p> : null}
+            {params.app === "auth-confirm-required" ? <p className="error">Confirm the change before saving.</p> : null}
+            <form action={updateAuthSettingsAction} className="record-form">
+              <label className="checkbox-field">
+                <input name="authDisabled" type="checkbox" defaultChecked={regionalSettings.authDisabled} />
+                Disable authentication
+              </label>
+              <label className="checkbox-field">
+                <input name="confirmed" type="checkbox" required={!regionalSettings.authDisabled} />
+                I understand this removes all login protection
+              </label>
+              <button className="primary-button" type="submit">Save authentication settings</button>
+            </form>
+          </article>
         </section>
       ) : null}
 
@@ -158,24 +172,6 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             </form>
           </article>
 
-          <article className="settings-panel">
-            <h2><ShieldCheck size={19} /> Authentication</h2>
-            <p className="muted">Disable login when Carvey is deployed behind a trusted reverse proxy that handles authentication.</p>
-            {regionalSettings.authDisabled ? <p className="error">Warning: authentication is currently disabled. Anyone who can reach this URL has full access.</p> : null}
-            {params.app === "auth-updated" ? <p className="success">Authentication setting saved.</p> : null}
-            {params.app === "auth-confirm-required" ? <p className="error">Confirm the change before saving.</p> : null}
-            <form action={updateAuthSettingsAction} className="record-form">
-              <label className="checkbox-field">
-                <input name="authDisabled" type="checkbox" defaultChecked={regionalSettings.authDisabled} />
-                Disable authentication
-              </label>
-              <label className="checkbox-field">
-                <input name="confirmed" type="checkbox" required={!regionalSettings.authDisabled} />
-                I understand this removes all login protection
-              </label>
-              <button className="primary-button" type="submit">Save authentication settings</button>
-            </form>
-          </article>
         </section>
       ) : null}
 
