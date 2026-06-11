@@ -122,13 +122,14 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                 <select name="currency" defaultValue={regionalSettings.currency}>
                   <option value="GBP">GBP (£) — British Pound</option>
                   <option value="USD">USD ($) — US Dollar</option>
+                  <option value="EUR">EUR (€) — Euro</option>
                 </select>
               </label>
               <label>
-                Plate style
+                Plate colour
                 <select name="plateStyle" defaultValue={regionalSettings.plateStyle}>
-                  <option value="uk">UK — Yellow/White rectangular</option>
-                  <option value="us">US — White plate</option>
+                  <option value="uk-yellow">Yellow (rear plate)</option>
+                  <option value="uk-white">White (front plate)</option>
                 </select>
               </label>
               <label>

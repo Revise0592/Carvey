@@ -14,7 +14,7 @@ export default async function GaragePage() {
   const stats = getDashboardStats();
   const collectionName = getCollectionName();
   const settings = getRegionalSettings();
-  const regMode = settings.plateStyle === "us" ? "us" : "uk";
+  const regMode = settings.plateStyle;
   const motLabel = settings.motFeature === "emissionsTest" ? "Emissions Test" : "MOT";
 
   return (

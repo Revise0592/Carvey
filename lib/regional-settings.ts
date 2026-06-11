@@ -1,11 +1,11 @@
 import { getAppSetting, setAppSetting } from "./db";
 
 export type RegionalSettings = {
-  currency: "GBP" | "USD";
+  currency: "GBP" | "USD" | "EUR";
   motFeature: "mot" | "emissionsTest" | "disabled";
   dateFormat: "dd-mon-yyyy" | "iso";
   distanceUnit: "miles" | "km";
-  plateStyle: "uk" | "us";
+  plateStyle: "uk-yellow" | "uk-white";
   authDisabled: boolean;
 };
 
@@ -15,7 +15,7 @@ export function getRegionalSettings(): RegionalSettings {
     motFeature: (getAppSetting("motFeature") as RegionalSettings["motFeature"]) ?? "mot",
     dateFormat: (getAppSetting("dateFormat") as RegionalSettings["dateFormat"]) ?? "dd-mon-yyyy",
     distanceUnit: (getAppSetting("distanceUnit") as RegionalSettings["distanceUnit"]) ?? "miles",
-    plateStyle: (getAppSetting("plateStyle") as RegionalSettings["plateStyle"]) ?? "uk",
+    plateStyle: (getAppSetting("plateStyle") as RegionalSettings["plateStyle"]) ?? "uk-yellow",
     authDisabled: getAppSetting("authDisabled") === "true"
   };
 }
