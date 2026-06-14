@@ -1158,7 +1158,7 @@ textarea:focus-visible {
   margin-bottom: 24px;
   padding: 5px;
   border: 1px solid var(--line);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--surface-soft) 64%, transparent);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
   scrollbar-width: thin;

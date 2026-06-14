@@ -2,6 +2,13 @@
 
 All notable changes to Carvey will be documented here.
 
+## [1.0.1] - 2026-06-14
+
+### Fixed
+
+- Settings tabs no longer wrap onto a second line breaking the container shape — tabs now wrap cleanly inside a rounded rectangle at any width
+- Page and tab transitions now animate correctly when switching between tabs on the vehicle and settings pages
+
 ## [1.0.0] - 2026-06-14
 
 Initial public release.
