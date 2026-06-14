@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { BadgeCheck, CalendarDays, ExternalLink, Hammer, PackagePlus, Printer, ShieldCheck, Wrench } from "lucide-react";
+import { BadgeCheck, CalendarDays, Check, ExternalLink, Hammer, PackagePlus, Plus, Printer, RefreshCw, ShieldCheck, Wrench } from "lucide-react";
 import { AppFrame } from "@/components/AppFrame";
 import { BackButton } from "@/components/BackButton";
 import {
@@ -27,16 +27,18 @@ import { ExplosionEffect } from "@/components/ExplosionEffect";
 import { RegistrationPlate } from "@/components/RegistrationPlate";
 import { VehiclePhotoUploadForm } from "@/components/VehiclePhotoUploadForm";
 import { VehiclePhoto } from "@/components/VehiclePhoto";
-import { getCollectionName, getVehicle, getVehicleActivePlannedPurchaseSummary, getVehicleLoggedSpend, listAttachments, listMaintenance, listMaintenanceCategories, listMots, listPlannedPurchases, listReminders, listRepairs, listWorkshops } from "@/lib/db";
+import { getCollectionName, getVehicle, getVehicleActivePlannedPurchaseSummary, getVehicleLoggedSpend, listAttachments, listMaintenance, listMaintenanceCategories, listMots, listPlannedPurchases, listReminders, listRepairs, listServiceIntervals, listVehicleServiceIntervals, listWorkshops, type ServiceInterval, type Vehicle, type VehicleServiceInterval } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { debugEasterEggsEnabled } from "@/lib/debug";
-import { formatCurrency, formatDate, formatMiles, formatMotResult, formatPlannedPurchaseStatus, formatReminderStatus, type MotResult, type PlannedPurchaseStatus, type ReminderStatusLabel } from "@/lib/format";
-import { getRegionalSettings } from "@/lib/regional-settings";
+import { formatCurrency, formatDate, formatMiles, formatMotResult, formatPlannedPurchaseStatus, formatReminderStatus, todayIso, type MotResult, type PlannedPurchaseStatus, type ReminderStatusLabel } from "@/lib/format";
+import { getRegionalSettings, type RegionalSettings } from "@/lib/regional-settings";
 import { getReminderStatus } from "@/lib/reminders";
 import { AttachmentSection } from "@/components/AttachmentSection";
-import { deleteAttachmentAction } from "@/app/actions";
+import { ModalPanel } from "@/components/ModalPanel";
+import { assignServiceIntervalAction, deleteAttachmentAction, recordServiceDoneAction, removeVehicleServiceIntervalAction } from "@/app/actions";
+import { ConfirmDelete } from "@/components/ConfirmDelete";
 
-const allTabs = ["overview", "maintenance", "repairs", "mots", "to-buy", "reminders"] as const;
+const allTabs = ["overview", "maintenance", "repairs", "mots", "to-buy", "reminders", "service-plan"] as const;
 type Tab = (typeof allTabs)[number];
 
 export default async function VehiclePage({
@@ -63,6 +65,14 @@ export default async function VehiclePage({
   const repairs = listRepairs(vehicle.id);
   const mots = listMots(vehicle.id);
   const reminders = listReminders(vehicle.id);
+  const vehicleServiceIntervals = listVehicleServiceIntervals(vehicle.id);
+  const allServiceIntervals = listServiceIntervals();
+  const unassignedIntervals = allServiceIntervals.filter(
+    (si) => !vehicleServiceIntervals.some((vsi) => vsi.serviceIntervalId === si.id)
+  );
+  const linkedReminderIds = new Set(
+    vehicleServiceIntervals.filter((v) => v.reminderId !== null).map((v) => v.reminderId!)
+  );
   const plannedPurchases = listPlannedPurchases(vehicle.id);
   const toBuyPurchases = plannedPurchases.filter((record) => !record.purchasedDate);
   const purchasedItems = plannedPurchases.filter((record) => record.purchasedDate);
@@ -93,7 +103,7 @@ export default async function VehiclePage({
         </div>
         <div className="vehicle-hero-copy">
           <Link href="/garage" className="back-link">{collectionName}</Link>
-          <RegistrationPlate value={vehicle.registration} className="large" mode={regMode} />
+          <RegistrationPlate value={vehicle.registration} mode={regMode} />
           <h1>{vehicle.make} {vehicle.model}</h1>
           <div className="hero-meta">
             <MileagePill>{formatMiles(vehicle.effectiveOdometer, settings)}</MileagePill>
@@ -117,7 +127,7 @@ export default async function VehiclePage({
       <nav className="tabs" aria-label="Vehicle sections">
         {tabs.map((tab) => (
           <Link className={activeTab === tab ? "active" : ""} href={`/vehicles/${vehicle.id}?tab=${tab}`} key={tab}>
-            {tab === "mots" ? `${motLabel}s` : tab === "to-buy" ? "To Buy" : tab[0].toUpperCase() + tab.slice(1)}
+            {tab === "mots" ? `${motLabel}s` : tab === "to-buy" ? "To Buy" : tab === "service-plan" ? "Service Plan" : tab[0].toUpperCase() + tab.slice(1)}
           </Link>
         ))}
       </nav>
@@ -255,12 +265,39 @@ export default async function VehiclePage({
                 {record.recurrence ? <p>Repeats {record.recurrence}</p> : null}
                 <div className="record-actions">
                   {!record.completedAt ? <CompleteReminderButton vehicleId={vehicle.id} id={record.id} /> : null}
-                  <EditReminderForm record={record} />
+                  <EditReminderForm record={record} isLinked={linkedReminderIds.has(record.id)} />
                 </div>
               </article>
             );
           })}
         </RecordSection>
+      ) : null}
+
+      {activeTab === "service-plan" ? (
+        <section className="records-shell">
+          <div className="section-heading">
+            <h2><RefreshCw size={19} />Service Plan</h2>
+            {unassignedIntervals.length > 0 ? (
+              <AssignServiceIntervalForm vehicleId={vehicle.id} intervals={unassignedIntervals} />
+            ) : null}
+          </div>
+          <div className="records-grid">
+            {vehicleServiceIntervals.length ? (
+              vehicleServiceIntervals.map((record) => (
+                <ServicePlanCard key={record.id} record={record} vehicle={vehicle} settings={settings} />
+              ))
+            ) : (
+              <div className="empty-state records-empty-state">
+                <h3>No services scheduled</h3>
+                <p>
+                  {allServiceIntervals.length
+                    ? "Assign a service interval to start tracking this vehicle's service plan."
+                    : "Define service intervals in Settings first, then assign them here."}
+                </p>
+              </div>
+            )}
+          </div>
+        </section>
       ) : null}
 
       {activeTab === "to-buy" ? (
@@ -336,6 +373,74 @@ export default async function VehiclePage({
         </RecordSection>
       ) : null}
     </AppFrame>
+  );
+}
+
+function AssignServiceIntervalForm({ vehicleId, intervals }: { vehicleId: number; intervals: ServiceInterval[] }) {
+  const action = assignServiceIntervalAction.bind(null, vehicleId);
+  return (
+    <ModalPanel trigger={<><Plus size={17} /> Assign interval</>} title="Assign service interval">
+      <form action={action} className="record-form">
+        <label>
+          Service interval
+          <select name="serviceIntervalId" required>
+            <option value="">Select an interval…</option>
+            {intervals.map((si) => (
+              <option value={si.id} key={si.id}>
+                {si.name}
+                {si.intervalMonths ? ` — every ${si.intervalMonths} months` : ""}
+                {si.intervalMileage ? ` / ${si.intervalMileage.toLocaleString()} miles` : ""}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button className="primary-button" type="submit">Assign</button>
+      </form>
+    </ModalPanel>
+  );
+}
+
+function ServicePlanCard({ record, vehicle, settings }: { record: VehicleServiceInterval; vehicle: Vehicle; settings: RegionalSettings }) {
+  const recordAction = recordServiceDoneAction.bind(null, vehicle.id, record.id);
+  const removeAction = removeVehicleServiceIntervalAction.bind(null, vehicle.id, record.id);
+
+  const intervalDesc = [
+    record.intervalMonths ? `Every ${record.intervalMonths} months` : null,
+    record.intervalMileage ? `Every ${record.intervalMileage.toLocaleString()} ${settings.distanceUnit}` : null
+  ].filter(Boolean).join(" or ");
+
+  return (
+    <article className="record-card">
+      <div className="record-header">
+        <h3>{record.name}</h3>
+      </div>
+      <p className="record-meta">{intervalDesc || "No interval set"}</p>
+      {record.lastServiceDate ? (
+        <p>Last done: {formatDate(record.lastServiceDate, settings)}{record.lastServiceOdometer ? ` · ${formatMiles(record.lastServiceOdometer, settings)}` : ""}</p>
+      ) : (
+        <p className="muted">Not yet recorded for this vehicle.</p>
+      )}
+      <div className="record-actions">
+        <ModalPanel trigger={<><Check size={17} /> Record service</>} title={`Record ${record.name}`}>
+          <form action={recordAction} className="record-form">
+            <label>
+              Date
+              <input name="serviceDate" type="date" defaultValue={todayIso()} required />
+            </label>
+            <label>
+              Odometer
+              <input name="serviceOdometer" type="number" min="0" defaultValue={vehicle.effectiveOdometer ?? ""} />
+            </label>
+            <label>
+              Cost
+              <input name="cost" type="number" min="0" step="0.01" defaultValue="0" />
+            </label>
+            <button className="primary-button" type="submit">Save service record</button>
+          </form>
+        </ModalPanel>
+        <ConfirmDelete action={removeAction} label="Remove" />
+      </div>
+    </article>
   );
 }
 

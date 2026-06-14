@@ -1,21 +1,22 @@
 import Link from "next/link";
-import { Bug, Building2, Download, Globe, HardDrive, KeyRound, Monitor, Palette, RotateCcw, Server, Settings2, ShieldCheck, Tag, Trash2, Upload, UserRound } from "lucide-react";
+import { Bug, Building2, Download, Globe, HardDrive, KeyRound, Monitor, Palette, RefreshCw, RotateCcw, Server, Settings2, ShieldCheck, Tag, Upload, UserRound } from "lucide-react";
 import { AppFrame } from "@/components/AppFrame";
 import { ThemeControls } from "@/components/ThemeControls";
-import { createMaintenanceCategoryAction, createWorkshopAction, deleteMaintenanceCategoryAction, deleteWorkshopAction, loadShowcaseDemoDataAction, restorePreviousDemoDataAction, saveCurrentShowcaseDemoDataAction, updateAuthSettingsAction, updateCollectionNameAction, updateMaintenanceCategoryAction, updatePasswordAction, updateRegionalSettingsAction, updateUsernameAction, updateWorkshopAction } from "@/app/actions";
+import { CategoryCard, ServiceIntervalCard, WorkshopCard } from "@/components/SettingsCards";
+import { createMaintenanceCategoryAction, createServiceIntervalAction, createWorkshopAction, loadShowcaseDemoDataAction, restorePreviousDemoDataAction, saveCurrentShowcaseDemoDataAction, updateAuthSettingsAction, updateCollectionNameAction, updateMaintenanceCategoryAction, updatePasswordAction, updateRegionalSettingsAction, updateServiceIntervalAction, updateUsernameAction, updateWorkshopAction } from "@/app/actions";
 import { requireUser } from "@/lib/auth";
 import { getShowcaseDemoStatus, readRestoreSummary } from "@/lib/backup";
 import { debugEasterEggsEnabled } from "@/lib/debug";
-import { getCollectionName, listMaintenanceCategories, listWorkshops, type MaintenanceCategory, type Workshop } from "@/lib/db";
+import { getCollectionName, listMaintenanceCategories, listServiceIntervals, listWorkshops, type ServiceInterval } from "@/lib/db";
 import { formatDate } from "@/lib/format";
 import { getRegionalSettings } from "@/lib/regional-settings";
 
 export const dynamic = "force-dynamic";
 
-const settingsTabs = ["personalisation", "admin", "regional", "workshops", "categories", "backup"] as const;
+const settingsTabs = ["personalisation", "admin", "regional", "workshops", "categories", "service-intervals", "backup"] as const;
 type SettingsTab = (typeof settingsTabs)[number];
 
-export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ tab?: string; account?: string; app?: string; workshop?: string; category?: string; restore?: string; token?: string; debug?: string; message?: string }> }) {
+export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ tab?: string; account?: string; app?: string; workshop?: string; category?: string; interval?: string; restore?: string; token?: string; debug?: string; message?: string }> }) {
   const user = await requireUser();
   const params = await searchParams;
   const activeTab = settingsTabs.includes(params.tab as SettingsTab) ? (params.tab as SettingsTab) : "personalisation";
@@ -25,6 +26,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const collectionName = getCollectionName();
   const workshops = listWorkshops();
   const categories = listMaintenanceCategories();
+  const serviceIntervals = listServiceIntervals();
   const regionalSettings = getRegionalSettings();
 
   return (
@@ -42,6 +44,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         <Link className={activeTab === "regional" ? "active" : ""} href="/settings?tab=regional"><Globe size={15} /> Regional</Link>
         <Link className={activeTab === "workshops" ? "active" : ""} href="/settings?tab=workshops"><Building2 size={15} /> Garages & Workshops</Link>
         <Link className={activeTab === "categories" ? "active" : ""} href="/settings?tab=categories"><Tag size={15} /> Maintenance Categories</Link>
+        <Link className={activeTab === "service-intervals" ? "active" : ""} href="/settings?tab=service-intervals"><RefreshCw size={15} /> Service Intervals</Link>
         <Link className={activeTab === "backup" ? "active" : ""} href="/settings?tab=backup"><HardDrive size={15} /> Backup & Restore</Link>
       </nav>
 
@@ -227,6 +230,30 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         </section>
       ) : null}
 
+      {activeTab === "service-intervals" ? (
+        <section className="settings-grid">
+          <article className="settings-panel">
+            <h2><RefreshCw size={19} /> Add Service Interval</h2>
+            <p className="muted">Define recurring service schedules to assign to your vehicles.</p>
+            {params.interval === "created" ? <p className="success">Service interval saved.</p> : null}
+            {params.interval === "updated" ? <p className="success">Service interval updated.</p> : null}
+            {params.interval === "deleted" ? <p className="success">Service interval deleted.</p> : null}
+            <ServiceIntervalForm action={createServiceIntervalAction} button="Save interval" distanceUnit={regionalSettings.distanceUnit} />
+          </article>
+
+          <article className="settings-panel workshop-list-panel">
+            <h2><RefreshCw size={19} /> Saved Service Intervals</h2>
+            {serviceIntervals.length ? (
+              <div className="workshop-list">
+                {serviceIntervals.map((interval) => (
+                  <ServiceIntervalCard interval={interval} key={interval.id} distanceUnit={regionalSettings.distanceUnit} />
+                ))}
+              </div>
+            ) : <p className="muted">No service intervals defined yet.</p>}
+          </article>
+        </section>
+      ) : null}
+
       {activeTab === "backup" ? (
         <section className="settings-grid">
           <article className="settings-panel">
@@ -334,64 +361,17 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   );
 }
 
-function WorkshopCard({ workshop }: { workshop: Workshop }) {
-  const updateAction = updateWorkshopAction.bind(null, workshop.id);
-  const deleteAction = deleteWorkshopAction.bind(null, workshop.id);
-  return (
-    <article className="workshop-card">
-      <div>
-        <h3>{workshop.name}</h3>
-        {workshop.preferred ? <span className="tag tag-success">Preferred</span> : null}
-      </div>
-      {workshop.address ? <p>{workshop.address}</p> : null}
-      {[workshop.phone, workshop.email, workshop.website].filter(Boolean).length ? (
-        <p className="muted">{[workshop.phone, workshop.email, workshop.website].filter(Boolean).join(" · ")}</p>
-      ) : null}
-      {workshop.notes ? <p>{workshop.notes}</p> : null}
-      <details>
-        <summary className="secondary-button">Edit</summary>
-        <WorkshopForm workshop={workshop} action={updateAction} button="Save changes" />
-      </details>
-      <form action={deleteAction} className="delete-confirm">
-        <label>
-          <input type="checkbox" name="confirmed" required />
-          Confirm delete
-        </label>
-        <button className="danger-button" type="submit"><Trash2 size={17} /> Delete</button>
-      </form>
-    </article>
-  );
-}
-
-function WorkshopForm({ workshop, action, button }: { workshop?: Workshop; action: (formData: FormData) => void | Promise<void>; button: string }) {
+function WorkshopForm({ action, button }: { action: (formData: FormData) => void | Promise<void>; button: string }) {
   return (
     <form action={action} className="record-form">
-      <label>
-        Name
-        <input name="name" defaultValue={workshop?.name ?? ""} required maxLength={100} />
-      </label>
-      <label>
-        Address
-        <textarea name="address" defaultValue={workshop?.address ?? ""} />
-      </label>
-      <label>
-        Phone
-        <input name="phone" defaultValue={workshop?.phone ?? ""} />
-      </label>
-      <label>
-        Email
-        <input name="email" type="email" defaultValue={workshop?.email ?? ""} />
-      </label>
-      <label>
-        Website
-        <input name="website" type="url" defaultValue={workshop?.website ?? ""} />
-      </label>
-      <label>
-        Notes
-        <textarea name="notes" defaultValue={workshop?.notes ?? ""} />
-      </label>
+      <label>Name<input name="name" required maxLength={100} /></label>
+      <label>Address<textarea name="address" /></label>
+      <label>Phone<input name="phone" /></label>
+      <label>Email<input name="email" type="email" /></label>
+      <label>Website<input name="website" type="url" /></label>
+      <label>Notes<textarea name="notes" /></label>
       <label className="checkbox-field">
-        <input name="preferred" type="checkbox" defaultChecked={Boolean(workshop?.preferred)} />
+        <input name="preferred" type="checkbox" />
         Preferred Garage/Workshop
       </label>
       <button className="primary-button" type="submit">{button}</button>
@@ -399,29 +379,22 @@ function WorkshopForm({ workshop, action, button }: { workshop?: Workshop; actio
   );
 }
 
-function CategoryCard({ category }: { category: MaintenanceCategory }) {
-  const updateAction = updateMaintenanceCategoryAction.bind(null, category.id);
-  const deleteAction = deleteMaintenanceCategoryAction.bind(null, category.id);
+function ServiceIntervalForm({ interval, action, button, distanceUnit }: { interval?: ServiceInterval; action: (formData: FormData) => void | Promise<void>; button: string; distanceUnit: string }) {
   return (
-    <article className="workshop-card">
-      <h3>{category.name}</h3>
-      <details>
-        <summary className="secondary-button">Edit</summary>
-        <form action={updateAction} className="record-form">
-          <label>
-            Name
-            <input name="name" defaultValue={category.name} required maxLength={100} />
-          </label>
-          <button className="primary-button" type="submit">Save changes</button>
-        </form>
-      </details>
-      <form action={deleteAction} className="delete-confirm">
-        <label>
-          <input type="checkbox" name="confirmed" required />
-          Confirm delete
-        </label>
-        <button className="danger-button" type="submit"><Trash2 size={17} /> Delete</button>
-      </form>
-    </article>
+    <form action={action} className="record-form">
+      <label>
+        Name
+        <input name="name" defaultValue={interval?.name ?? ""} required maxLength={100} placeholder="Annual service, oil change..." />
+      </label>
+      <label>
+        Every (months)
+        <input name="intervalMonths" type="number" min="1" max="120" defaultValue={interval?.intervalMonths ?? ""} placeholder="12" />
+      </label>
+      <label>
+        Every ({distanceUnit})
+        <input name="intervalMileage" type="number" min="1" defaultValue={interval?.intervalMileage ?? ""} placeholder="10000" />
+      </label>
+      <button className="primary-button" type="submit">{button}</button>
+    </form>
   );
 }

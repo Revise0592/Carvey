@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { activateShowcaseDemoData, restorePreviousDebugDemoData, saveCurrentDataAsShowcaseDemo, syncShowcaseDemoBackupIfActive } from "@/lib/backup";
 import {
+  assignServiceInterval,
   completeReminder,
   convertPlannedPurchaseToMaintenance,
   convertPlannedPurchaseToRepair,
@@ -17,6 +18,7 @@ import {
   createPlannedPurchase,
   createReminder,
   createRepair,
+  createServiceInterval,
   createWorkshop,
   createVehicle,
   deleteAttachment,
@@ -26,6 +28,7 @@ import {
   deletePlannedPurchase,
   deleteReminder,
   deleteRepair,
+  deleteServiceInterval,
   deleteWorkshop,
   deleteVehicle,
   getAttachment,
@@ -33,6 +36,8 @@ import {
   markPlannedPurchaseBought,
   getOrCreateWorkshopByName,
   getVehicle,
+  recordServiceDone,
+  removeVehicleServiceInterval,
   setVehicleDebugDestroyed,
   updateCollectionName,
   updateMaintenance,
@@ -42,6 +47,7 @@ import {
   updatePlannedPurchasePurchasedDate,
   updateReminder,
   updateRepair,
+  updateServiceInterval,
   updateVehicle,
   updateWorkshop,
   upsertMotReminder
@@ -519,6 +525,67 @@ export async function deleteMaintenanceCategoryAction(categoryId: number, formDa
   await syncCurrentDemoAfterMutation();
   revalidatePath("/settings");
   redirect("/settings?tab=categories&category=deleted");
+}
+
+export async function createServiceIntervalAction(formData: FormData) {
+  await requireUser();
+  createServiceInterval({
+    name: z.string().min(1).max(100).parse(str(formData, "name")),
+    intervalMonths: nullableInt(formData, "intervalMonths"),
+    intervalMileage: nullableInt(formData, "intervalMileage")
+  });
+  await syncCurrentDemoAfterMutation();
+  revalidatePath("/settings");
+  redirect("/settings?tab=service-intervals&interval=created");
+}
+
+export async function updateServiceIntervalAction(intervalId: number, formData: FormData) {
+  await requireUser();
+  updateServiceInterval(intervalId, {
+    name: z.string().min(1).max(100).parse(str(formData, "name")),
+    intervalMonths: nullableInt(formData, "intervalMonths"),
+    intervalMileage: nullableInt(formData, "intervalMileage")
+  });
+  await syncCurrentDemoAfterMutation();
+  revalidatePath("/settings");
+  redirect("/settings?tab=service-intervals&interval=updated");
+}
+
+export async function deleteServiceIntervalAction(intervalId: number, formData: FormData) {
+  await requireUser();
+  if (str(formData, "confirmed") !== "on") return;
+  deleteServiceInterval(intervalId);
+  await syncCurrentDemoAfterMutation();
+  revalidatePath("/settings");
+  redirect("/settings?tab=service-intervals&interval=deleted");
+}
+
+export async function assignServiceIntervalAction(vehicleId: number, formData: FormData) {
+  await requireUser();
+  const serviceIntervalId = nullableInt(formData, "serviceIntervalId");
+  if (!serviceIntervalId) return;
+  assignServiceInterval(vehicleId, serviceIntervalId);
+  await syncCurrentDemoAfterMutation();
+  revalidatePath(`/vehicles/${vehicleId}`);
+}
+
+export async function removeVehicleServiceIntervalAction(vehicleId: number, id: number) {
+  await requireUser();
+  removeVehicleServiceInterval(id, vehicleId);
+  await syncCurrentDemoAfterMutation();
+  revalidatePath(`/vehicles/${vehicleId}`);
+}
+
+export async function recordServiceDoneAction(vehicleId: number, id: number, formData: FormData) {
+  await requireUser();
+  recordServiceDone(id, vehicleId, {
+    serviceDate: z.string().min(1).parse(str(formData, "serviceDate")),
+    serviceOdometer: nullableInt(formData, "serviceOdometer"),
+    cost: money(formData, "cost")
+  });
+  await syncCurrentDemoAfterMutation();
+  revalidatePath("/garage");
+  revalidatePath(`/vehicles/${vehicleId}`);
 }
 
 export async function loadShowcaseDemoDataAction() {
