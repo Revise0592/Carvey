@@ -25,14 +25,22 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Extract version from tag
+        id: meta
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/v}"
+            echo "tags=ghcr.io/revise0592/carvey:latest,ghcr.io/revise0592/carvey:${VERSION}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tags=ghcr.io/revise0592/carvey:latest,ghcr.io/revise0592/carvey:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Build image
         uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7.0.0
         with:
           context: .
           push: ${{ github.event_name != 'pull_request' }}
-          tags: |
-            ghcr.io/revise0592/carvey:latest
-            ghcr.io/revise0592/carvey:${{ github.sha }}
+          tags: ${{ steps.meta.outputs.tags }}
           labels: |
             org.opencontainers.image.title=Carvey
             org.opencontainers.image.description=Self-hosted car maintenance dashboard

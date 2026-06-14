@@ -141,6 +141,29 @@ export type Workshop = {
   updatedAt: string;
 };
 
+export type ServiceInterval = {
+  id: number;
+  name: string;
+  intervalMonths: number | null;
+  intervalMileage: number | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type VehicleServiceInterval = {
+  id: number;
+  vehicleId: number;
+  serviceIntervalId: number;
+  lastServiceDate: string | null;
+  lastServiceOdometer: number | null;
+  reminderId: number | null;
+  createdAt: string;
+  updatedAt: string;
+  name: string;
+  intervalMonths: number | null;
+  intervalMileage: number | null;
+};
+
 export const defaultCollectionName = "My cars";
 
 let db: Database.Database | null = null;
@@ -315,6 +338,27 @@ function migrate(database: Database.Database) {
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
 
+    CREATE TABLE IF NOT EXISTS service_intervals (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      interval_months INTEGER,
+      interval_mileage INTEGER,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS vehicle_service_intervals (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      vehicle_id INTEGER NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
+      service_interval_id INTEGER NOT NULL REFERENCES service_intervals(id) ON DELETE CASCADE,
+      last_service_date TEXT,
+      last_service_odometer INTEGER,
+      reminder_id INTEGER REFERENCES reminders(id) ON DELETE SET NULL,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(vehicle_id, service_interval_id)
+    );
+
     CREATE INDEX IF NOT EXISTS idx_vehicles_archived ON vehicles(archived);
     CREATE INDEX IF NOT EXISTS idx_auth_sessions_admin ON auth_sessions(admin_user_id);
     CREATE INDEX IF NOT EXISTS idx_workshops_preferred ON workshops(preferred);
@@ -326,6 +370,8 @@ function migrate(database: Database.Database) {
     CREATE INDEX IF NOT EXISTS idx_planned_purchases_reminder ON planned_purchases(reminder_id);
     CREATE INDEX IF NOT EXISTS idx_attachments_record ON record_attachments(record_type, record_id);
     CREATE INDEX IF NOT EXISTS idx_attachments_vehicle ON record_attachments(vehicle_id);
+    CREATE INDEX IF NOT EXISTS idx_vehicle_service_intervals_vehicle ON vehicle_service_intervals(vehicle_id);
+    CREATE INDEX IF NOT EXISTS idx_vehicle_service_intervals_reminder ON vehicle_service_intervals(reminder_id);
   `);
   ensureColumn(database, "vehicles", "purchase_price", "REAL");
   ensureColumn(database, "vehicles", "purchase_date", "TEXT");
@@ -820,6 +866,167 @@ export function completeReminder(id: number, vehicleId: number) {
   return getDb()
     .prepare("UPDATE reminders SET completed_at = CURRENT_TIMESTAMP WHERE id = ? AND vehicle_id = ?")
     .run(id, vehicleId);
+}
+
+function addMonths(isoDate: string, months: number): string {
+  const d = new Date(`${isoDate}T12:00:00`);
+  d.setMonth(d.getMonth() + months);
+  return d.toISOString().slice(0, 10);
+}
+
+const serviceIntervalSelect = `
+  id,
+  name,
+  interval_months as intervalMonths,
+  interval_mileage as intervalMileage,
+  created_at as createdAt,
+  updated_at as updatedAt
+`;
+
+export function listServiceIntervals() {
+  return getDb()
+    .prepare(`SELECT ${serviceIntervalSelect} FROM service_intervals ORDER BY name COLLATE NOCASE ASC`)
+    .all() as ServiceInterval[];
+}
+
+export function getServiceInterval(id: number) {
+  return getDb()
+    .prepare(`SELECT ${serviceIntervalSelect} FROM service_intervals WHERE id = ?`)
+    .get(id) as ServiceInterval | undefined;
+}
+
+export function createServiceInterval(input: { name: string; intervalMonths: number | null; intervalMileage: number | null }) {
+  return getDb()
+    .prepare("INSERT INTO service_intervals (name, interval_months, interval_mileage) VALUES (@name, @intervalMonths, @intervalMileage)")
+    .run(input);
+}
+
+export function updateServiceInterval(id: number, input: { name: string; intervalMonths: number | null; intervalMileage: number | null }) {
+  return getDb()
+    .prepare("UPDATE service_intervals SET name = @name, interval_months = @intervalMonths, interval_mileage = @intervalMileage, updated_at = CURRENT_TIMESTAMP WHERE id = @id")
+    .run({ id, ...input });
+}
+
+export function deleteServiceInterval(id: number) {
+  return getDb()
+    .prepare("DELETE FROM service_intervals WHERE id = ?")
+    .run(id);
+}
+
+export function listVehicleServiceIntervals(vehicleId: number) {
+  return getDb()
+    .prepare(`
+      SELECT
+        vsi.id,
+        vsi.vehicle_id as vehicleId,
+        vsi.service_interval_id as serviceIntervalId,
+        vsi.last_service_date as lastServiceDate,
+        vsi.last_service_odometer as lastServiceOdometer,
+        vsi.reminder_id as reminderId,
+        vsi.created_at as createdAt,
+        vsi.updated_at as updatedAt,
+        si.name,
+        si.interval_months as intervalMonths,
+        si.interval_mileage as intervalMileage
+      FROM vehicle_service_intervals vsi
+      JOIN service_intervals si ON si.id = vsi.service_interval_id
+      WHERE vsi.vehicle_id = ?
+      ORDER BY si.name COLLATE NOCASE ASC
+    `)
+    .all(vehicleId) as VehicleServiceInterval[];
+}
+
+export function assignServiceInterval(vehicleId: number, serviceIntervalId: number) {
+  return getDb()
+    .prepare("INSERT OR IGNORE INTO vehicle_service_intervals (vehicle_id, service_interval_id) VALUES (?, ?)")
+    .run(vehicleId, serviceIntervalId);
+}
+
+export function removeVehicleServiceInterval(id: number, vehicleId: number) {
+  return getDb().transaction(() => {
+    const row = getDb()
+      .prepare("SELECT reminder_id as reminderId FROM vehicle_service_intervals WHERE id = ? AND vehicle_id = ?")
+      .get(id, vehicleId) as { reminderId: number | null } | undefined;
+    if (!row) return;
+    getDb()
+      .prepare("DELETE FROM vehicle_service_intervals WHERE id = ? AND vehicle_id = ?")
+      .run(id, vehicleId);
+    if (row.reminderId) deleteReminder(row.reminderId, vehicleId);
+  })();
+}
+
+export function recordServiceDone(
+  id: number,
+  vehicleId: number,
+  input: { serviceDate: string; serviceOdometer: number | null; cost: number }
+) {
+  return getDb().transaction(() => {
+    const row = getDb()
+      .prepare(`
+        SELECT vsi.reminder_id as reminderId,
+               si.interval_months as intervalMonths,
+               si.interval_mileage as intervalMileage,
+               si.name
+        FROM vehicle_service_intervals vsi
+        JOIN service_intervals si ON si.id = vsi.service_interval_id
+        WHERE vsi.id = ? AND vsi.vehicle_id = ?
+      `)
+      .get(id, vehicleId) as {
+        reminderId: number | null;
+        intervalMonths: number | null;
+        intervalMileage: number | null;
+        name: string;
+      } | undefined;
+    if (!row) return;
+
+    createMaintenance({
+      vehicleId,
+      date: input.serviceDate,
+      odometer: input.serviceOdometer,
+      category: row.name,
+      description: row.name,
+      cost: input.cost,
+      notes: null
+    });
+
+    if (row.reminderId) completeReminder(row.reminderId, vehicleId);
+
+    getDb()
+      .prepare(`
+        UPDATE vehicle_service_intervals
+        SET last_service_date = @serviceDate,
+            last_service_odometer = @serviceOdometer,
+            reminder_id = NULL,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = @id AND vehicle_id = @vehicleId
+      `)
+      .run({ id, vehicleId, ...input });
+
+    const nextDueDate = row.intervalMonths && input.serviceDate
+      ? addMonths(input.serviceDate, row.intervalMonths)
+      : null;
+    const nextDueOdometer = row.intervalMileage !== null && input.serviceOdometer !== null
+      ? input.serviceOdometer + row.intervalMileage
+      : null;
+
+    if (!nextDueDate && nextDueOdometer === null) return;
+
+    const recurrence = row.intervalMonths
+      ? `${row.intervalMonths} months`
+      : row.intervalMileage ? `${row.intervalMileage} miles` : null;
+
+    const reminderResult = createReminder({
+      vehicleId,
+      title: row.name,
+      dueDate: nextDueDate,
+      dueOdometer: nextDueOdometer,
+      recurrence
+    });
+
+    getDb()
+      .prepare("UPDATE vehicle_service_intervals SET reminder_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND vehicle_id = ?")
+      .run(reminderResult.lastInsertRowid, id, vehicleId);
+  })();
 }
 
 export function createPlannedPurchase(input: Omit<PlannedPurchase, "id" | "reminderId" | "actualCost" | "purchasedDate" | "convertedToType" | "convertedRecordId" | "convertedAt" | "createdAt" | "updatedAt">) {

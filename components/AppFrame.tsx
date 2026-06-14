@@ -25,7 +25,9 @@ export function AppFrame({ children }: { children: React.ReactNode }) {
           ) : null}
         </nav>
       </header>
-      {children}
+      <div className="page-content">
+        {children}
+      </div>
     </main>
   );
 }

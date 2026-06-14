@@ -27,6 +27,7 @@ import {
 } from "@/app/actions";
 import type { MaintenanceCategory, MaintenanceRecord, MotRecord, PlannedPurchase, Reminder, RepairRecord, Vehicle, Workshop } from "@/lib/db";
 import { todayIso } from "@/lib/format";
+import { ConfirmDelete } from "./ConfirmDelete";
 import { EditPanel } from "./EditPanel";
 import { ModalPanel } from "./ModalPanel";
 
@@ -71,14 +72,8 @@ export function EditVehicleForm({ vehicle, registrationLabel = "Registration" }:
         <button className="primary-button" type="submit">Save car</button>
       </form>
       <hr className="modal-divider" />
-      <form action={deleteAction} className="delete-confirm destructive-form">
-        <p className="muted">This removes {vehicle.make} {vehicle.model} and all of its logs.</p>
-        <label>
-          <input type="checkbox" name="confirmed" required />
-          Confirm delete
-        </label>
-        <button className="danger-button" type="submit"><Trash2 size={17} /> Delete car</button>
-      </form>
+      <p className="muted">This removes {vehicle.make} {vehicle.model} and all of its logs.</p>
+      <ConfirmDelete action={deleteAction} label="Delete car" />
     </ModalPanel>
   );
 }
@@ -168,27 +163,40 @@ export function EditMotForm({ record, motLabel = "MOT" }: { record: MotRecord; m
   );
 }
 
-export function EditReminderForm({ record }: { record: Reminder }) {
+export function EditReminderForm({ record, isLinked = false }: { record: Reminder; isLinked?: boolean }) {
   const updateAction = updateReminderAction.bind(null, record.vehicleId, record.id);
   const deleteAction = deleteReminderAction.bind(null, record.vehicleId, record.id);
   const isMotReminder = record.title.toLowerCase() === "mot due";
+  const editForm = (
+    <form action={updateAction} className="record-form">
+      <Field label="Title"><input name="title" defaultValue={record.title} required /></Field>
+      <Field label="Due date"><input name="dueDate" type="date" defaultValue={record.dueDate ?? ""} /></Field>
+      {!isMotReminder ? (
+        <Field label="Due odometer"><input name="dueOdometer" type="number" min="0" defaultValue={record.dueOdometer ?? ""} /></Field>
+      ) : null}
+      <Field label="Recurrence"><select name="recurrence" defaultValue={record.recurrence ?? ""}>
+          <option value="">No recurrence</option>
+          <option value="12 months">Every 12 months</option>
+          <option value="6 months">Every 6 months</option>
+          {!isMotReminder ? <option value="10000 miles">Every 10,000 miles</option> : null}
+          {!isMotReminder ? <option value="5000 miles">Every 5,000 miles</option> : null}
+        </select></Field>
+      <button className="primary-button" type="submit">Save changes</button>
+    </form>
+  );
+  if (isLinked) {
+    return (
+      <ModalPanel trigger="Edit" title="Edit reminder">
+        <div className="edit-menu">
+          {editForm}
+          <p className="muted">This reminder is managed by the Service Plan — remove the service interval assignment to delete it.</p>
+        </div>
+      </ModalPanel>
+    );
+  }
   return (
     <EditPanel deleteAction={deleteAction} title="Edit reminder">
-      <form action={updateAction} className="record-form">
-        <Field label="Title"><input name="title" defaultValue={record.title} required /></Field>
-        <Field label="Due date"><input name="dueDate" type="date" defaultValue={record.dueDate ?? ""} /></Field>
-        {!isMotReminder ? (
-          <Field label="Due odometer"><input name="dueOdometer" type="number" min="0" defaultValue={record.dueOdometer ?? ""} /></Field>
-        ) : null}
-        <Field label="Recurrence"><select name="recurrence" defaultValue={record.recurrence ?? ""}>
-            <option value="">No recurrence</option>
-            <option value="12 months">Every 12 months</option>
-            <option value="6 months">Every 6 months</option>
-            {!isMotReminder ? <option value="10000 miles">Every 10,000 miles</option> : null}
-            {!isMotReminder ? <option value="5000 miles">Every 5,000 miles</option> : null}
-          </select></Field>
-        <button className="primary-button" type="submit">Save changes</button>
-      </form>
+      {editForm}
     </EditPanel>
   );
 }
