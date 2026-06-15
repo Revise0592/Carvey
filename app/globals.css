@@ -444,7 +444,7 @@ textarea:focus-visible {
 .app-shell {
   width: min(1180px, calc(100% - 32px));
   margin: 0 auto;
-  padding: 18px 0 62px;
+  padding: 18px 0 max(62px, env(safe-area-inset-bottom));
 }
 
 .topbar {
@@ -1929,13 +1929,13 @@ textarea:focus-visible {
 @media (max-width: 760px) {
   .app-shell {
     width: min(100% - 24px, 1180px);
-    padding: 14px 0 36px;
+    padding: 14px 0 max(36px, env(safe-area-inset-bottom));
   }
 
   .topbar {
     gap: 0.75rem;
     margin-bottom: 20px;
-    padding: 12px 14px;
+    padding: 12px max(14px, env(safe-area-inset-right)) 12px max(14px, env(safe-area-inset-left));
     border-radius: var(--radius-lg);
   }
 
@@ -2057,12 +2057,23 @@ textarea:focus-visible {
     border-bottom-right-radius: 0;
   }
 
+  .modal-card::before {
+    content: "";
+    display: block;
+    width: 36px;
+    height: 4px;
+    background: var(--line-strong);
+    border-radius: var(--radius-pill);
+    margin: 10px auto 0;
+    flex-shrink: 0;
+  }
+
   .modal-body {
     padding: 16px;
   }
 
   .modal-chrome {
-    top: 14px;
+    top: 28px;
     right: 14px;
   }
 
