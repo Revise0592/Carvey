@@ -69,6 +69,22 @@ docker compose up -d --build
 
 Then open `http://localhost:3000`.
 
+## Password Reset
+
+If you're locked out and can't use the **Settings → Admin → Password** form, there are two ways to reset the admin password.
+
+**Option 1 — CLI (no restart needed):**
+
+```bash
+docker exec -it <container-name> node scripts/reset-password.mjs
+```
+
+You'll be prompted to enter and confirm a new password.
+
+**Option 2 — Environment variable (Docker Compose):**
+
+Add `CARVEY_RESET_PASSWORD=yournewpassword` to your Docker Compose environment, restart the container, log in with the new password, then remove the variable and restart again.
+
 ## Tech Stack
 
 - Next.js
