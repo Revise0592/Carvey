@@ -46,7 +46,7 @@ export default async function VehiclePage({
   searchParams
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<{ tab?: string; sort?: string; dir?: string }>;
 }) {
   await requireUser();
   const { id } = await params;
@@ -126,7 +126,7 @@ export default async function VehiclePage({
 
       <nav className="tabs" aria-label="Vehicle sections">
         {tabs.map((tab) => (
-          <Link className={activeTab === tab ? "active" : ""} href={`/vehicles/${vehicle.id}?tab=${tab}`} key={tab}>
+          <Link className={activeTab === tab ? "active" : ""} href={`/vehicles/${vehicle.id}?tab=${tab}`} key={tab} scroll={false}>
             {tab === "mots" ? `${motLabel}s` : tab === "to-buy" ? "To Buy" : tab === "service-plan" ? "Service Plan" : tab[0].toUpperCase() + tab.slice(1)}
           </Link>
         ))}
@@ -176,102 +176,217 @@ export default async function VehiclePage({
         </section>
       ) : null}
 
-      {activeTab === "maintenance" ? (
-        <RecordSection
-          title="Maintenance"
-          icon={<Wrench size={19} />}
-          form={<MaintenanceForm vehicleId={vehicle.id} categories={categories} />}
-          emptyTitle="No maintenance logged"
-          emptyMessage="Add the first service or upkeep entry for this car."
-          hasRecords={maintenance.length > 0}
-        >
-          {maintenance.map((record) => (
-            <article className="record-card" key={record.id}>
-              <div className="record-header"><span className="tag">{record.category}</span><h3>{record.description}</h3></div>
-              <p className="record-meta">{formatDate(record.date, settings)} · {formatMiles(record.odometer, settings)}</p>
-              <strong>{formatCurrency(record.cost, settings)}</strong>
-              {record.notes ? <p>{record.notes}</p> : null}
-              <AttachmentSection attachments={listAttachments("maintenance", record.id)} deleteAction={boundDeleteAttachment} recordType="maintenance" recordId={record.id} vehicleId={vehicle.id} />
-              <div className="record-actions"><EditMaintenanceForm record={record} categories={categories} /></div>
-            </article>
-          ))}
-        </RecordSection>
-      ) : null}
-
-      {activeTab === "repairs" ? (
-        <RecordSection
-          title="Repairs"
-          icon={<Hammer size={19} />}
-          form={<RepairForm vehicleId={vehicle.id} workshops={workshops} />}
-          emptyTitle="No repairs logged"
-          emptyMessage="Track faults, fixes, and garage work once they happen."
-          hasRecords={repairs.length > 0}
-        >
-          {repairs.map((record) => (
-            <article className="record-card" key={record.id}>
-              <div className="record-header"><span className="tag">{record.garage ?? "Repair"}</span><h3>{record.fault}</h3></div>
-              <p className="record-meta">{formatDate(record.date, settings)} · {formatMiles(record.odometer, settings)}</p>
-              <strong>{formatCurrency(record.cost, settings)}</strong>
-              {record.notes ? <p>{record.notes}</p> : null}
-              <AttachmentSection attachments={listAttachments("repair", record.id)} deleteAction={boundDeleteAttachment} recordType="repair" recordId={record.id} vehicleId={vehicle.id} />
-              <div className="record-actions"><EditRepairForm record={record} workshops={workshops} /></div>
-            </article>
-          ))}
-        </RecordSection>
-      ) : null}
-
-      {activeTab === "mots" ? (
-        <RecordSection
-          title={`${motLabel}s`}
-          icon={<ShieldCheck size={19} />}
-          form={<MotForm vehicleId={vehicle.id} motLabel={motLabel} />}
-          emptyTitle={`No ${motLabel.toLowerCase()} history yet`}
-          emptyMessage={`Add the latest ${motLabel.toLowerCase()} result to start building this vehicle's test record.`}
-          hasRecords={mots.length > 0}
-        >
-          {mots.map((record) => (
-            <article className="record-card" key={record.id}>
-              <div className="record-header"><span className={`tag ${motResultTone(record.result)}`}>{formatMotResult(record.result)}</span><h3>Expires {formatDate(record.expiryDate, settings)}</h3></div>
-              <p className="record-meta">Tested {formatDate(record.testDate, settings)} · Mileage: {formatMiles(record.odometer, settings)}</p>
-              <strong>{formatCurrency(record.cost, settings)}</strong>
-              {record.certificateRef ? <p>Reference: {record.certificateRef}</p> : null}
-              {record.advisories ? <p>{record.advisories}</p> : null}
-              <AttachmentSection attachments={listAttachments("mot", record.id)} deleteAction={boundDeleteAttachment} recordType="mot" recordId={record.id} vehicleId={vehicle.id} />
-              <div className="record-actions"><EditMotForm record={record} motLabel={motLabel} /></div>
-            </article>
-          ))}
-        </RecordSection>
-      ) : null}
-
-      {activeTab === "reminders" ? (
-        <RecordSection
-          title="Reminders"
-          icon={<CalendarDays size={19} />}
-          form={<ReminderForm vehicleId={vehicle.id} />}
-          emptyTitle="No reminders set"
-          emptyMessage="Create reminders for upcoming jobs, inspections, or mileage milestones."
-          hasRecords={reminders.length > 0}
-        >
-          {reminders.map((record) => {
-            const status = getReminderStatus(record, vehicle);
-            const reminderDetails = [
-              record.dueDate ? `Due ${formatDate(record.dueDate, settings)}` : "No date",
-              record.title.toLowerCase() === "mot due" ? null : formatMiles(record.dueOdometer, settings)
-            ].filter(Boolean).join(" · ");
-            return (
-              <article className="record-card reminder-card" key={record.id}>
-                <div className="record-header"><span className={`tag ${reminderStatusTone(status)}`}>{formatReminderStatus(status)}</span><h3>{record.title}</h3></div>
-                <p className="record-meta">{reminderDetails}</p>
-                {record.recurrence ? <p>Repeats {record.recurrence}</p> : null}
-                <div className="record-actions">
-                  {!record.completedAt ? <CompleteReminderButton vehicleId={vehicle.id} id={record.id} /> : null}
-                  <EditReminderForm record={record} isLinked={linkedReminderIds.has(record.id)} />
+      {activeTab === "maintenance" ? (() => {
+        const sort = query.sort || "date";
+        const dir: "asc" | "desc" = query.dir === "asc" ? "asc" : "desc";
+        const sorted = [...maintenance].sort((a, b) => {
+          const m = dir === "asc" ? 1 : -1;
+          if (sort === "cost") return m * (a.cost - b.cost);
+          if (sort === "category") return m * a.category.localeCompare(b.category);
+          return m * a.date.localeCompare(b.date);
+        });
+        return (
+          <section className="records-shell">
+            <div className="section-heading">
+              <h2><Wrench size={19} /> Maintenance</h2>
+              <MaintenanceForm vehicleId={vehicle.id} categories={categories} />
+            </div>
+            {maintenance.length > 0 ? (
+              <>
+                <SortBar vehicleId={vehicle.id} tab="maintenance" activeSort={sort} activeDir={dir} options={[
+                  { key: "date", label: "Date" },
+                  { key: "cost", label: "Cost" },
+                  { key: "category", label: "Category" },
+                ]} />
+                <div className="record-list">
+                  {sorted.map((record) => (
+                    <div className="record-entry" key={record.id}>
+                      <div className="record-row">
+                        <span className="tag">{record.category}</span>
+                        <div className="record-row-content">
+                          <strong>{record.description}</strong>
+                          <p className="record-row-meta">{formatDate(record.date, settings)} · {formatMiles(record.odometer, settings)}</p>
+                        </div>
+                        <strong className="record-row-value">{formatCurrency(record.cost, settings)}</strong>
+                        <div className="record-row-actions">
+                          <EditMaintenanceForm record={record} categories={categories} />
+                        </div>
+                      </div>
+                      <AttachmentSection attachments={listAttachments("maintenance", record.id)} deleteAction={boundDeleteAttachment} recordType="maintenance" recordId={record.id} vehicleId={vehicle.id} />
+                    </div>
+                  ))}
                 </div>
-              </article>
-            );
-          })}
-        </RecordSection>
-      ) : null}
+              </>
+            ) : (
+              <div className="empty-state records-empty-state">
+                <h3>No maintenance logged</h3>
+                <p>Add the first service or upkeep entry for this car.</p>
+              </div>
+            )}
+          </section>
+        );
+      })() : null}
+
+      {activeTab === "repairs" ? (() => {
+        const sort = query.sort || "date";
+        const dir: "asc" | "desc" = query.dir === "asc" ? "asc" : "desc";
+        const sorted = [...repairs].sort((a, b) => {
+          const m = dir === "asc" ? 1 : -1;
+          if (sort === "cost") return m * (a.cost - b.cost);
+          return m * a.date.localeCompare(b.date);
+        });
+        return (
+          <section className="records-shell">
+            <div className="section-heading">
+              <h2><Hammer size={19} /> Repairs</h2>
+              <RepairForm vehicleId={vehicle.id} workshops={workshops} />
+            </div>
+            {repairs.length > 0 ? (
+              <>
+                <SortBar vehicleId={vehicle.id} tab="repairs" activeSort={sort} activeDir={dir} options={[
+                  { key: "date", label: "Date" },
+                  { key: "cost", label: "Cost" },
+                ]} />
+                <div className="record-list">
+                  {sorted.map((record) => (
+                    <div className="record-entry" key={record.id}>
+                      <div className="record-row">
+                        <span className="tag">{record.garage ?? "Repair"}</span>
+                        <div className="record-row-content">
+                          <strong>{record.fault}</strong>
+                          <p className="record-row-meta">{formatDate(record.date, settings)} · {formatMiles(record.odometer, settings)}</p>
+                        </div>
+                        <strong className="record-row-value">{formatCurrency(record.cost, settings)}</strong>
+                        <div className="record-row-actions">
+                          <EditRepairForm record={record} workshops={workshops} />
+                        </div>
+                      </div>
+                      <AttachmentSection attachments={listAttachments("repair", record.id)} deleteAction={boundDeleteAttachment} recordType="repair" recordId={record.id} vehicleId={vehicle.id} />
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="empty-state records-empty-state">
+                <h3>No repairs logged</h3>
+                <p>Track faults, fixes, and garage work once they happen.</p>
+              </div>
+            )}
+          </section>
+        );
+      })() : null}
+
+      {activeTab === "mots" ? (() => {
+        const sort = query.sort || "expiry";
+        const dir: "asc" | "desc" = query.dir === "asc" ? "asc" : "desc";
+        const sorted = [...mots].sort((a, b) => {
+          const m = dir === "asc" ? 1 : -1;
+          if (sort === "testDate") return m * a.testDate.localeCompare(b.testDate);
+          if (sort === "cost") return m * (a.cost - b.cost);
+          return m * a.expiryDate.localeCompare(b.expiryDate);
+        });
+        return (
+          <section className="records-shell">
+            <div className="section-heading">
+              <h2><ShieldCheck size={19} /> {motLabel}s</h2>
+              <MotForm vehicleId={vehicle.id} motLabel={motLabel} />
+            </div>
+            {mots.length > 0 ? (
+              <>
+                <SortBar vehicleId={vehicle.id} tab="mots" activeSort={sort} activeDir={dir} options={[
+                  { key: "expiry", label: "Expiry date" },
+                  { key: "testDate", label: "Test date" },
+                  { key: "cost", label: "Cost" },
+                ]} />
+                <div className="record-list">
+                  {sorted.map((record) => (
+                    <div className="record-entry" key={record.id}>
+                      <div className="record-row">
+                        <span className={`tag ${motResultTone(record.result)}`}>{formatMotResult(record.result)}</span>
+                        <div className="record-row-content">
+                          <strong>Expires {formatDate(record.expiryDate, settings)}</strong>
+                          <p className="record-row-meta">Tested {formatDate(record.testDate, settings)} · {formatMiles(record.odometer, settings)}</p>
+                        </div>
+                        <strong className="record-row-value">{formatCurrency(record.cost, settings)}</strong>
+                        <div className="record-row-actions">
+                          <EditMotForm record={record} motLabel={motLabel} />
+                        </div>
+                      </div>
+                      <AttachmentSection attachments={listAttachments("mot", record.id)} deleteAction={boundDeleteAttachment} recordType="mot" recordId={record.id} vehicleId={vehicle.id} />
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="empty-state records-empty-state">
+                <h3>No {motLabel.toLowerCase()} history yet</h3>
+                <p>Add the latest {motLabel.toLowerCase()} result to start building this vehicle&apos;s test record.</p>
+              </div>
+            )}
+          </section>
+        );
+      })() : null}
+
+      {activeTab === "reminders" ? (() => {
+        const statusOrder: Record<string, number> = { overdue: 0, upcoming: 1, open: 2, done: 3 };
+        const sort = query.sort || "status";
+        const dir: "asc" | "desc" = query.dir === "asc" ? "asc" : "desc";
+        const withStatus = reminders.map((r) => ({ record: r, status: getReminderStatus(r, vehicle) }));
+        const sorted = [...withStatus].sort((a, b) => {
+          const m = dir === "asc" ? 1 : -1;
+          if (sort === "dueDate") {
+            const ad = a.record.dueDate ?? "9999";
+            const bd = b.record.dueDate ?? "9999";
+            return m * ad.localeCompare(bd);
+          }
+          return m * ((statusOrder[a.status] ?? 4) - (statusOrder[b.status] ?? 4));
+        });
+        return (
+          <section className="records-shell">
+            <div className="section-heading">
+              <h2><CalendarDays size={19} /> Reminders</h2>
+              <ReminderForm vehicleId={vehicle.id} />
+            </div>
+            {reminders.length > 0 ? (
+              <>
+                <SortBar vehicleId={vehicle.id} tab="reminders" activeSort={sort} activeDir={dir} options={[
+                  { key: "status", label: "Status" },
+                  { key: "dueDate", label: "Due date" },
+                ]} />
+                <div className="record-list">
+                  {sorted.map(({ record, status }) => {
+                    const reminderMeta = [
+                      record.dueDate ? `Due ${formatDate(record.dueDate, settings)}` : "No date set",
+                      record.title.toLowerCase() === "mot due" ? null : formatMiles(record.dueOdometer, settings),
+                      record.recurrence ? `Repeats ${record.recurrence}` : null,
+                    ].filter(Boolean).join(" · ");
+                    return (
+                      <div className="record-entry" key={record.id}>
+                        <div className="record-row">
+                          <span className={`tag ${reminderStatusTone(status)}`}>{formatReminderStatus(status)}</span>
+                          <div className="record-row-content">
+                            <strong>{record.title}</strong>
+                            <p className="record-row-meta">{reminderMeta}</p>
+                          </div>
+                          <div className="record-row-actions">
+                            {!record.completedAt ? <CompleteReminderButton vehicleId={vehicle.id} id={record.id} /> : null}
+                            <EditReminderForm record={record} isLinked={linkedReminderIds.has(record.id)} />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            ) : (
+              <div className="empty-state records-empty-state">
+                <h3>No reminders set</h3>
+                <p>Create reminders for upcoming jobs, inspections, or mileage milestones.</p>
+              </div>
+            )}
+          </section>
+        );
+      })() : null}
 
       {activeTab === "service-plan" ? (
         <section className="records-shell">
@@ -300,78 +415,108 @@ export default async function VehiclePage({
         </section>
       ) : null}
 
-      {activeTab === "to-buy" ? (
-        <RecordSection
-          title="To Buy"
-          icon={<PackagePlus size={19} />}
-          form={<PlannedPurchaseForm vehicleId={vehicle.id} />}
-          emptyTitle="No planned purchases"
-          emptyMessage="Add parts or supplies you need to buy before the next job."
-          hasRecords={plannedPurchases.length > 0}
-        >
-          <div className="record-subsection">
-            <h3>To Buy</h3>
-            {toBuyPurchases.length ? toBuyPurchases.map((record) => (
-              <article className="record-card to-buy-card" key={record.id}>
-                <div className="record-header">
-                  <span className="tag tag-neutral">{formatPlannedPurchaseStatus("to-buy")}</span>
-                  <h3>{record.itemName}</h3>
-                </div>
-                <p className="record-meta">Qty {record.quantity}</p>
-                <strong>{formatCurrency(record.estimatedCost, settings)}</strong>
-                {record.supplier ? <p>{record.supplier}</p> : null}
-                {record.url ? (
-                  <a className="secondary-button" href={record.url} target="_blank" rel="noreferrer">
-                    <ExternalLink size={17} />
-                    Open link
-                  </a>
-                ) : null}
-                {record.notes ? <p>{record.notes}</p> : null}
-                <div className="record-actions">
-                  <MarkPlannedPurchaseBoughtForm record={record} />
-                  <EditPlannedPurchaseForm record={record} />
-                </div>
-              </article>
-            )) : <p className="muted">Nothing left to buy.</p>}
-          </div>
+      {activeTab === "to-buy" ? (() => {
+        const sort = query.sort || "dueDate";
+        const dir: "asc" | "desc" = query.dir === "asc" ? "asc" : "desc";
+        const sortToBuy = <T extends { dueDate: string | null; estimatedCost: number; itemName: string }>(arr: T[]) =>
+          [...arr].sort((a, b) => {
+            const m = dir === "asc" ? 1 : -1;
+            if (sort === "cost") return m * (a.estimatedCost - b.estimatedCost);
+            if (sort === "itemName") return m * a.itemName.localeCompare(b.itemName);
+            const ad = a.dueDate ?? "9999";
+            const bd = b.dueDate ?? "9999";
+            return m * ad.localeCompare(bd);
+          });
+        const sortedToBuy = sortToBuy(toBuyPurchases);
+        const sortedPurchased = [...purchasedItems].sort((a, b) => {
+          const m = dir === "asc" ? 1 : -1;
+          if (sort === "cost") return m * ((a.actualCost ?? a.estimatedCost) - (b.actualCost ?? b.estimatedCost));
+          if (sort === "itemName") return m * a.itemName.localeCompare(b.itemName);
+          const ad = a.purchasedDate ?? "9999";
+          const bd = b.purchasedDate ?? "9999";
+          return m * ad.localeCompare(bd);
+        });
+        return (
+          <section className="records-shell">
+            <div className="section-heading">
+              <h2><PackagePlus size={19} /> To Buy</h2>
+              <PlannedPurchaseForm vehicleId={vehicle.id} />
+            </div>
+            {plannedPurchases.length > 0 ? (
+              <>
+                <SortBar vehicleId={vehicle.id} tab="to-buy" activeSort={sort} activeDir={dir} options={[
+                  { key: "dueDate", label: "Due date" },
+                  { key: "cost", label: "Cost" },
+                  { key: "itemName", label: "Name" },
+                ]} />
+                <div className="record-list">
+                  <p className="record-list-subheading">To Buy</p>
+                  {sortedToBuy.length ? sortedToBuy.map((record) => (
+                    <div className="record-entry" key={record.id}>
+                      <div className="record-row">
+                        <span className="tag tag-neutral">{formatPlannedPurchaseStatus("to-buy")}</span>
+                        <div className="record-row-content">
+                          <strong>{record.itemName}</strong>
+                          <p className="record-row-meta">
+                            {[
+                              `Qty ${record.quantity}`,
+                              record.supplier,
+                              record.dueDate ? `Due ${formatDate(record.dueDate, settings)}` : null,
+                            ].filter(Boolean).join(" · ")}
+                          </p>
+                        </div>
+                        <strong className="record-row-value">{formatCurrency(record.estimatedCost, settings)}</strong>
+                        <div className="record-row-actions">
+                          {record.url ? <a className="secondary-button" href={record.url} target="_blank" rel="noreferrer"><ExternalLink size={15} /></a> : null}
+                          <MarkPlannedPurchaseBoughtForm record={record} />
+                          <EditPlannedPurchaseForm record={record} />
+                        </div>
+                      </div>
+                    </div>
+                  )) : <p className="record-row-meta" style={{ padding: "0.85rem 0" }}>Nothing left to buy.</p>}
 
-          <div className="record-subsection">
-            <h3>Purchased</h3>
-            {purchasedItems.length ? purchasedItems.map((record) => (
-              <article className="record-card to-buy-card" key={record.id}>
-                <div className="record-header">
-                  <span className={`tag ${record.convertedAt ? "tag-success" : "tag-neutral"}`}>
-                    {formatPlannedPurchaseStatus(plannedPurchaseStatus(record.convertedAt, record.convertedToType))}
-                  </span>
-                  <h3>{record.itemName}</h3>
+                  <p className="record-list-subheading">Purchased</p>
+                  {sortedPurchased.length ? sortedPurchased.map((record) => (
+                    <div className="record-entry" key={record.id}>
+                      <div className="record-row">
+                        <span className={`tag ${record.convertedAt ? "tag-success" : "tag-neutral"}`}>
+                          {formatPlannedPurchaseStatus(plannedPurchaseStatus(record.convertedAt, record.convertedToType))}
+                        </span>
+                        <div className="record-row-content">
+                          <strong>{record.itemName}</strong>
+                          <p className="record-row-meta">
+                            {[
+                              `Qty ${record.quantity}`,
+                              record.purchasedDate ? `Bought ${formatDate(record.purchasedDate, settings)}` : null,
+                              record.supplier,
+                            ].filter(Boolean).join(" · ")}
+                          </p>
+                        </div>
+                        <strong className="record-row-value">{formatCurrency(record.actualCost ?? record.estimatedCost, settings)}</strong>
+                        <div className="record-row-actions">
+                          {record.url ? <a className="secondary-button" href={record.url} target="_blank" rel="noreferrer"><ExternalLink size={15} /></a> : null}
+                          {!record.convertedAt ? (
+                            <>
+                              <CreateMaintenanceFromPurchaseForm record={record} categories={categories} />
+                              <CreateRepairFromPurchaseForm record={record} workshops={workshops} />
+                            </>
+                          ) : null}
+                          <EditPlannedPurchaseBoughtDateForm record={record} />
+                        </div>
+                      </div>
+                    </div>
+                  )) : <p className="record-row-meta" style={{ padding: "0.85rem 0" }}>Purchased items will appear here once bought.</p>}
                 </div>
-                <p className="record-meta">
-                  Qty {record.quantity} · Bought {formatDate(record.purchasedDate, settings)}
-                  {record.convertedAt ? ` · Logged ${formatDate(record.convertedAt, settings)}` : ""}
-                </p>
-                <strong>{formatCurrency(record.actualCost ?? record.estimatedCost, settings)}</strong>
-                {record.supplier ? <p>{record.supplier}</p> : null}
-                {record.url ? (
-                  <a className="secondary-button" href={record.url} target="_blank" rel="noreferrer">
-                    <ExternalLink size={17} />
-                    Open link
-                  </a>
-                ) : null}
-                {record.notes ? <p>{record.notes}</p> : null}
-                <div className="record-actions">
-                  {!record.convertedAt ? (
-                    <>
-                      <CreateMaintenanceFromPurchaseForm record={record} categories={categories} />
-                      <CreateRepairFromPurchaseForm record={record} workshops={workshops} />
-                    </>
-                  ) : null}
-                  <EditPlannedPurchaseBoughtDateForm record={record} />
-                </div>
-              </article>
-            )) : <p className="muted">Purchased items will appear here once bought.</p>}
-          </div>
-        </RecordSection>
-      ) : null}
+              </>
+            ) : (
+              <div className="empty-state records-empty-state">
+                <h3>No planned purchases</h3>
+                <p>Add parts or supplies you need to buy before the next job.</p>
+              </div>
+            )}
+          </section>
+        );
+      })() : null}
     </AppFrame>
   );
 }
@@ -468,37 +613,26 @@ function plannedPurchaseStatus(convertedAt: string | null, convertedToType: "mai
   return convertedToType === "repair" ? "logged-as-repair" : "logged-as-maintenance";
 }
 
-function RecordSection({
-  title,
-  icon,
-  form,
-  children,
-  hasRecords,
-  emptyTitle,
-  emptyMessage
-}: {
-  title: string;
-  icon: React.ReactNode;
-  form: React.ReactNode;
-  children: React.ReactNode;
-  hasRecords: boolean;
-  emptyTitle: string;
-  emptyMessage: string;
+function SortBar({ vehicleId, tab, options, activeSort, activeDir }: {
+  vehicleId: number;
+  tab: string;
+  options: { key: string; label: string }[];
+  activeSort: string;
+  activeDir: "asc" | "desc";
 }) {
   return (
-    <section className="records-shell">
-      <div className="section-heading">
-        <h2>{icon}{title}</h2>
-        {form}
-      </div>
-      <div className="records-grid">
-        {hasRecords ? children : (
-          <div className="empty-state records-empty-state">
-            <h3>{emptyTitle}</h3>
-            <p>{emptyMessage}</p>
-          </div>
-        )}
-      </div>
-    </section>
+    <div className="sort-bar">
+      <span>Sort:</span>
+      {options.map(({ key, label }) => {
+        const isActive = activeSort === key;
+        const nextDir = isActive && activeDir === "desc" ? "asc" : "desc";
+        const indicator = isActive ? (activeDir === "desc" ? " ↓" : " ↑") : "";
+        return (
+          <Link key={key} href={`/vehicles/${vehicleId}?tab=${tab}&sort=${key}&dir=${nextDir}`} className={isActive ? "active" : ""} scroll={false}>
+            {label}{indicator}
+          </Link>
+        );
+      })}
+    </div>
   );
 }

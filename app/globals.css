@@ -1244,6 +1244,124 @@ textarea:focus-visible {
   gap: 0.72rem;
 }
 
+.sort-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+  font-size: 0.83rem;
+  padding: 0.1rem 0;
+}
+
+.sort-bar > span {
+  color: var(--muted);
+  font-weight: 600;
+  margin-right: 0.15rem;
+}
+
+.sort-bar a {
+  color: var(--muted);
+  font-weight: 700;
+  padding: 0.28rem 0.65rem;
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
+}
+
+.sort-bar a:hover {
+  color: var(--text);
+}
+
+.sort-bar a.active {
+  color: var(--text);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-button);
+}
+
+.record-list {
+  display: grid;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+  padding: 0 20px;
+}
+
+.record-entry {
+  border-top: 1px solid var(--line);
+}
+
+.record-entry:first-child {
+  border-top: none;
+}
+
+.record-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.9rem 0;
+  min-height: 52px;
+}
+
+.record-row > .tag {
+  flex: 0 0 auto;
+  align-self: flex-start;
+  margin-top: 0.18rem;
+}
+
+.record-row-content {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 0.12rem;
+}
+
+.record-row-content > strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  letter-spacing: -0.02em;
+}
+
+.record-row-meta {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin: 0;
+  line-height: 1.35;
+}
+
+.record-row-value {
+  font-weight: 700;
+  white-space: nowrap;
+  letter-spacing: -0.03em;
+  flex: 0 0 auto;
+}
+
+.record-row-actions {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.record-entry > .attachment-section {
+  padding-bottom: 0.85rem;
+}
+
+.record-list-subheading {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--muted);
+  padding: 0.9rem 0 0;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-top: 1px solid var(--line);
+}
+
+.record-list > .record-list-subheading:first-child {
+  border-top: none;
+  padding-top: 0.75rem;
+}
+
 .to-buy-card .record-header {
   gap: 0.45rem;
   padding-bottom: 0.7rem;
@@ -1468,6 +1586,11 @@ textarea:focus-visible {
 
 .settings-panel > .record-form {
   margin-top: 0.1rem;
+}
+
+.settings-panel-col2-span2 {
+  grid-column: 2;
+  grid-row: 1 / span 2;
 }
 
 .settings-tabs {
@@ -1955,6 +2078,11 @@ textarea:focus-visible {
     grid-template-columns: 1fr;
   }
 
+  .settings-panel-col2-span2 {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
   .page-heading,
   .section-heading {
     display: grid;
@@ -2043,6 +2171,18 @@ textarea:focus-visible {
   .record-actions form,
   .record-actions .modal-trigger {
     width: 100%;
+  }
+
+  .record-row .record-actions {
+    align-items: center;
+    flex-direction: row;
+    flex-wrap: nowrap;
+  }
+
+  .record-row .record-actions > *,
+  .record-row .record-actions form,
+  .record-row .record-actions .modal-trigger {
+    width: auto;
   }
 
   .modal-backdrop {

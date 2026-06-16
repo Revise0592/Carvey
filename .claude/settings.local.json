@@ -21,7 +21,13 @@
       "Bash(git -C /home/harvey/vscode/Carvey branch -vv)",
       "Bash(git -C /home/harvey/vscode/Carvey log origin/main..HEAD --oneline)",
       "Bash(git -C /home/harvey/vscode/Carvey status)",
-      "Bash(git -C /home/harvey/vscode/Carvey config credential.helper)"
+      "Bash(git -C /home/harvey/vscode/Carvey config credential.helper)",
+      "Bash(npx playwright *)",
+      "Read(//home/harvey/.cache/**)",
+      "Bash(node -e \"require\\('@playwright/test'\\)\")",
+      "Bash(npm list *)",
+      "Bash(npm install *)",
+      "Bash(gh release *)"
     ]
   }
 }

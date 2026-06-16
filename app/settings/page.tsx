@@ -106,7 +106,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             </article>
           ) : null}
 
-          <article className="settings-panel" style={!regionalSettings.authDisabled ? { gridColumn: 2, gridRow: "1 / span 2" } : undefined}>
+          <article className={`settings-panel${!regionalSettings.authDisabled ? " settings-panel-col2-span2" : ""}`}>
             <h2><ShieldCheck size={19} /> Authentication</h2>
             <p className="muted">Disable login when Carvey is deployed behind a trusted reverse proxy that handles authentication.</p>
             {regionalSettings.authDisabled ? <p className="error">Warning: authentication is currently disabled. Anyone who can reach this URL has full access.</p> : null}

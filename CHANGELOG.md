@@ -2,6 +2,36 @@
 
 All notable changes to Carvey will be documented here.
 
+## [1.0.4] - 2026-06-16
+
+### Changed
+
+- Maintenance, repairs, MOTs, reminders, and to buy tabs now display records as a sortable list rather than a card grid — easier to scan as entries accumulate
+- Record lists are enclosed in a panel with a clear outer border, so single-entry lists look contained rather than floating on a bare divider line
+- Sort controls appear above each list — click to sort by date, cost, category, status, or name depending on the tab; click again to reverse direction
+
+### Fixed
+
+- Switching tabs and changing sort order no longer jumps the page back to the top — scroll position is preserved on navigation
+- Admin settings page on mobile no longer crams the Authentication panel into a hardcoded second column — it now stacks correctly in a single column on narrow screens
+
+## [1.0.3] - 2026-06-16
+
+### Added
+
+- Password reset for locked-out users via two recovery paths: a CLI script (`node scripts/reset-password.mjs` inside the container) and a `CARVEY_RESET_PASSWORD` startup environment variable, following the same pattern as Grafana's admin password reset
+
+## [1.0.2] - 2026-06-15
+
+### Added
+
+- PWA support — Carvey can now be installed as a standalone app on mobile and desktop via the browser install prompt
+- Install prompt surfaced in Settings → Personalisation
+- Web app manifest with icons at 192×192, 512×512, and maskable 512×512
+- Service worker with cache-first for static assets and network-first for navigation
+- Safe-area padding on the app shell and top bar for iPhone notch and home bar
+- Drag handle pill on mobile bottom-sheet modals
+
 ## [1.0.1] - 2026-06-14
 
 ### Fixed
