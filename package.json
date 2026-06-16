@@ -11,7 +11,8 @@
     "start": "next start",
     "lint": "eslint .",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "reset-password": "node scripts/reset-password.mjs"
   },
   "dependencies": {
     "@types/better-sqlite3": "^7.6.13",

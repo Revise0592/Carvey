@@ -1,4 +1,5 @@
 import Database from "better-sqlite3";
+import bcrypt from "bcryptjs";
 import path from "node:path";
 import { ensureDataDirs, dataDir } from "./paths";
 
@@ -169,12 +170,23 @@ export const defaultCollectionName = "My cars";
 let db: Database.Database | null = null;
 export const dbFileName = "carvey.sqlite";
 
+function applyStartupPasswordReset(database: Database.Database) {
+  const newPassword = process.env.CARVEY_RESET_PASSWORD;
+  if (!newPassword) return;
+  const user = database.prepare("SELECT id, username FROM admin_users LIMIT 1").get() as { id: number; username: string } | undefined;
+  if (!user) return;
+  const passwordHash = bcrypt.hashSync(newPassword, 12);
+  database.prepare("UPDATE admin_users SET password_hash = ? WHERE id = ?").run(passwordHash, user.id);
+  console.log(`[Carvey] CARVEY_RESET_PASSWORD was set — password reset for user "${user.username}". Remove the env var before restarting.`);
+}
+
 function openDb() {
   ensureDataDirs();
   const database = new Database(path.join(dataDir, dbFileName));
   database.pragma("journal_mode = WAL");
   database.pragma("foreign_keys = ON");
   migrate(database);
+  applyStartupPasswordReset(database);
   return database;
 }
 
