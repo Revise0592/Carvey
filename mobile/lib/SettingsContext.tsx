@@ -76,8 +76,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
   const updateSetting = useCallback(
     async <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => {
-      await setAppSetting(key, String(value));
       setSettings((prev) => ({ ...prev, [key]: value }));
+      await setAppSetting(key, String(value));
     },
     []
   );
