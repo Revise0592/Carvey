@@ -108,7 +108,7 @@ export default function EditVehicleScreen() {
       style={{ flex: 1, backgroundColor: bg }}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
         <View style={{ backgroundColor: cardBg, borderRadius: 12, padding: 16, borderWidth: 1, borderColor }}>
           <Field label="Make *" value={make} onChangeText={setMake} placeholder="e.g. Ford" inputBg={inputBg} textPrimary={textPrimary} textSecondary={textSecondary} borderColor={borderColor} />
           <FieldDivider borderColor={borderColor} />

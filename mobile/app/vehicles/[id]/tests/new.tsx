@@ -88,7 +88,7 @@ export default function NewTestScreen() {
       style={{ flex: 1, backgroundColor: bg }}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
         <View style={{ backgroundColor: cardBg, borderRadius: 12, padding: 16, borderWidth: 1, borderColor }}>
           <Field
             label="Test Date * (YYYY-MM-DD)"

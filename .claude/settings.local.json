@@ -27,7 +27,15 @@
       "Bash(node -e \"require\\('@playwright/test'\\)\")",
       "Bash(npm list *)",
       "Bash(npm install *)",
-      "Bash(gh release *)"
+      "Bash(gh release *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\('exports', d.get\\('main', 'no exports'\\)\\), indent=2\\)\\)\")",
+      "Bash(sed -i 's/<ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>/<ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>/g' \\\\ *)"
+    ],
+    "additionalDirectories": [
+      "/home/harvey/vscode/Carvey/mobile/app/vehicles/[id]/maintenance"
     ]
   }
 }

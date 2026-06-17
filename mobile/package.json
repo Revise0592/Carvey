@@ -3,6 +3,7 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "dependencies": {
+    "@expo/ngrok": "^4.0.0",
     "expo": "~56.0.12",
     "expo-constants": "~56.0.18",
     "expo-document-picker": "^56.0.4",
@@ -28,7 +29,7 @@
     "react-native-reanimated": "4.3.1",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "4.25.2",
-    "react-native-svg": "^15.15.5",
+    "react-native-svg": "15.15.4",
     "react-native-web": "~0.21.0",
     "react-native-worklets": "0.8.3",
     "tailwindcss": "^3.4.19"
