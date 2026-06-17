@@ -60,6 +60,13 @@ function RootLayoutNav() {
       ? "Add Test"
       : "Add MOT";
 
+  const editTestTitle =
+    settings.motFeature === "emissionsTest"
+      ? "Edit Emissions Test"
+      : settings.motFeature === "disabled"
+      ? "Edit Test"
+      : "Edit MOT";
+
   const headerBg = isDark ? "#111827" : "#ffffff";
   const headerTint = isDark ? "#f9fafb" : "#111827";
   const contentBg = isDark ? "#111827" : "#f9fafb";
@@ -160,6 +167,15 @@ function RootLayoutNav() {
       <Stack.Screen name="vehicles/[id]/tests/new" options={{ title: addTestTitle, presentation: "modal" }} />
       <Stack.Screen name="vehicles/[id]/reminders/new" options={{ title: "Add Reminder", presentation: "modal" }} />
       <Stack.Screen name="vehicles/[id]/purchases/new" options={{ title: "Add Purchase", presentation: "modal" }} />
+      <Stack.Screen name="vehicles/[id]/maintenance/[rid]/edit" options={{ title: "Edit Maintenance", presentation: "modal" }} />
+      <Stack.Screen name="vehicles/[id]/repairs/[rid]/edit" options={{ title: "Edit Repair", presentation: "modal" }} />
+      <Stack.Screen name="vehicles/[id]/tests/[rid]/edit" options={{ title: editTestTitle, presentation: "modal" }} />
+      <Stack.Screen name="vehicles/[id]/reminders/[rid]/edit" options={{ title: "Edit Reminder", presentation: "modal" }} />
+      <Stack.Screen name="vehicles/[id]/purchases/[rid]/edit" options={{ title: "Edit Purchase", presentation: "modal" }} />
+      <Stack.Screen name="workshops/index" options={{ title: "Workshops" }} />
+      <Stack.Screen name="workshops/new" options={{ title: "Add Workshop", presentation: "modal" }} />
+      <Stack.Screen name="workshops/[wid]/edit" options={{ title: "Edit Workshop", presentation: "modal" }} />
+      <Stack.Screen name="categories/index" options={{ title: "Maintenance Categories" }} />
     </Stack>
   );
 }

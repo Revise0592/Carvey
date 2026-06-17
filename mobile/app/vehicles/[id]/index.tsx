@@ -14,6 +14,11 @@ import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { Camera, Car, Edit, Plus } from "lucide-react-native";
 import { pickAndSaveVehiclePhoto } from "@/lib/photos";
 import {
+  deleteMaintenance,
+  deleteMot,
+  deletePlannedPurchase,
+  deleteReminder,
+  deleteRepair,
   getVehicle,
   listMaintenance,
   listMots,
@@ -293,21 +298,54 @@ export default function VehicleDetailScreen() {
             <Text style={{ color: textSecondary, fontSize: 14 }}>No records yet</Text>
           </View>
         }
-        renderItem={({ item }) => (
-          <View style={{ paddingHorizontal: 12, marginBottom: 8 }}>
-            <RecordRow
-              tab={activeTab}
-              item={item}
-              vehicle={vehicle}
-              isDark={isDark}
-              cardBg={cardBg}
-              textPrimary={textPrimary}
-              textSecondary={textSecondary}
-              borderColor={borderColor}
-              settings={settings}
-            />
-          </View>
-        )}
+        renderItem={({ item }) => {
+          const record = item as { id: number };
+          function onPress() {
+            const basePath = `/vehicles/${vehicleId}`;
+            const pathMap: Record<Tab, string> = {
+              maintenance: `${basePath}/maintenance/${record.id}/edit`,
+              repairs: `${basePath}/repairs/${record.id}/edit`,
+              tests: `${basePath}/tests/${record.id}/edit`,
+              reminders: `${basePath}/reminders/${record.id}/edit`,
+              purchases: `${basePath}/purchases/${record.id}/edit`,
+            };
+            router.push(pathMap[activeTab]);
+          }
+          function onLongPress() {
+            Alert.alert("Delete record", "Are you sure you want to delete this record?", [
+              { text: "Cancel", style: "cancel" },
+              {
+                text: "Delete",
+                style: "destructive",
+                onPress: async () => {
+                  if (activeTab === "maintenance") await deleteMaintenance(record.id, vehicleId);
+                  else if (activeTab === "repairs") await deleteRepair(record.id, vehicleId);
+                  else if (activeTab === "tests") await deleteMot(record.id, vehicleId);
+                  else if (activeTab === "reminders") await deleteReminder(record.id, vehicleId);
+                  else if (activeTab === "purchases") await deletePlannedPurchase(record.id, vehicleId);
+                  await loadData();
+                },
+              },
+            ]);
+          }
+          return (
+            <View style={{ paddingHorizontal: 12, marginBottom: 8 }}>
+              <Pressable onPress={onPress} onLongPress={onLongPress} android_ripple={{ color: "rgba(0,0,0,0.06)" }}>
+                <RecordRow
+                  tab={activeTab}
+                  item={item}
+                  vehicle={vehicle}
+                  isDark={isDark}
+                  cardBg={cardBg}
+                  textPrimary={textPrimary}
+                  textSecondary={textSecondary}
+                  borderColor={borderColor}
+                  settings={settings}
+                />
+              </Pressable>
+            </View>
+          );
+        }}
         contentContainerStyle={{ paddingTop: 4, paddingBottom: 24 }}
       />
     </View>
