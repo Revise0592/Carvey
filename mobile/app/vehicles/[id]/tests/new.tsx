@@ -128,7 +128,8 @@ export default function NewTestScreen() {
                 <Pressable
                   key={r}
                   onPress={() => setResult(r)}
-                  style={({ pressed }) => ({
+                  android_ripple={{ color: "rgba(0,0,0,0.1)", borderless: false }}
+                  style={{
                     flex: 1,
                     paddingVertical: 8,
                     borderRadius: 8,
@@ -136,8 +137,7 @@ export default function NewTestScreen() {
                     borderWidth: 2,
                     borderColor: isSelected ? colors[r] : borderColor,
                     backgroundColor: isSelected ? colors[r] + "20" : "transparent",
-                    opacity: pressed ? 0.7 : 1,
-                  })}
+                  }}
                 >
                   <Text
                     style={{
@@ -211,14 +211,15 @@ export default function NewTestScreen() {
         <Pressable
           onPress={handleSave}
           disabled={saving}
-          style={({ pressed }) => ({
+          android_ripple={{ color: "rgba(255,255,255,0.25)" }}
+          style={{
             marginTop: 20,
             paddingVertical: 14,
             borderRadius: 12,
             alignItems: "center",
             backgroundColor: accent,
-            opacity: pressed || saving ? 0.7 : 1,
-          })}
+            opacity: saving ? 0.5 : 1,
+          }}
         >
           <Text style={{ color: "#fff", fontSize: 15, fontWeight: "600" }}>
             {saving ? "Saving…" : `Save ${testLabel}`}

@@ -165,14 +165,15 @@ export default function EditVehicleScreen() {
         <Pressable
           onPress={handleSave}
           disabled={saving}
-          style={({ pressed }) => ({
+          android_ripple={{ color: "rgba(255,255,255,0.25)" }}
+          style={{
             marginTop: 20,
             paddingVertical: 14,
             borderRadius: 12,
             alignItems: "center",
             backgroundColor: accent,
-            opacity: pressed || saving ? 0.7 : 1,
-          })}
+            opacity: saving ? 0.5 : 1,
+          }}
         >
           <Text style={{ color: "#fff", fontSize: 15, fontWeight: "600" }}>
             {saving ? "Saving…" : "Save Changes"}
@@ -181,15 +182,15 @@ export default function EditVehicleScreen() {
 
         <Pressable
           onPress={handleArchive}
-          style={({ pressed }) => ({
+          android_ripple={{ color: "rgba(220,38,38,0.2)" }}
+          style={{
             marginTop: 12,
             paddingVertical: 14,
             borderRadius: 12,
             alignItems: "center",
             borderWidth: 1,
             borderColor: "#dc2626",
-            opacity: pressed ? 0.7 : 1,
-          })}
+          }}
         >
           <Text style={{ color: "#dc2626", fontSize: 15, fontWeight: "500" }}>Archive Vehicle</Text>
         </Pressable>

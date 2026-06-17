@@ -153,7 +153,8 @@ export default function VehicleDetailScreen() {
           {/* Photo slot */}
           <Pressable
             onPress={handlePhotoPress}
-            style={({ pressed }) => ({ marginRight: 14, opacity: pressed ? 0.8 : 1 })}
+            android_ripple={{ color: "rgba(0,0,0,0.1)" }}
+            style={{ marginRight: 14 }}
           >
             <View style={{ position: "relative" }}>
               {vehicle.photoPath ? (
@@ -209,12 +210,12 @@ export default function VehicleDetailScreen() {
           </View>
           <Pressable
             onPress={() => router.push(`/vehicles/${vehicleId}/edit`)}
-            style={({ pressed }) => ({
+            android_ripple={{ color: "rgba(0,0,0,0.1)" }}
+            style={{
               padding: 8,
               borderRadius: 8,
               backgroundColor: isDark ? "#374151" : "#f3f4f6",
-              opacity: pressed ? 0.6 : 1,
-            })}
+            }}
           >
             <Edit size={18} color={textSecondary} />
           </Pressable>
@@ -265,7 +266,8 @@ export default function VehicleDetailScreen() {
       >
         <Pressable
           onPress={() => router.push(`/vehicles/${vehicleId}/${ADD_PATH[activeTab]}`)}
-          style={({ pressed }) => ({
+          android_ripple={{ color: "rgba(255,255,255,0.25)" }}
+          style={{
             flexDirection: "row",
             alignItems: "center",
             gap: 4,
@@ -273,8 +275,7 @@ export default function VehicleDetailScreen() {
             paddingVertical: 7,
             borderRadius: 8,
             backgroundColor: accent,
-            opacity: pressed ? 0.8 : 1,
-          })}
+          }}
         >
           <Plus size={14} color="#fff" />
           <Text style={{ color: "#fff", fontSize: 13, fontWeight: "600" }}>Add</Text>
