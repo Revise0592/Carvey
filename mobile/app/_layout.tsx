@@ -127,14 +127,14 @@ function RootLayoutNav() {
         </Text>
         <Pressable
           onPress={authenticate}
-          style={({ pressed }) => ({
+          android_ripple={{ color: "rgba(255,255,255,0.25)" }}
+          style={{
             marginTop: 28,
             paddingHorizontal: 32,
             paddingVertical: 13,
             borderRadius: 12,
             backgroundColor: accent,
-            opacity: pressed ? 0.8 : 1,
-          })}
+          }}
         >
           <Text style={{ color: "#fff", fontSize: 15, fontWeight: "600" }}>Unlock</Text>
         </Pressable>

@@ -138,14 +138,15 @@ export default function NewRepairScreen() {
         <Pressable
           onPress={handleSave}
           disabled={saving}
-          style={({ pressed }) => ({
+          android_ripple={{ color: "rgba(255,255,255,0.25)" }}
+          style={{
             marginTop: 20,
             paddingVertical: 14,
             borderRadius: 12,
             alignItems: "center",
             backgroundColor: accent,
-            opacity: pressed || saving ? 0.7 : 1,
-          })}
+            opacity: saving ? 0.5 : 1,
+          }}
         >
           <Text style={{ color: "#fff", fontSize: 15, fontWeight: "600" }}>
             {saving ? "Saving…" : "Save Record"}

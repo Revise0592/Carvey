@@ -110,15 +110,15 @@ export default function NewReminderScreen() {
                 <Pressable
                   key={opt.value}
                   onPress={() => setRecurrence(opt.value)}
-                  style={({ pressed }) => ({
+                  android_ripple={{ color: "rgba(0,0,0,0.1)", borderless: false }}
+                  style={{
                     paddingHorizontal: 14,
                     paddingVertical: 7,
                     borderRadius: 20,
                     borderWidth: 2,
                     borderColor: isSelected ? accent : borderColor,
                     backgroundColor: isSelected ? accent + "20" : "transparent",
-                    opacity: pressed ? 0.7 : 1,
-                  })}
+                  }}
                 >
                   <Text style={{ fontSize: 12, fontWeight: "500", color: isSelected ? accent : textSecondary }}>
                     {opt.label}
@@ -132,14 +132,15 @@ export default function NewReminderScreen() {
         <Pressable
           onPress={handleSave}
           disabled={saving}
-          style={({ pressed }) => ({
+          android_ripple={{ color: "rgba(255,255,255,0.25)" }}
+          style={{
             marginTop: 20,
             paddingVertical: 14,
             borderRadius: 12,
             alignItems: "center",
             backgroundColor: accent,
-            opacity: pressed || saving ? 0.7 : 1,
-          })}
+            opacity: saving ? 0.5 : 1,
+          }}
         >
           <Text style={{ color: "#fff", fontSize: 15, fontWeight: "600" }}>
             {saving ? "Saving…" : "Save Reminder"}
