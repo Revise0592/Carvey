@@ -31,13 +31,11 @@ import { useTheme } from "@/lib/theme";
 
 type Tab = "maintenance" | "repairs" | "tests" | "reminders" | "purchases";
 
-const TABS: Array<{ id: Tab; label: string }> = [
-  { id: "maintenance", label: "Maintenance" },
-  { id: "repairs", label: "Repairs" },
-  { id: "tests", label: "Tests" },
-  { id: "reminders", label: "Reminders" },
-  { id: "purchases", label: "Purchases" },
-];
+function testTabLabel(motFeature: string): string {
+  if (motFeature === "emissionsTest") return "Emissions Test";
+  if (motFeature === "disabled") return "Tests";
+  return "MOT";
+}
 
 const ADD_PATH: Record<Tab, string> = {
   maintenance: "maintenance/new",
@@ -63,6 +61,14 @@ export default function VehicleDetailScreen() {
 
   const { settings } = useSettings();
   const { isDark, accent, bg, cardBg, textPrimary, textSecondary, borderColor } = useTheme();
+
+  const TABS: Array<{ id: Tab; label: string }> = [
+    { id: "maintenance", label: "Maintenance" },
+    { id: "repairs", label: "Repairs" },
+    { id: "tests", label: testTabLabel(settings.motFeature) },
+    { id: "reminders", label: "Reminders" },
+    { id: "purchases", label: "Purchases" },
+  ];
 
   async function loadData() {
     const [v, m, r, mo, rem, pur] = await Promise.all([
