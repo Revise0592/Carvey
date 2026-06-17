@@ -1,0 +1,391 @@
+import { useCallback, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
+import { Link, router, useFocusEffect, useLocalSearchParams } from "expo-router";
+import {
+  AlertTriangle,
+  ChevronRight,
+  ClipboardList,
+  Clock,
+  Edit,
+  Plus,
+  ShoppingCart,
+  Wrench,
+} from "lucide-react-native";
+import { useColorScheme } from "react-native";
+import {
+  getVehicle,
+  listMaintenance,
+  listMots,
+  listPlannedPurchases,
+  listReminders,
+  listRepairs,
+  type MaintenanceRecord,
+  type MotRecord,
+  type PlannedPurchase,
+  type Reminder,
+  type RepairRecord,
+  type Vehicle,
+} from "@/lib/db";
+import { formatCurrency, formatDate, formatMiles, formatMotResult } from "@/lib/format";
+import { getReminderStatus } from "@/lib/reminders";
+import { useSettings, paletteAccentColors } from "@/lib/SettingsContext";
+
+type Tab = "maintenance" | "repairs" | "tests" | "reminders" | "purchases";
+
+const TABS: Array<{ id: Tab; label: string }> = [
+  { id: "maintenance", label: "Maintenance" },
+  { id: "repairs", label: "Repairs" },
+  { id: "tests", label: "Tests" },
+  { id: "reminders", label: "Reminders" },
+  { id: "purchases", label: "Purchases" },
+];
+
+export default function VehicleDetailScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const vehicleId = parseInt(id, 10);
+
+  const [vehicle, setVehicle] = useState<Vehicle | null>(null);
+  const [maintenance, setMaintenance] = useState<MaintenanceRecord[]>([]);
+  const [repairs, setRepairs] = useState<RepairRecord[]>([]);
+  const [mots, setMots] = useState<MotRecord[]>([]);
+  const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [purchases, setPurchases] = useState<PlannedPurchase[]>([]);
+  const [activeTab, setActiveTab] = useState<Tab>("maintenance");
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const { settings } = useSettings();
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
+  const accent = paletteAccentColors[settings.palette];
+
+  async function loadData() {
+    const [v, m, r, mo, rem, pur] = await Promise.all([
+      getVehicle(vehicleId),
+      listMaintenance(vehicleId),
+      listRepairs(vehicleId),
+      listMots(vehicleId),
+      listReminders(vehicleId),
+      listPlannedPurchases(vehicleId),
+    ]);
+    setVehicle(v);
+    setMaintenance(m);
+    setRepairs(r);
+    setMots(mo);
+    setReminders(rem);
+    setPurchases(pur);
+  }
+
+  useFocusEffect(
+    useCallback(() => {
+      setLoading(true);
+      loadData().finally(() => setLoading(false));
+    }, [vehicleId])
+  );
+
+  async function onRefresh() {
+    setRefreshing(true);
+    await loadData();
+    setRefreshing(false);
+  }
+
+  const bg = isDark ? "#111827" : "#f9fafb";
+  const cardBg = isDark ? "#1f2937" : "#ffffff";
+  const textPrimary = isDark ? "#f3f4f6" : "#111827";
+  const textSecondary = isDark ? "#9ca3af" : "#6b7280";
+  const borderColor = isDark ? "#374151" : "#e5e7eb";
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: bg }}>
+        <ActivityIndicator size="large" color={accent} />
+      </View>
+    );
+  }
+
+  if (!vehicle) {
+    return (
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: bg }}>
+        <Text style={{ color: textSecondary }}>Vehicle not found</Text>
+      </View>
+    );
+  }
+
+  const currentTabData = {
+    maintenance,
+    repairs,
+    tests: mots,
+    reminders,
+    purchases,
+  }[activeTab];
+
+  return (
+    <View style={{ flex: 1, backgroundColor: bg }}>
+      {/* Vehicle header card */}
+      <View style={{ backgroundColor: cardBg, padding: 16, borderBottomWidth: 1, borderBottomColor: borderColor }}>
+        <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" }}>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 20, fontWeight: "700", color: textPrimary }}>
+              {vehicle.make} {vehicle.model}
+            </Text>
+            <Text style={{ fontSize: 15, color: accent, fontWeight: "600", marginTop: 2 }}>
+              {vehicle.registration}
+            </Text>
+            {vehicle.year ? (
+              <Text style={{ fontSize: 13, color: textSecondary, marginTop: 1 }}>{vehicle.year}</Text>
+            ) : null}
+            {vehicle.effectiveOdometer ? (
+              <Text style={{ fontSize: 13, color: textSecondary, marginTop: 1 }}>
+                {formatMiles(vehicle.effectiveOdometer, settings)}
+              </Text>
+            ) : null}
+          </View>
+          <Link href={`/vehicles/${vehicleId}/edit`} asChild>
+            <Pressable
+              style={({ pressed }) => ({
+                padding: 8,
+                borderRadius: 8,
+                backgroundColor: isDark ? "#374151" : "#f3f4f6",
+                opacity: pressed ? 0.6 : 1,
+              })}
+            >
+              <Edit size={18} color={textSecondary} />
+            </Pressable>
+          </Link>
+        </View>
+      </View>
+
+      {/* Tab bar */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={{ backgroundColor: cardBg, borderBottomWidth: 1, borderBottomColor: borderColor }}
+        contentContainerStyle={{ paddingHorizontal: 8 }}
+      >
+        {TABS.map((tab) => (
+          <Pressable
+            key={tab.id}
+            onPress={() => setActiveTab(tab.id)}
+            style={{
+              paddingHorizontal: 14,
+              paddingVertical: 12,
+              borderBottomWidth: 2,
+              borderBottomColor: activeTab === tab.id ? accent : "transparent",
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 13,
+                fontWeight: "600",
+                color: activeTab === tab.id ? accent : textSecondary,
+              }}
+            >
+              {tab.label}
+            </Text>
+          </Pressable>
+        ))}
+      </ScrollView>
+
+      {/* Tab content */}
+      <FlatList
+        data={currentTabData as unknown[]}
+        keyExtractor={(item) => String((item as { id: number }).id)}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        ListHeaderComponent={
+          <View style={{ flexDirection: "row", justifyContent: "flex-end", padding: 12 }}>
+            <Pressable
+              style={({ pressed }) => ({
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 4,
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+                borderRadius: 8,
+                backgroundColor: accent,
+                opacity: pressed ? 0.8 : 1,
+              })}
+            >
+              <Plus size={14} color="#fff" />
+              <Text style={{ color: "#fff", fontSize: 13, fontWeight: "500" }}>Add</Text>
+            </Pressable>
+          </View>
+        }
+        ListEmptyComponent={
+          <View style={{ alignItems: "center", paddingVertical: 48 }}>
+            <Text style={{ color: textSecondary, fontSize: 14 }}>No records yet</Text>
+          </View>
+        }
+        renderItem={({ item }) => (
+          <View style={{ paddingHorizontal: 12, marginBottom: 8 }}>
+            <RecordRow
+              tab={activeTab}
+              item={item}
+              vehicle={vehicle}
+              isDark={isDark}
+              cardBg={cardBg}
+              textPrimary={textPrimary}
+              textSecondary={textSecondary}
+              borderColor={borderColor}
+              settings={settings}
+            />
+          </View>
+        )}
+        contentContainerStyle={{ paddingBottom: 24 }}
+      />
+    </View>
+  );
+}
+
+function RecordRow({
+  tab,
+  item,
+  vehicle,
+  isDark,
+  cardBg,
+  textPrimary,
+  textSecondary,
+  borderColor,
+  settings,
+}: {
+  tab: Tab;
+  item: unknown;
+  vehicle: Vehicle;
+  isDark: boolean;
+  cardBg: string;
+  textPrimary: string;
+  textSecondary: string;
+  borderColor: string;
+  settings: { currency?: "GBP" | "USD" | "EUR"; distanceUnit?: "miles" | "km"; dateFormat?: "dd-mon-yyyy" | "iso" };
+}) {
+  const rowStyle = {
+    backgroundColor: cardBg,
+    borderRadius: 10,
+    padding: 14,
+    borderWidth: 1,
+    borderColor,
+  };
+
+  if (tab === "maintenance") {
+    const r = item as MaintenanceRecord;
+    return (
+      <View style={rowStyle}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+          <Text style={{ fontSize: 14, fontWeight: "600", color: textPrimary, flex: 1 }} numberOfLines={1}>
+            {r.description}
+          </Text>
+          <Text style={{ fontSize: 14, fontWeight: "600", color: textPrimary, marginLeft: 8 }}>
+            {formatCurrency(r.cost, settings)}
+          </Text>
+        </View>
+        <Text style={{ fontSize: 12, color: textSecondary, marginTop: 2 }}>
+          {r.category} · {formatDate(r.date, settings)}
+          {r.odometer ? ` · ${formatMiles(r.odometer, settings)}` : ""}
+        </Text>
+      </View>
+    );
+  }
+
+  if (tab === "repairs") {
+    const r = item as RepairRecord;
+    return (
+      <View style={rowStyle}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+          <Text style={{ fontSize: 14, fontWeight: "600", color: textPrimary, flex: 1 }} numberOfLines={1}>
+            {r.fault}
+          </Text>
+          <Text style={{ fontSize: 14, fontWeight: "600", color: textPrimary, marginLeft: 8 }}>
+            {formatCurrency(r.cost, settings)}
+          </Text>
+        </View>
+        <Text style={{ fontSize: 12, color: textSecondary, marginTop: 2 }}>
+          {r.garage ?? "Unknown garage"} · {formatDate(r.date, settings)}
+        </Text>
+      </View>
+    );
+  }
+
+  if (tab === "tests") {
+    const r = item as MotRecord;
+    const resultColor = r.result === "pass" ? "#16a34a" : r.result === "advisory" ? "#d97706" : "#dc2626";
+    return (
+      <View style={rowStyle}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 14, fontWeight: "600", color: textPrimary }}>
+              {formatDate(r.testDate, settings)}
+            </Text>
+            <Text style={{ fontSize: 12, color: textSecondary, marginTop: 2 }}>
+              Expires {formatDate(r.expiryDate, settings)}
+              {r.odometer ? ` · ${formatMiles(r.odometer, settings)}` : ""}
+            </Text>
+          </View>
+          <View style={{ backgroundColor: resultColor + "20", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 12 }}>
+            <Text style={{ fontSize: 11, fontWeight: "600", color: resultColor }}>
+              {formatMotResult(r.result)}
+            </Text>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
+  if (tab === "reminders") {
+    const r = item as Reminder;
+    const status = getReminderStatus(r, vehicle);
+    const statusColor = {
+      done: "#16a34a",
+      overdue: "#dc2626",
+      upcoming: "#d97706",
+      open: "#6b7280",
+    }[status];
+    return (
+      <View style={rowStyle}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+          <Text style={{ fontSize: 14, fontWeight: "600", color: textPrimary, flex: 1 }} numberOfLines={1}>
+            {r.title}
+          </Text>
+          <View style={{ backgroundColor: statusColor + "20", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 12 }}>
+            <Text style={{ fontSize: 11, fontWeight: "600", color: statusColor, textTransform: "capitalize" }}>
+              {status}
+            </Text>
+          </View>
+        </View>
+        {r.dueDate ? (
+          <Text style={{ fontSize: 12, color: textSecondary, marginTop: 2 }}>
+            Due {formatDate(r.dueDate, settings)}
+          </Text>
+        ) : null}
+      </View>
+    );
+  }
+
+  if (tab === "purchases") {
+    const r = item as PlannedPurchase;
+    return (
+      <View style={rowStyle}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+          <Text style={{ fontSize: 14, fontWeight: "600", color: textPrimary, flex: 1 }} numberOfLines={1}>
+            {r.itemName}
+          </Text>
+          <Text style={{ fontSize: 14, fontWeight: "600", color: textPrimary, marginLeft: 8 }}>
+            {formatCurrency(r.estimatedCost, settings)}
+          </Text>
+        </View>
+        {r.supplier ? (
+          <Text style={{ fontSize: 12, color: textSecondary, marginTop: 2 }}>{r.supplier}</Text>
+        ) : null}
+      </View>
+    );
+  }
+
+  return null;
+}
