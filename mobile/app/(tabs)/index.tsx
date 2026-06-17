@@ -107,7 +107,8 @@ export default function GarageScreen() {
             </Text>
               <Pressable
                 onPress={() => router.push("/vehicles/new")}
-                style={({ pressed }) => ({
+                android_ripple={{ color: "rgba(255,255,255,0.25)" }}
+                style={{
                   flexDirection: "row",
                   alignItems: "center",
                   gap: 4,
@@ -115,8 +116,7 @@ export default function GarageScreen() {
                   paddingVertical: 6,
                   borderRadius: 8,
                   backgroundColor: accent,
-                  opacity: pressed ? 0.8 : 1,
-                })}
+                }}
               >
                 <Plus size={14} color="#fff" />
                 <Text style={{ color: "#fff", fontSize: 13, fontWeight: "500" }}>Add</Text>
@@ -206,15 +206,15 @@ function VehicleCard({
   return (
     <Pressable
       onPress={() => router.push(`/vehicles/${vehicle.id}`)}
-      style={({ pressed }) => ({
+      android_ripple={{ color: "rgba(0,0,0,0.08)" }}
+      style={{
         borderRadius: 12,
         padding: 14,
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
         backgroundColor: cardBg,
-        opacity: pressed ? 0.7 : 1,
-      })}
+      }}
     >
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12, flex: 1 }}>
           {vehicle.thumbnailPath ? (

@@ -132,7 +132,8 @@ export default function SettingsScreen() {
             <Pressable
               key={p.value}
               onPress={() => updateSetting("palette", p.value)}
-              style={({ pressed }) => ({
+              android_ripple={{ color: "rgba(0,0,0,0.1)", borderless: false }}
+              style={{
                 flexDirection: "row",
                 alignItems: "center",
                 gap: 6,
@@ -143,8 +144,7 @@ export default function SettingsScreen() {
                 borderColor: settings.palette === p.value ? paletteAccentColors[p.value] : borderColor,
                 backgroundColor:
                   settings.palette === p.value ? paletteAccentColors[p.value] + "20" : "transparent",
-                opacity: pressed ? 0.7 : 1,
-              })}
+              }}
             >
               <View
                 style={{
@@ -192,7 +192,7 @@ export default function SettingsScreen() {
       <Section title="Data" cardBg={cardBg} textPrimary={textPrimary} borderColor={borderColor}>
         <Pressable
           onPress={handleExport}
-          style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+          android_ripple={{ color: "rgba(0,0,0,0.08)" }}
         >
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
             <View>
@@ -207,7 +207,7 @@ export default function SettingsScreen() {
         <RowDivider borderColor={borderColor} />
         <Pressable
           onPress={handleImport}
-          style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+          android_ripple={{ color: "rgba(0,0,0,0.08)" }}
         >
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
             <View>
@@ -297,14 +297,14 @@ function SegmentedRow<T extends string>({
           <Pressable
             key={opt.value}
             onPress={() => onChange(opt.value)}
-            style={({ pressed }) => ({
+            android_ripple={{ color: "rgba(0,0,0,0.1)", borderless: false }}
+            style={{
               flex: 1,
               paddingVertical: 7,
               borderRadius: 8,
               alignItems: "center",
               backgroundColor: value === opt.value ? accent : isDark ? "#374151" : "#f3f4f6",
-              opacity: pressed ? 0.7 : 1,
-            })}
+            }}
           >
             <Text
               style={{
