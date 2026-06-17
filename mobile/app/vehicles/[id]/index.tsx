@@ -1,7 +1,9 @@
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
+  Image,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -9,7 +11,8 @@ import {
   View,
 } from "react-native";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
-import { Edit, Plus } from "lucide-react-native";
+import { Camera, Car, Edit, Plus } from "lucide-react-native";
+import { pickAndSaveVehiclePhoto } from "@/lib/photos";
 import {
   getVehicle,
   listMaintenance,
@@ -17,6 +20,7 @@ import {
   listPlannedPurchases,
   listReminders,
   listRepairs,
+  setVehiclePhoto,
   type MaintenanceRecord,
   type MotRecord,
   type PlannedPurchase,
@@ -100,6 +104,23 @@ export default function VehicleDetailScreen() {
     setRefreshing(false);
   }
 
+  function handlePhotoPress() {
+    Alert.alert("Vehicle Photo", "Choose a source", [
+      { text: "Take Photo", onPress: () => doPickPhoto("camera") },
+      { text: "Choose from Library", onPress: () => doPickPhoto("library") },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  }
+
+  async function doPickPhoto(source: "camera" | "library") {
+    const result = await pickAndSaveVehiclePhoto(source);
+    if (!result) return;
+    await setVehiclePhoto(vehicleId, result.original, result.thumbnail);
+    setVehicle((prev) =>
+      prev ? { ...prev, photoPath: result.original, thumbnailPath: result.thumbnail } : prev
+    );
+  }
+
   if (loading) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: bg }}>
@@ -129,6 +150,47 @@ export default function VehicleDetailScreen() {
       {/* Vehicle header */}
       <View style={{ backgroundColor: cardBg, paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: borderColor }}>
         <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" }}>
+          {/* Photo slot */}
+          <Pressable
+            onPress={handlePhotoPress}
+            style={({ pressed }) => ({ marginRight: 14, opacity: pressed ? 0.8 : 1 })}
+          >
+            <View style={{ position: "relative" }}>
+              {vehicle.photoPath ? (
+                <Image
+                  source={{ uri: vehicle.photoPath }}
+                  style={{ width: 64, height: 64, borderRadius: 10 }}
+                  resizeMode="cover"
+                />
+              ) : (
+                <View
+                  style={{
+                    width: 64,
+                    height: 64,
+                    borderRadius: 10,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: isDark ? "#374151" : "#f3f4f6",
+                  }}
+                >
+                  <Car size={28} color={textSecondary} />
+                </View>
+              )}
+              <View
+                style={{
+                  position: "absolute",
+                  bottom: -5,
+                  right: -5,
+                  backgroundColor: accent,
+                  borderRadius: 10,
+                  padding: 3,
+                }}
+              >
+                <Camera size={11} color="#fff" />
+              </View>
+            </View>
+          </Pressable>
+
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: 20, fontWeight: "700", color: textPrimary }}>
               {vehicle.make} {vehicle.model}

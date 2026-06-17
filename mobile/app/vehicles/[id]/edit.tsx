@@ -88,7 +88,7 @@ export default function EditVehicleScreen() {
           style: "destructive",
           onPress: async () => {
             await archiveVehicle(vehicleId);
-            router.replace("/(tabs)/");
+            router.replace("/(tabs)" as never);
           },
         },
       ]

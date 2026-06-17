@@ -25,6 +25,7 @@ export type AppSettings = RegionalSettings & {
   palette: ThemePalette;
   darkMode: "system" | "light" | "dark";
   collectionName: string;
+  securityEnabled: "true" | "false";
 };
 
 const defaults: AppSettings = {
@@ -36,6 +37,7 @@ const defaults: AppSettings = {
   palette: "default",
   darkMode: "system",
   collectionName: "My cars",
+  securityEnabled: "false",
 };
 
 type SettingsContextValue = {

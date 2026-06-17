@@ -1,7 +1,10 @@
 import "../global.css";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect, useState } from "react";
+import * as LocalAuthentication from "expo-local-authentication";
+import { useEffect, useRef, useState } from "react";
+import { AppState, AppStateStatus, Pressable, Text, View } from "react-native";
+import { Lock } from "lucide-react-native";
 import { SettingsProvider, useSettings } from "@/lib/SettingsContext";
 import { useTheme } from "@/lib/theme";
 import { getDb } from "@/lib/db";
@@ -42,8 +45,14 @@ export default function RootLayout() {
 }
 
 function RootLayoutNav() {
-  const { isDark } = useTheme();
-  const { settings } = useSettings();
+  const { isDark, accent } = useTheme();
+  const { settings, loaded } = useSettings();
+  const [locked, setLocked] = useState(false);
+  const authInProgress = useRef(false);
+  const wentToBackground = useRef(false);
+
+  const isSecurityEnabled = settings.securityEnabled === "true";
+
   const addTestTitle =
     settings.motFeature === "emissionsTest"
       ? "Add Emissions Test"
@@ -54,6 +63,84 @@ function RootLayoutNav() {
   const headerBg = isDark ? "#111827" : "#ffffff";
   const headerTint = isDark ? "#f9fafb" : "#111827";
   const contentBg = isDark ? "#111827" : "#f9fafb";
+
+  async function authenticate() {
+    if (authInProgress.current) return;
+    authInProgress.current = true;
+    try {
+      const hasHardware = await LocalAuthentication.hasHardwareAsync();
+      const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+      if (!hasHardware || !isEnrolled) {
+        setLocked(false);
+        return;
+      }
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: "Unlock Carvey",
+        disableDeviceFallback: false,
+        cancelLabel: "Cancel",
+      });
+      if (result.success) setLocked(false);
+    } finally {
+      authInProgress.current = false;
+    }
+  }
+
+  // Lock on startup if security is enabled
+  useEffect(() => {
+    if (!loaded) return;
+    if (isSecurityEnabled) {
+      setLocked(true);
+      authenticate();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded]);
+
+  // Lock when app returns from background
+  useEffect(() => {
+    const handleAppStateChange = (nextState: AppStateStatus) => {
+      if (nextState === "background" || nextState === "inactive") {
+        if (isSecurityEnabled) wentToBackground.current = true;
+      } else if (nextState === "active" && wentToBackground.current) {
+        wentToBackground.current = false;
+        if (isSecurityEnabled) {
+          setLocked(true);
+          authenticate();
+        }
+      }
+    };
+    const sub = AppState.addEventListener("change", handleAppStateChange);
+    return () => sub.remove();
+  }, [isSecurityEnabled]);
+
+  const lockBg = isDark ? "#111827" : "#f9fafb";
+  const lockText = isDark ? "#f9fafb" : "#111827";
+
+  if (locked) {
+    return (
+      <View style={{ flex: 1, backgroundColor: lockBg, alignItems: "center", justifyContent: "center" }}>
+        <Lock size={52} color={accent} />
+        <Text style={{ color: lockText, fontSize: 20, fontWeight: "700", marginTop: 20 }}>
+          Carvey is locked
+        </Text>
+        <Text style={{ color: isDark ? "#6b7280" : "#9ca3af", fontSize: 14, marginTop: 6 }}>
+          Authenticate to continue
+        </Text>
+        <Pressable
+          onPress={authenticate}
+          style={({ pressed }) => ({
+            marginTop: 28,
+            paddingHorizontal: 32,
+            paddingVertical: 13,
+            borderRadius: 12,
+            backgroundColor: accent,
+            opacity: pressed ? 0.8 : 1,
+          })}
+        >
+          <Text style={{ color: "#fff", fontSize: 15, fontWeight: "600" }}>Unlock</Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   return (
     <Stack
