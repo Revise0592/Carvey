@@ -7,7 +7,7 @@ import {
   Text,
   View,
 } from "react-native";
-import { Link, useFocusEffect } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { Car, ChevronRight, Plus } from "lucide-react-native";
 import {
   getActivePurchaseCount,
@@ -204,18 +204,18 @@ function VehicleCard({
   settings: { distanceUnit?: "miles" | "km" };
 }) {
   return (
-    <Link href={`/vehicles/${vehicle.id}`} asChild>
-      <Pressable
-        style={({ pressed }) => ({
-          borderRadius: 12,
-          padding: 14,
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-between",
-          backgroundColor: cardBg,
-          opacity: pressed ? 0.7 : 1,
-        })}
-      >
+    <Pressable
+      onPress={() => router.push(`/vehicles/${vehicle.id}`)}
+      style={({ pressed }) => ({
+        borderRadius: 12,
+        padding: 14,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        backgroundColor: cardBg,
+        opacity: pressed ? 0.7 : 1,
+      })}
+    >
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12, flex: 1 }}>
           <View
             style={{
@@ -244,6 +244,5 @@ function VehicleCard({
         </View>
         <ChevronRight size={18} color={textSecondary} />
       </Pressable>
-    </Link>
   );
 }
