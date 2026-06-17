@@ -1,4 +1,5 @@
 import { Alert, ScrollView, Switch, Text, View, Pressable } from "react-native";
+import { router } from "expo-router";
 import { useSettings, paletteAccentColors, type ThemePalette } from "@/lib/SettingsContext";
 import { useTheme } from "@/lib/theme";
 import { exportBackup, importBackup } from "@/lib/backup";
@@ -187,6 +188,38 @@ export default function SettingsScreen() {
             trackColor={{ false: isDark ? "#374151" : "#d1d5db", true: accent + "80" }}
           />
         </View>
+      </Section>
+
+      <Section title="Manage" cardBg={cardBg} textPrimary={textPrimary} borderColor={borderColor}>
+        <Pressable
+          onPress={() => router.push("/workshops/index")}
+          android_ripple={{ color: "rgba(0,0,0,0.08)" }}
+        >
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+            <View>
+              <Text style={{ fontSize: 14, color: textPrimary, fontWeight: "500" }}>Workshops</Text>
+              <Text style={{ fontSize: 12, color: textSecondary, marginTop: 2 }}>
+                Manage garages and service centres
+              </Text>
+            </View>
+            <Text style={{ fontSize: 20, color: textSecondary }}>›</Text>
+          </View>
+        </Pressable>
+        <RowDivider borderColor={borderColor} />
+        <Pressable
+          onPress={() => router.push("/categories/index")}
+          android_ripple={{ color: "rgba(0,0,0,0.08)" }}
+        >
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+            <View>
+              <Text style={{ fontSize: 14, color: textPrimary, fontWeight: "500" }}>Maintenance Categories</Text>
+              <Text style={{ fontSize: 12, color: textSecondary, marginTop: 2 }}>
+                Manage service and maintenance categories
+              </Text>
+            </View>
+            <Text style={{ fontSize: 20, color: textSecondary }}>›</Text>
+          </View>
+        </Pressable>
       </Section>
 
       <Section title="Data" cardBg={cardBg} textPrimary={textPrimary} borderColor={borderColor}>
