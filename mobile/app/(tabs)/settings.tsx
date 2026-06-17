@@ -1,6 +1,6 @@
-import { ScrollView, Text, View, Pressable, Switch } from "react-native";
-import { useColorScheme } from "react-native";
+import { ScrollView, Text, View, Pressable } from "react-native";
 import { useSettings, paletteAccentColors, type ThemePalette } from "@/lib/SettingsContext";
+import { useTheme } from "@/lib/theme";
 
 const CURRENCIES = [
   { label: "£ GBP", value: "GBP" as const },
@@ -24,6 +24,12 @@ const MOT_FEATURE_OPTIONS = [
   { label: "Disabled", value: "disabled" as const },
 ];
 
+const DARK_MODE_OPTIONS = [
+  { label: "Light", value: "light" as const },
+  { label: "System", value: "system" as const },
+  { label: "Dark", value: "dark" as const },
+];
+
 const PALETTES: Array<{ label: string; value: ThemePalette }> = [
   { label: "Default Blue", value: "default" },
   { label: "British Racing", value: "british-racing" },
@@ -39,15 +45,7 @@ const PALETTES: Array<{ label: string; value: ThemePalette }> = [
 
 export default function SettingsScreen() {
   const { settings, updateSetting } = useSettings();
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const accent = paletteAccentColors[settings.palette];
-
-  const bg = isDark ? "#111827" : "#f9fafb";
-  const cardBg = isDark ? "#1f2937" : "#ffffff";
-  const textPrimary = isDark ? "#f3f4f6" : "#111827";
-  const textSecondary = isDark ? "#9ca3af" : "#6b7280";
-  const borderColor = isDark ? "#374151" : "#e5e7eb";
+  const { isDark, accent, bg, cardBg, textPrimary, textSecondary, borderColor } = useTheme();
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: bg }} contentContainerStyle={{ paddingBottom: 40 }}>
@@ -117,9 +115,8 @@ export default function SettingsScreen() {
                 borderRadius: 20,
                 borderWidth: 2,
                 borderColor: settings.palette === p.value ? paletteAccentColors[p.value] : borderColor,
-                backgroundColor: settings.palette === p.value
-                  ? paletteAccentColors[p.value] + "20"
-                  : "transparent",
+                backgroundColor:
+                  settings.palette === p.value ? paletteAccentColors[p.value] + "20" : "transparent",
                 opacity: pressed ? 0.7 : 1,
               })}
             >
@@ -135,6 +132,18 @@ export default function SettingsScreen() {
             </Pressable>
           ))}
         </View>
+        <RowDivider borderColor={borderColor} />
+        <SegmentedRow
+          label="Dark mode"
+          options={DARK_MODE_OPTIONS}
+          value={settings.darkMode}
+          onChange={(v) => updateSetting("darkMode", v)}
+          accent={accent}
+          isDark={isDark}
+          textPrimary={textPrimary}
+          textSecondary={textSecondary}
+          borderColor={borderColor}
+        />
       </Section>
 
       <View style={{ paddingHorizontal: 16, marginTop: 8 }}>
@@ -161,7 +170,16 @@ function Section({
 }) {
   return (
     <View style={{ paddingHorizontal: 16, paddingTop: 20 }}>
-      <Text style={{ fontSize: 12, fontWeight: "600", color: textPrimary, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>
+      <Text
+        style={{
+          fontSize: 12,
+          fontWeight: "600",
+          color: textPrimary,
+          marginBottom: 8,
+          textTransform: "uppercase",
+          letterSpacing: 0.5,
+        }}
+      >
         {title}
       </Text>
       <View style={{ backgroundColor: cardBg, borderRadius: 12, padding: 16, borderWidth: 1, borderColor }}>
@@ -209,8 +227,7 @@ function SegmentedRow<T extends string>({
               paddingVertical: 7,
               borderRadius: 8,
               alignItems: "center",
-              backgroundColor:
-                value === opt.value ? accent : isDark ? "#374151" : "#f3f4f6",
+              backgroundColor: value === opt.value ? accent : isDark ? "#374151" : "#f3f4f6",
               opacity: pressed ? 0.7 : 1,
             })}
           >

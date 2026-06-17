@@ -10,9 +10,9 @@ import {
   View,
 } from "react-native";
 import { router } from "expo-router";
-import { useColorScheme } from "react-native";
 import { createVehicle } from "@/lib/db";
-import { useSettings, paletteAccentColors } from "@/lib/SettingsContext";
+import { useSettings } from "@/lib/SettingsContext";
+import { useTheme } from "@/lib/theme";
 
 export default function NewVehicleScreen() {
   const [make, setMake] = useState("");
@@ -25,16 +25,7 @@ export default function NewVehicleScreen() {
   const [saving, setSaving] = useState(false);
 
   const { settings } = useSettings();
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const accent = paletteAccentColors[settings.palette];
-
-  const bg = isDark ? "#111827" : "#f9fafb";
-  const cardBg = isDark ? "#1f2937" : "#ffffff";
-  const textPrimary = isDark ? "#f3f4f6" : "#111827";
-  const textSecondary = isDark ? "#9ca3af" : "#6b7280";
-  const borderColor = isDark ? "#374151" : "#e5e7eb";
-  const inputBg = isDark ? "#111827" : "#f9fafb";
+  const { accent, bg, cardBg, textPrimary, textSecondary, borderColor, inputBg } = useTheme();
 
   async function handleSave() {
     if (!make.trim() || !model.trim() || !registration.trim()) {

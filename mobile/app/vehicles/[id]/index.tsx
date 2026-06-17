@@ -1,7 +1,6 @@
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   Pressable,
   RefreshControl,
@@ -9,18 +8,8 @@ import {
   Text,
   View,
 } from "react-native";
-import { Link, router, useFocusEffect, useLocalSearchParams } from "expo-router";
-import {
-  AlertTriangle,
-  ChevronRight,
-  ClipboardList,
-  Clock,
-  Edit,
-  Plus,
-  ShoppingCart,
-  Wrench,
-} from "lucide-react-native";
-import { useColorScheme } from "react-native";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
+import { Edit, Plus } from "lucide-react-native";
 import {
   getVehicle,
   listMaintenance,
@@ -37,7 +26,8 @@ import {
 } from "@/lib/db";
 import { formatCurrency, formatDate, formatMiles, formatMotResult } from "@/lib/format";
 import { getReminderStatus } from "@/lib/reminders";
-import { useSettings, paletteAccentColors } from "@/lib/SettingsContext";
+import { useSettings } from "@/lib/SettingsContext";
+import { useTheme } from "@/lib/theme";
 
 type Tab = "maintenance" | "repairs" | "tests" | "reminders" | "purchases";
 
@@ -48,6 +38,14 @@ const TABS: Array<{ id: Tab; label: string }> = [
   { id: "reminders", label: "Reminders" },
   { id: "purchases", label: "Purchases" },
 ];
+
+const ADD_PATH: Record<Tab, string> = {
+  maintenance: "maintenance/new",
+  repairs: "repairs/new",
+  tests: "tests/new",
+  reminders: "reminders/new",
+  purchases: "purchases/new",
+};
 
 export default function VehicleDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -64,9 +62,7 @@ export default function VehicleDetailScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   const { settings } = useSettings();
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const accent = paletteAccentColors[settings.palette];
+  const { isDark, accent, bg, cardBg, textPrimary, textSecondary, borderColor } = useTheme();
 
   async function loadData() {
     const [v, m, r, mo, rem, pur] = await Promise.all([
@@ -98,12 +94,6 @@ export default function VehicleDetailScreen() {
     setRefreshing(false);
   }
 
-  const bg = isDark ? "#111827" : "#f9fafb";
-  const cardBg = isDark ? "#1f2937" : "#ffffff";
-  const textPrimary = isDark ? "#f3f4f6" : "#111827";
-  const textSecondary = isDark ? "#9ca3af" : "#6b7280";
-  const borderColor = isDark ? "#374151" : "#e5e7eb";
-
   if (loading) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: bg }}>
@@ -120,7 +110,7 @@ export default function VehicleDetailScreen() {
     );
   }
 
-  const currentTabData = {
+  const currentTabData: unknown[] = {
     maintenance,
     repairs,
     tests: mots,
@@ -130,8 +120,8 @@ export default function VehicleDetailScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: bg }}>
-      {/* Vehicle header card */}
-      <View style={{ backgroundColor: cardBg, padding: 16, borderBottomWidth: 1, borderBottomColor: borderColor }}>
+      {/* Vehicle header */}
+      <View style={{ backgroundColor: cardBg, paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: borderColor }}>
         <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" }}>
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: 20, fontWeight: "700", color: textPrimary }}>
@@ -149,76 +139,86 @@ export default function VehicleDetailScreen() {
               </Text>
             ) : null}
           </View>
-          <Link href={`/vehicles/${vehicleId}/edit`} asChild>
-            <Pressable
-              style={({ pressed }) => ({
-                padding: 8,
-                borderRadius: 8,
-                backgroundColor: isDark ? "#374151" : "#f3f4f6",
-                opacity: pressed ? 0.6 : 1,
-              })}
-            >
-              <Edit size={18} color={textSecondary} />
-            </Pressable>
-          </Link>
+          <Pressable
+            onPress={() => router.push(`/vehicles/${vehicleId}/edit`)}
+            style={({ pressed }) => ({
+              padding: 8,
+              borderRadius: 8,
+              backgroundColor: isDark ? "#374151" : "#f3f4f6",
+              opacity: pressed ? 0.6 : 1,
+            })}
+          >
+            <Edit size={18} color={textSecondary} />
+          </Pressable>
         </View>
       </View>
 
       {/* Tab bar */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={{ backgroundColor: cardBg, borderBottomWidth: 1, borderBottomColor: borderColor }}
-        contentContainerStyle={{ paddingHorizontal: 8 }}
-      >
-        {TABS.map((tab) => (
-          <Pressable
-            key={tab.id}
-            onPress={() => setActiveTab(tab.id)}
-            style={{
-              paddingHorizontal: 14,
-              paddingVertical: 12,
-              borderBottomWidth: 2,
-              borderBottomColor: activeTab === tab.id ? accent : "transparent",
-            }}
-          >
-            <Text
+      <View style={{ backgroundColor: cardBg, borderBottomWidth: 1, borderBottomColor: borderColor }}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 8 }}
+        >
+          {TABS.map((tab) => (
+            <Pressable
+              key={tab.id}
+              onPress={() => setActiveTab(tab.id)}
               style={{
-                fontSize: 13,
-                fontWeight: "600",
-                color: activeTab === tab.id ? accent : textSecondary,
+                paddingHorizontal: 14,
+                paddingVertical: 12,
+                borderBottomWidth: 2,
+                borderBottomColor: activeTab === tab.id ? accent : "transparent",
               }}
             >
-              {tab.label}
-            </Text>
-          </Pressable>
-        ))}
-      </ScrollView>
+              <Text
+                style={{
+                  fontSize: 13,
+                  fontWeight: "600",
+                  color: activeTab === tab.id ? accent : textSecondary,
+                }}
+              >
+                {tab.label}
+              </Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+      </View>
 
-      {/* Tab content */}
+      {/* Add button toolbar */}
+      <View
+        style={{
+          flexDirection: "row",
+          justifyContent: "flex-end",
+          paddingHorizontal: 12,
+          paddingVertical: 8,
+          backgroundColor: bg,
+        }}
+      >
+        <Pressable
+          onPress={() => router.push(`/vehicles/${vehicleId}/${ADD_PATH[activeTab]}`)}
+          style={({ pressed }) => ({
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 4,
+            paddingHorizontal: 14,
+            paddingVertical: 7,
+            borderRadius: 8,
+            backgroundColor: accent,
+            opacity: pressed ? 0.8 : 1,
+          })}
+        >
+          <Plus size={14} color="#fff" />
+          <Text style={{ color: "#fff", fontSize: 13, fontWeight: "600" }}>Add</Text>
+        </Pressable>
+      </View>
+
+      {/* Record list */}
       <FlatList
-        data={currentTabData as unknown[]}
+        style={{ flex: 1 }}
+        data={currentTabData}
         keyExtractor={(item) => String((item as { id: number }).id)}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        ListHeaderComponent={
-          <View style={{ flexDirection: "row", justifyContent: "flex-end", padding: 12 }}>
-            <Pressable
-              style={({ pressed }) => ({
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 4,
-                paddingHorizontal: 12,
-                paddingVertical: 6,
-                borderRadius: 8,
-                backgroundColor: accent,
-                opacity: pressed ? 0.8 : 1,
-              })}
-            >
-              <Plus size={14} color="#fff" />
-              <Text style={{ color: "#fff", fontSize: 13, fontWeight: "500" }}>Add</Text>
-            </Pressable>
-          </View>
-        }
         ListEmptyComponent={
           <View style={{ alignItems: "center", paddingVertical: 48 }}>
             <Text style={{ color: textSecondary, fontSize: 14 }}>No records yet</Text>
@@ -239,7 +239,7 @@ export default function VehicleDetailScreen() {
             />
           </View>
         )}
-        contentContainerStyle={{ paddingBottom: 24 }}
+        contentContainerStyle={{ paddingTop: 4, paddingBottom: 24 }}
       />
     </View>
   );

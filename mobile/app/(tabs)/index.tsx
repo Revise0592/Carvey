@@ -9,7 +9,6 @@ import {
 } from "react-native";
 import { Link, useFocusEffect } from "expo-router";
 import { Car, ChevronRight, Plus } from "lucide-react-native";
-import { useColorScheme } from "react-native";
 import {
   getActivePurchaseCount,
   getOpenReminderCount,
@@ -18,7 +17,8 @@ import {
   type Vehicle,
 } from "@/lib/db";
 import { formatCurrency, formatMiles } from "@/lib/format";
-import { useSettings, paletteAccentColors } from "@/lib/SettingsContext";
+import { useSettings } from "@/lib/SettingsContext";
+import { useTheme } from "@/lib/theme";
 
 export default function GarageScreen() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -28,9 +28,7 @@ export default function GarageScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const { settings } = useSettings();
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const accent = paletteAccentColors[settings.palette];
+  const { isDark, accent, bg, cardBg, textPrimary, textSecondary } = useTheme();
 
   async function loadData() {
     const [vs, spend, reminders, purchases] = await Promise.all([
@@ -60,7 +58,7 @@ export default function GarageScreen() {
 
   if (loading) {
     return (
-      <View className="flex-1 items-center justify-center" style={{ backgroundColor: isDark ? "#111827" : "#f9fafb" }}>
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: bg }}>
         <ActivityIndicator size="large" color={accent} />
       </View>
     );
@@ -68,7 +66,7 @@ export default function GarageScreen() {
 
   return (
     <FlatList
-      style={{ backgroundColor: isDark ? "#111827" : "#f9fafb" }}
+      style={{ backgroundColor: bg }}
       data={vehicles}
       keyExtractor={(item) => String(item.id)}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
@@ -79,25 +77,31 @@ export default function GarageScreen() {
             <StatCard
               label={`${new Date().getFullYear()} spend`}
               value={formatCurrency(yearlySpend, { currency: settings.currency })}
-              isDark={isDark}
+              cardBg={cardBg}
+              textPrimary={textPrimary}
+              textSecondary={textSecondary}
             />
             <StatCard
               label="Reminders"
               value={String(openReminders)}
-              isDark={isDark}
+              cardBg={cardBg}
+              textPrimary={textPrimary}
+              textSecondary={textSecondary}
               highlight={openReminders > 0}
               accent={accent}
             />
             <StatCard
               label="To buy"
               value={String(activePurchases)}
-              isDark={isDark}
+              cardBg={cardBg}
+              textPrimary={textPrimary}
+              textSecondary={textSecondary}
             />
           </View>
 
           {/* Section header */}
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-            <Text style={{ fontSize: 15, fontWeight: "600", color: isDark ? "#f3f4f6" : "#111827" }}>
+            <Text style={{ fontSize: 15, fontWeight: "600", color: textPrimary }}>
               Vehicles
             </Text>
             <Link href="/vehicles/new" asChild>
@@ -123,17 +127,17 @@ export default function GarageScreen() {
       ListEmptyComponent={
         <View style={{ alignItems: "center", justifyContent: "center", paddingVertical: 64, paddingHorizontal: 32 }}>
           <Car size={48} color={isDark ? "#4b5563" : "#d1d5db"} />
-          <Text style={{ marginTop: 16, fontSize: 15, fontWeight: "500", color: isDark ? "#9ca3af" : "#6b7280" }}>
+          <Text style={{ marginTop: 16, fontSize: 15, fontWeight: "500", color: textSecondary }}>
             No vehicles yet
           </Text>
           <Text style={{ marginTop: 4, fontSize: 13, textAlign: "center", color: isDark ? "#6b7280" : "#9ca3af" }}>
-            Tap &quot;Add&quot; to add your first vehicle
+            Tap "Add" to add your first vehicle
           </Text>
         </View>
       }
       renderItem={({ item }) => (
         <View style={{ paddingHorizontal: 16, marginBottom: 8 }}>
-          <VehicleCard vehicle={item} isDark={isDark} settings={settings} />
+          <VehicleCard vehicle={item} isDark={isDark} cardBg={cardBg} textPrimary={textPrimary} textSecondary={textSecondary} settings={settings} />
         </View>
       )}
       contentContainerStyle={{ paddingBottom: 24 }}
@@ -144,13 +148,17 @@ export default function GarageScreen() {
 function StatCard({
   label,
   value,
-  isDark,
+  cardBg,
+  textPrimary,
+  textSecondary,
   highlight,
   accent,
 }: {
   label: string;
   value: string;
-  isDark: boolean;
+  cardBg: string;
+  textPrimary: string;
+  textSecondary: string;
   highlight?: boolean;
   accent?: string;
 }) {
@@ -160,7 +168,7 @@ function StatCard({
         flex: 1,
         borderRadius: 12,
         padding: 12,
-        backgroundColor: isDark ? "#1f2937" : "#ffffff",
+        backgroundColor: cardBg,
         ...(highlight && accent ? { borderWidth: 1, borderColor: accent } : {}),
       }}
     >
@@ -168,16 +176,14 @@ function StatCard({
         style={{
           fontSize: 17,
           fontWeight: "700",
-          color: highlight && accent ? accent : isDark ? "#f3f4f6" : "#111827",
+          color: highlight && accent ? accent : textPrimary,
         }}
         numberOfLines={1}
         adjustsFontSizeToFit
       >
         {value}
       </Text>
-      <Text style={{ fontSize: 11, marginTop: 2, color: isDark ? "#9ca3af" : "#6b7280" }}>
-        {label}
-      </Text>
+      <Text style={{ fontSize: 11, marginTop: 2, color: textSecondary }}>{label}</Text>
     </View>
   );
 }
@@ -185,10 +191,16 @@ function StatCard({
 function VehicleCard({
   vehicle,
   isDark,
+  cardBg,
+  textPrimary,
+  textSecondary,
   settings,
 }: {
   vehicle: Vehicle;
   isDark: boolean;
+  cardBg: string;
+  textPrimary: string;
+  textSecondary: string;
   settings: { distanceUnit?: "miles" | "km" };
 }) {
   return (
@@ -200,7 +212,7 @@ function VehicleCard({
           flexDirection: "row",
           alignItems: "center",
           justifyContent: "space-between",
-          backgroundColor: isDark ? "#1f2937" : "#ffffff",
+          backgroundColor: cardBg,
           opacity: pressed ? 0.7 : 1,
         })}
       >
@@ -215,16 +227,13 @@ function VehicleCard({
               backgroundColor: isDark ? "#374151" : "#f3f4f6",
             }}
           >
-            <Car size={20} color={isDark ? "#9ca3af" : "#6b7280"} />
+            <Car size={20} color={textSecondary} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text
-              style={{ fontSize: 15, fontWeight: "600", color: isDark ? "#f3f4f6" : "#111827" }}
-              numberOfLines={1}
-            >
+            <Text style={{ fontSize: 15, fontWeight: "600", color: textPrimary }} numberOfLines={1}>
               {vehicle.make} {vehicle.model}
             </Text>
-            <Text style={{ fontSize: 13, color: isDark ? "#9ca3af" : "#6b7280" }} numberOfLines={1}>
+            <Text style={{ fontSize: 13, color: textSecondary }} numberOfLines={1}>
               {vehicle.registration}
               {vehicle.year ? ` · ${vehicle.year}` : ""}
               {vehicle.effectiveOdometer
@@ -233,7 +242,7 @@ function VehicleCard({
             </Text>
           </View>
         </View>
-        <ChevronRight size={18} color={isDark ? "#6b7280" : "#9ca3af"} />
+        <ChevronRight size={18} color={textSecondary} />
       </Pressable>
     </Link>
   );
