@@ -2,8 +2,8 @@ import "../global.css";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect, useState } from "react";
-import { useColorScheme } from "react-native";
 import { SettingsProvider } from "@/lib/SettingsContext";
+import { useTheme } from "@/lib/theme";
 import { getDb } from "@/lib/db";
 
 export { ErrorBoundary } from "expo-router";
@@ -42,27 +42,30 @@ export default function RootLayout() {
 }
 
 function RootLayoutNav() {
-  const colorScheme = useColorScheme();
+  const { isDark } = useTheme();
+
+  const headerBg = isDark ? "#111827" : "#ffffff";
+  const headerTint = isDark ? "#f9fafb" : "#111827";
+  const contentBg = isDark ? "#111827" : "#f9fafb";
 
   return (
     <Stack
       screenOptions={{
-        headerStyle: { backgroundColor: colorScheme === "dark" ? "#111827" : "#ffffff" },
-        headerTintColor: colorScheme === "dark" ? "#f9fafb" : "#111827",
-        contentStyle: { backgroundColor: colorScheme === "dark" ? "#111827" : "#f9fafb" },
+        headerStyle: { backgroundColor: headerBg },
+        headerTintColor: headerTint,
+        contentStyle: { backgroundColor: contentBg },
       }}
     >
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="modal" options={{ presentation: "modal" }} />
-      <Stack.Screen
-        name="vehicles/new"
-        options={{ title: "Add Vehicle", presentation: "modal" }}
-      />
+      <Stack.Screen name="vehicles/new" options={{ title: "Add Vehicle", presentation: "modal" }} />
       <Stack.Screen name="vehicles/[id]/index" options={{ title: "Vehicle" }} />
-      <Stack.Screen
-        name="vehicles/[id]/edit"
-        options={{ title: "Edit Vehicle", presentation: "modal" }}
-      />
+      <Stack.Screen name="vehicles/[id]/edit" options={{ title: "Edit Vehicle", presentation: "modal" }} />
+      <Stack.Screen name="vehicles/[id]/maintenance/new" options={{ title: "Add Maintenance", presentation: "modal" }} />
+      <Stack.Screen name="vehicles/[id]/repairs/new" options={{ title: "Add Repair", presentation: "modal" }} />
+      <Stack.Screen name="vehicles/[id]/tests/new" options={{ title: "Add Test", presentation: "modal" }} />
+      <Stack.Screen name="vehicles/[id]/reminders/new" options={{ title: "Add Reminder", presentation: "modal" }} />
+      <Stack.Screen name="vehicles/[id]/purchases/new" options={{ title: "Add Purchase", presentation: "modal" }} />
     </Stack>
   );
 }

@@ -1,14 +1,11 @@
 import { Tabs } from "expo-router";
 import { Car, Settings } from "lucide-react-native";
-import { useColorScheme } from "react-native";
 import { useSettings } from "@/lib/SettingsContext";
-import { paletteAccentColors } from "@/lib/SettingsContext";
+import { useTheme } from "@/lib/theme";
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
   const { settings } = useSettings();
-  const accentColor = paletteAccentColors[settings.palette];
-  const isDark = colorScheme === "dark";
+  const { isDark, accent: accentColor } = useTheme();
 
   return (
     <Tabs
