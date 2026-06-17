@@ -104,8 +104,8 @@ export default function GarageScreen() {
             <Text style={{ fontSize: 15, fontWeight: "600", color: textPrimary }}>
               Vehicles
             </Text>
-            <Link href="/vehicles/new" asChild>
               <Pressable
+                onPress={() => router.push("/vehicles/new")}
                 style={({ pressed }) => ({
                   flexDirection: "row",
                   alignItems: "center",
@@ -120,7 +120,6 @@ export default function GarageScreen() {
                 <Plus size={14} color="#fff" />
                 <Text style={{ color: "#fff", fontSize: 13, fontWeight: "500" }}>Add</Text>
               </Pressable>
-            </Link>
           </View>
         </View>
       }
