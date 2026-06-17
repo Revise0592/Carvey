@@ -1,6 +1,7 @@
-import { ScrollView, Text, View, Pressable } from "react-native";
+import { Alert, ScrollView, Switch, Text, View, Pressable } from "react-native";
 import { useSettings, paletteAccentColors, type ThemePalette } from "@/lib/SettingsContext";
 import { useTheme } from "@/lib/theme";
+import { exportBackup, importBackup } from "@/lib/backup";
 
 const CURRENCIES = [
   { label: "£ GBP", value: "GBP" as const },
@@ -46,6 +47,31 @@ const PALETTES: Array<{ label: string; value: ThemePalette }> = [
 export default function SettingsScreen() {
   const { settings, updateSetting } = useSettings();
   const { isDark, accent, bg, cardBg, textPrimary, textSecondary, borderColor } = useTheme();
+
+  async function handleExport() {
+    try {
+      await exportBackup();
+    } catch {
+      Alert.alert("Export Failed", "Could not export backup. Please try again.");
+    }
+  }
+
+  async function handleImport() {
+    try {
+      const result = await importBackup();
+      if (!result) return;
+      if (result.error) {
+        Alert.alert("Import Failed", result.error);
+        return;
+      }
+      Alert.alert(
+        "Import Complete",
+        `Added ${result.vehiclesImported} vehicle${result.vehiclesImported !== 1 ? "s" : ""} and ${result.recordsImported} record${result.recordsImported !== 1 ? "s" : ""}.`
+      );
+    } catch {
+      Alert.alert("Import Failed", "Could not import backup. Please try again.");
+    }
+  }
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: bg }} contentContainerStyle={{ paddingBottom: 40 }}>
@@ -144,6 +170,55 @@ export default function SettingsScreen() {
           textSecondary={textSecondary}
           borderColor={borderColor}
         />
+      </Section>
+
+      <Section title="Security" cardBg={cardBg} textPrimary={textPrimary} borderColor={borderColor}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+          <View style={{ flex: 1, marginRight: 12 }}>
+            <Text style={{ fontSize: 14, color: textPrimary, fontWeight: "500" }}>Biometric lock</Text>
+            <Text style={{ fontSize: 12, color: textSecondary, marginTop: 2 }}>
+              Require fingerprint or face ID when opening the app
+            </Text>
+          </View>
+          <Switch
+            value={settings.securityEnabled === "true"}
+            onValueChange={(v) => updateSetting("securityEnabled", v ? "true" : "false")}
+            thumbColor={settings.securityEnabled === "true" ? accent : "#9ca3af"}
+            trackColor={{ false: isDark ? "#374151" : "#d1d5db", true: accent + "80" }}
+          />
+        </View>
+      </Section>
+
+      <Section title="Data" cardBg={cardBg} textPrimary={textPrimary} borderColor={borderColor}>
+        <Pressable
+          onPress={handleExport}
+          style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+        >
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+            <View>
+              <Text style={{ fontSize: 14, color: textPrimary, fontWeight: "500" }}>Export backup</Text>
+              <Text style={{ fontSize: 12, color: textSecondary, marginTop: 2 }}>
+                Save all data as a JSON file
+              </Text>
+            </View>
+            <Text style={{ fontSize: 20, color: textSecondary }}>›</Text>
+          </View>
+        </Pressable>
+        <RowDivider borderColor={borderColor} />
+        <Pressable
+          onPress={handleImport}
+          style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+        >
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+            <View>
+              <Text style={{ fontSize: 14, color: textPrimary, fontWeight: "500" }}>Restore from backup</Text>
+              <Text style={{ fontSize: 12, color: textSecondary, marginTop: 2 }}>
+                Import vehicles and records from a backup file
+              </Text>
+            </View>
+            <Text style={{ fontSize: 20, color: textSecondary }}>›</Text>
+          </View>
+        </Pressable>
       </Section>
 
       <View style={{ paddingHorizontal: 16, marginTop: 8 }}>

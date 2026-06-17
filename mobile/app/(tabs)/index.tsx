@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Image,
   Pressable,
   RefreshControl,
   Text,
@@ -216,18 +217,26 @@ function VehicleCard({
       })}
     >
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12, flex: 1 }}>
-          <View
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: 8,
-              alignItems: "center",
-              justifyContent: "center",
-              backgroundColor: isDark ? "#374151" : "#f3f4f6",
-            }}
-          >
-            <Car size={20} color={textSecondary} />
-          </View>
+          {vehicle.thumbnailPath ? (
+            <Image
+              source={{ uri: vehicle.thumbnailPath }}
+              style={{ width: 40, height: 40, borderRadius: 8 }}
+              resizeMode="cover"
+            />
+          ) : (
+            <View
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 8,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: isDark ? "#374151" : "#f3f4f6",
+              }}
+            >
+              <Car size={20} color={textSecondary} />
+            </View>
+          )}
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: 15, fontWeight: "600", color: textPrimary }} numberOfLines={1}>
               {vehicle.make} {vehicle.model}

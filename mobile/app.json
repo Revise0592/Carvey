@@ -35,7 +35,14 @@
         }
       ],
       "expo-secure-store",
-      "expo-local-authentication"
+      "expo-local-authentication",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Carvey to access your photos to set vehicle photos.",
+          "cameraPermission": "Allow Carvey to use the camera to take vehicle photos."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
