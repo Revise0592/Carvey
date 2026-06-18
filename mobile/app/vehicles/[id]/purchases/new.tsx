@@ -1,13 +1,11 @@
 import { useState } from "react";
 import {
   Alert,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
-  ScrollView,
   Text,
   View,
 } from "react-native";
+import { FormScrollView } from "@/components/FormScrollView";
 import { router, useLocalSearchParams } from "expo-router";
 import { createPlannedPurchase } from "@/lib/db";
 import { useTheme } from "@/lib/theme";
@@ -60,11 +58,7 @@ export default function NewPurchaseScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: bg }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+    <FormScrollView bg={bg}>
         <View style={{ backgroundColor: cardBg, borderRadius: 12, padding: 16, borderWidth: 1, borderColor }}>
           <Field
             label="Item *"
@@ -154,7 +148,6 @@ export default function NewPurchaseScreen() {
             {saving ? "Saving…" : "Save Item"}
           </Text>
         </Pressable>
-      </ScrollView>
-    </KeyboardAvoidingView>
+    </FormScrollView>
   );
 }

@@ -2,14 +2,12 @@ import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
-  ScrollView,
   Text,
   TextInput,
   View,
 } from "react-native";
+import { FormScrollView } from "@/components/FormScrollView";
 import { router, useLocalSearchParams } from "expo-router";
 import { archiveVehicle, getVehicle, updateVehicle, type Vehicle } from "@/lib/db";
 import { useSettings } from "@/lib/SettingsContext";
@@ -104,11 +102,7 @@ export default function EditVehicleScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: bg }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+    <FormScrollView bg={bg}>
         <View style={{ backgroundColor: cardBg, borderRadius: 12, padding: 16, borderWidth: 1, borderColor }}>
           <Field label="Make *" value={make} onChangeText={setMake} placeholder="e.g. Ford" inputBg={inputBg} textPrimary={textPrimary} textSecondary={textSecondary} borderColor={borderColor} />
           <FieldDivider borderColor={borderColor} />
@@ -194,8 +188,7 @@ export default function EditVehicleScreen() {
         >
           <Text style={{ color: "#dc2626", fontSize: 15, fontWeight: "500" }}>Archive Vehicle</Text>
         </Pressable>
-      </ScrollView>
-    </KeyboardAvoidingView>
+    </FormScrollView>
   );
 }
 
