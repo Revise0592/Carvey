@@ -2,13 +2,11 @@ import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
-  ScrollView,
   Text,
   View,
 } from "react-native";
+import { FormScrollView } from "@/components/FormScrollView";
 import { router, useLocalSearchParams } from "expo-router";
 import { completeReminder, deleteReminder, getReminder, updateReminder } from "@/lib/db";
 import { useTheme } from "@/lib/theme";
@@ -99,11 +97,7 @@ export default function EditReminderScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: bg }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+    <FormScrollView bg={bg}>
         <View style={{ backgroundColor: cardBg, borderRadius: 12, padding: 16, borderWidth: 1, borderColor }}>
           <Field
             label="Title *"
@@ -217,7 +211,6 @@ export default function EditReminderScreen() {
         >
           <Text style={{ color: "#dc2626", fontSize: 15, fontWeight: "600" }}>Delete Reminder</Text>
         </Pressable>
-      </ScrollView>
-    </KeyboardAvoidingView>
+    </FormScrollView>
   );
 }
