@@ -927,6 +927,48 @@ export async function deletePlannedPurchase(id: number, vehicleId: number): Prom
   await db.runAsync("DELETE FROM planned_purchases WHERE id = ? AND vehicle_id = ?", id, vehicleId);
 }
 
+export async function convertPlannedPurchaseToMaintenance(
+  id: number,
+  vehicleId: number,
+  input: Omit<MaintenanceRecord, "id" | "createdAt">
+): Promise<number> {
+  const db = await getDb();
+  const recordId = await createMaintenance(input);
+  await db.runAsync(
+    `UPDATE planned_purchases
+     SET converted_to_type = 'maintenance',
+         converted_record_id = ?,
+         converted_at = CURRENT_TIMESTAMP,
+         updated_at = CURRENT_TIMESTAMP
+     WHERE id = ? AND vehicle_id = ? AND purchased_date IS NOT NULL AND converted_at IS NULL`,
+    recordId,
+    id,
+    vehicleId
+  );
+  return recordId;
+}
+
+export async function convertPlannedPurchaseToRepair(
+  id: number,
+  vehicleId: number,
+  input: Omit<RepairRecord, "id" | "createdAt">
+): Promise<number> {
+  const db = await getDb();
+  const recordId = await createRepair(input);
+  await db.runAsync(
+    `UPDATE planned_purchases
+     SET converted_to_type = 'repair',
+         converted_record_id = ?,
+         converted_at = CURRENT_TIMESTAMP,
+         updated_at = CURRENT_TIMESTAMP
+     WHERE id = ? AND vehicle_id = ? AND purchased_date IS NOT NULL AND converted_at IS NULL`,
+    recordId,
+    id,
+    vehicleId
+  );
+  return recordId;
+}
+
 // ─── Workshops ───────────────────────────────────────────────────────────────
 
 export async function listWorkshops(): Promise<Workshop[]> {
@@ -1173,9 +1215,12 @@ export async function getYearlySpend(): Promise<number> {
     `SELECT COALESCE(
       (SELECT SUM(cost) FROM maintenance_records WHERE date LIKE ? || '%')
       + (SELECT SUM(cost) FROM repair_records WHERE date LIKE ? || '%')
-      + (SELECT SUM(cost) FROM mot_records WHERE test_date LIKE ? || '%'),
+      + (SELECT SUM(cost) FROM mot_records WHERE test_date LIKE ? || '%')
+      + (SELECT COALESCE(SUM(CASE WHEN actual_cost IS NOT NULL THEN actual_cost ELSE estimated_cost END), 0)
+         FROM planned_purchases WHERE purchased_date LIKE ? || '%'),
       0
     ) as total`,
+    year,
     year,
     year,
     year

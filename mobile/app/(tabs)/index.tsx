@@ -73,6 +73,9 @@ export default function GarageScreen() {
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       ListHeaderComponent={
         <View style={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8 }}>
+          <Text style={{ fontSize: 22, fontWeight: "700", color: textPrimary, marginBottom: 12 }}>
+            {settings.collectionName}
+          </Text>
           {/* Stats row */}
           <View style={{ flexDirection: "row", gap: 12, marginBottom: 16 }}>
             <StatCard
