@@ -13,6 +13,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { deleteRepair, getRepair, updateRepair } from "@/lib/db";
 import { useTheme } from "@/lib/theme";
 import { Field, FieldDivider } from "@/components/FormField";
+import { DatePickerField } from "@/components/DatePickerField";
 import { WorkshopPicker } from "@/components/WorkshopPicker";
 
 export default function EditRepairScreen() {
@@ -47,12 +48,8 @@ export default function EditRepairScreen() {
   }, [recordId, vehicleId]);
 
   async function handleSave() {
-    if (!date.trim() || !fault.trim()) {
+    if (!date || !fault.trim()) {
       Alert.alert("Required fields", "Please fill in date and fault description.");
-      return;
-    }
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      Alert.alert("Invalid date", "Please use YYYY-MM-DD format (e.g. 2026-06-17).");
       return;
     }
     setSaving(true);
@@ -102,12 +99,11 @@ export default function EditRepairScreen() {
     >
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
         <View style={{ backgroundColor: cardBg, borderRadius: 12, padding: 16, borderWidth: 1, borderColor }}>
-          <Field
-            label="Date * (YYYY-MM-DD)"
+          <DatePickerField
+            label="Date *"
             value={date}
-            onChangeText={setDate}
-            placeholder="2026-06-17"
-            autoCapitalize="none"
+            onChange={setDate}
+            accent={accent}
             textPrimary={textPrimary}
             textSecondary={textSecondary}
             borderColor={borderColor}

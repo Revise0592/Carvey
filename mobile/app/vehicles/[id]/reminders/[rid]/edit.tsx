@@ -13,6 +13,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { completeReminder, deleteReminder, getReminder, updateReminder } from "@/lib/db";
 import { useTheme } from "@/lib/theme";
 import { Field, FieldDivider } from "@/components/FormField";
+import { DatePickerField } from "@/components/DatePickerField";
 
 const RECURRENCE_OPTIONS = [
   { label: "None", value: "" },
@@ -54,15 +55,11 @@ export default function EditReminderScreen() {
       Alert.alert("Required fields", "Please enter a reminder title.");
       return;
     }
-    if (dueDate && !/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) {
-      Alert.alert("Invalid date", "Please use YYYY-MM-DD format (e.g. 2026-06-17).");
-      return;
-    }
     setSaving(true);
     try {
       await updateReminder(recordId, vehicleId, {
         title: title.trim(),
-        dueDate: dueDate.trim() || null,
+        dueDate: dueDate || null,
         dueOdometer: dueOdometer ? parseInt(dueOdometer, 10) : null,
         recurrence: recurrence || null,
         completedAt: isCompleted ? new Date().toISOString() : null,
@@ -119,12 +116,12 @@ export default function EditReminderScreen() {
             inputBg={inputBg}
           />
           <FieldDivider borderColor={borderColor} />
-          <Field
-            label="Due Date (YYYY-MM-DD)"
+          <DatePickerField
+            label="Due Date"
             value={dueDate}
-            onChangeText={setDueDate}
-            placeholder="Optional"
-            autoCapitalize="none"
+            onChange={setDueDate}
+            optional
+            accent={accent}
             textPrimary={textPrimary}
             textSecondary={textSecondary}
             borderColor={borderColor}

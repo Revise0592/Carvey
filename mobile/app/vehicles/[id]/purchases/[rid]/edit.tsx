@@ -13,6 +13,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { deletePlannedPurchase, getPlannedPurchase, updatePlannedPurchase } from "@/lib/db";
 import { useTheme } from "@/lib/theme";
 import { Field, FieldDivider } from "@/components/FormField";
+import { DatePickerField } from "@/components/DatePickerField";
 
 const today = new Date().toISOString().slice(0, 10);
 
@@ -52,10 +53,6 @@ export default function EditPurchaseScreen() {
       Alert.alert("Required fields", "Please enter an item name.");
       return;
     }
-    if (dueDate && !/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) {
-      Alert.alert("Invalid date", "Please use YYYY-MM-DD format (e.g. 2026-06-17).");
-      return;
-    }
     setSaving(true);
     try {
       await updatePlannedPurchase(recordId, vehicleId, {
@@ -63,7 +60,7 @@ export default function EditPurchaseScreen() {
         quantity: quantity ? parseInt(quantity, 10) : 1,
         estimatedCost: estimatedCost ? parseFloat(estimatedCost) : 0,
         supplier: supplier.trim() || null,
-        dueDate: dueDate.trim() || null,
+        dueDate: dueDate || null,
         notes: notes.trim() || null,
       });
       router.back();
@@ -161,12 +158,12 @@ export default function EditPurchaseScreen() {
             inputBg={inputBg}
           />
           <FieldDivider borderColor={borderColor} />
-          <Field
-            label="Needed By (YYYY-MM-DD)"
+          <DatePickerField
+            label="Needed By"
             value={dueDate}
-            onChangeText={setDueDate}
-            placeholder="Optional"
-            autoCapitalize="none"
+            onChange={setDueDate}
+            optional
+            accent={accent}
             textPrimary={textPrimary}
             textSecondary={textSecondary}
             borderColor={borderColor}

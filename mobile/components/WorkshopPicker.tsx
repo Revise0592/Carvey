@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { FlatList, Modal, Pressable, Text, View } from "react-native";
+import { ChevronRight } from "lucide-react-native";
 import { listWorkshops, type Workshop } from "@/lib/db";
 
 type Props = {
@@ -63,7 +64,7 @@ export function WorkshopPicker({
               <Text style={{ color: "#dc2626", fontSize: 13, fontWeight: "600" }}>Clear</Text>
             </Pressable>
           ) : null}
-          <Text style={{ color: accent, fontSize: 13, fontWeight: "600" }}>›</Text>
+          <ChevronRight size={16} color={accent} />
         </View>
       </Pressable>
 

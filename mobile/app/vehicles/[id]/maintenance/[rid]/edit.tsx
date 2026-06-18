@@ -13,6 +13,8 @@ import { router, useLocalSearchParams } from "expo-router";
 import { deleteMaintenance, getMaintenance, updateMaintenance } from "@/lib/db";
 import { useTheme } from "@/lib/theme";
 import { Field, FieldDivider } from "@/components/FormField";
+import { DatePickerField } from "@/components/DatePickerField";
+import { CategoryPicker } from "@/components/CategoryPicker";
 
 export default function EditMaintenanceScreen() {
   const { id, rid } = useLocalSearchParams<{ id: string; rid: string }>();
@@ -44,12 +46,8 @@ export default function EditMaintenanceScreen() {
   }, [recordId, vehicleId]);
 
   async function handleSave() {
-    if (!date.trim() || !category.trim() || !description.trim()) {
+    if (!date || !category.trim() || !description.trim()) {
       Alert.alert("Required fields", "Please fill in date, category and description.");
-      return;
-    }
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      Alert.alert("Invalid date", "Please use YYYY-MM-DD format (e.g. 2026-06-17).");
       return;
     }
     setSaving(true);
@@ -98,12 +96,11 @@ export default function EditMaintenanceScreen() {
     >
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
         <View style={{ backgroundColor: cardBg, borderRadius: 12, padding: 16, borderWidth: 1, borderColor }}>
-          <Field
-            label="Date * (YYYY-MM-DD)"
+          <DatePickerField
+            label="Date *"
             value={date}
-            onChangeText={setDate}
-            placeholder="2026-06-17"
-            autoCapitalize="none"
+            onChange={setDate}
+            accent={accent}
             textPrimary={textPrimary}
             textSecondary={textSecondary}
             borderColor={borderColor}
@@ -119,6 +116,16 @@ export default function EditMaintenanceScreen() {
             textSecondary={textSecondary}
             borderColor={borderColor}
             inputBg={inputBg}
+          />
+          <CategoryPicker
+            category={category}
+            onSelect={setCategory}
+            textPrimary={textPrimary}
+            textSecondary={textSecondary}
+            borderColor={borderColor}
+            cardBg={cardBg}
+            bg={bg}
+            accent={accent}
           />
           <FieldDivider borderColor={borderColor} />
           <Field

@@ -14,16 +14,16 @@ import { deleteMot, getMot, updateMot, upsertMotReminder } from "@/lib/db";
 import { useSettings } from "@/lib/SettingsContext";
 import { useTheme } from "@/lib/theme";
 import { Field, FieldDivider } from "@/components/FormField";
+import { DatePickerField } from "@/components/DatePickerField";
 
 function nextYear(dateStr: string): string {
-  try {
-    const d = new Date(dateStr);
-    d.setFullYear(d.getFullYear() + 1);
-    d.setDate(d.getDate() - 1);
-    return d.toISOString().slice(0, 10);
-  } catch {
-    return "";
-  }
+  if (!dateStr) return "";
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const next = new Date(y + 1, m - 1, d - 1);
+  const ny = next.getFullYear();
+  const nm = String(next.getMonth() + 1).padStart(2, "0");
+  const nd = String(next.getDate()).padStart(2, "0");
+  return `${ny}-${nm}-${nd}`;
 }
 
 type Result = "pass" | "fail" | "advisory";
@@ -68,12 +68,8 @@ export default function EditTestScreen() {
   }, [recordId, vehicleId]);
 
   async function handleSave() {
-    if (!testDate.trim() || !expiryDate.trim()) {
+    if (!testDate || !expiryDate) {
       Alert.alert("Required fields", "Please fill in test date and expiry date.");
-      return;
-    }
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(testDate) || !/^\d{4}-\d{2}-\d{2}$/.test(expiryDate)) {
-      Alert.alert("Invalid date", "Please use YYYY-MM-DD format (e.g. 2026-06-17).");
       return;
     }
     setSaving(true);
@@ -126,27 +122,25 @@ export default function EditTestScreen() {
     >
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
         <View style={{ backgroundColor: cardBg, borderRadius: 12, padding: 16, borderWidth: 1, borderColor }}>
-          <Field
-            label="Test Date * (YYYY-MM-DD)"
+          <DatePickerField
+            label="Test Date *"
             value={testDate}
-            onChangeText={(v) => {
+            onChange={(v) => {
               setTestDate(v);
-              if (/^\d{4}-\d{2}-\d{2}$/.test(v)) setExpiryDate(nextYear(v));
+              if (v) setExpiryDate(nextYear(v));
             }}
-            placeholder="2026-06-17"
-            autoCapitalize="none"
+            accent={accent}
             textPrimary={textPrimary}
             textSecondary={textSecondary}
             borderColor={borderColor}
             inputBg={inputBg}
           />
           <FieldDivider borderColor={borderColor} />
-          <Field
-            label="Expiry Date * (YYYY-MM-DD)"
+          <DatePickerField
+            label="Expiry Date *"
             value={expiryDate}
-            onChangeText={setExpiryDate}
-            placeholder="2027-06-16"
-            autoCapitalize="none"
+            onChange={setExpiryDate}
+            accent={accent}
             textPrimary={textPrimary}
             textSecondary={textSecondary}
             borderColor={borderColor}
