@@ -13,6 +13,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { deleteRepair, getRepair, updateRepair } from "@/lib/db";
 import { useTheme } from "@/lib/theme";
 import { Field, FieldDivider } from "@/components/FormField";
+import { WorkshopPicker } from "@/components/WorkshopPicker";
 
 export default function EditRepairScreen() {
   const { id, rid } = useLocalSearchParams<{ id: string; rid: string }>();
@@ -23,6 +24,7 @@ export default function EditRepairScreen() {
   const [date, setDate] = useState("");
   const [fault, setFault] = useState("");
   const [garage, setGarage] = useState("");
+  const [workshopId, setWorkshopId] = useState<number | null>(null);
   const [cost, setCost] = useState("");
   const [odometer, setOdometer] = useState("");
   const [notes, setNotes] = useState("");
@@ -36,6 +38,7 @@ export default function EditRepairScreen() {
       setDate(r.date);
       setFault(r.fault);
       setGarage(r.garage ?? "");
+      setWorkshopId(r.workshopId);
       setCost(r.cost ? String(r.cost) : "");
       setOdometer(r.odometer ? String(r.odometer) : "");
       setNotes(r.notes ?? "");
@@ -58,7 +61,7 @@ export default function EditRepairScreen() {
         date,
         fault: fault.trim(),
         garage: garage.trim() || null,
-        workshopId: null,
+        workshopId,
         cost: cost ? parseFloat(cost) : 0,
         odometer: odometer ? parseInt(odometer, 10) : null,
         notes: notes.trim() || null,
@@ -125,12 +128,23 @@ export default function EditRepairScreen() {
           <Field
             label="Garage / Workshop"
             value={garage}
-            onChangeText={setGarage}
+            onChangeText={(v) => { setGarage(v); if (v !== garage) setWorkshopId(null); }}
             placeholder="e.g. Halfords Autocentre"
             textPrimary={textPrimary}
             textSecondary={textSecondary}
             borderColor={borderColor}
             inputBg={inputBg}
+          />
+          <WorkshopPicker
+            workshopId={workshopId}
+            garageName={garage}
+            onSelect={(id, name) => { setWorkshopId(id); setGarage(name); }}
+            textPrimary={textPrimary}
+            textSecondary={textSecondary}
+            borderColor={borderColor}
+            cardBg={cardBg}
+            bg={bg}
+            accent={accent}
           />
           <FieldDivider borderColor={borderColor} />
           <Field

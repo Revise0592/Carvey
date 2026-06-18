@@ -1059,6 +1059,26 @@ export async function deleteMaintenanceCategory(id: number): Promise<void> {
   await db.runAsync("DELETE FROM maintenance_categories WHERE id = ?", id);
 }
 
+export type ReminderWithVehicle = Reminder & {
+  vehicleMake: string;
+  vehicleModel: string;
+  vehicleRegistration: string;
+};
+
+export async function listAllOpenReminders(): Promise<ReminderWithVehicle[]> {
+  const db = await getDb();
+  return db.getAllAsync<ReminderWithVehicle>(
+    `SELECT r.id, r.vehicle_id as vehicleId, r.title, r.due_date as dueDate,
+            r.due_odometer as dueOdometer, r.recurrence, r.completed_at as completedAt,
+            r.created_at as createdAt,
+            v.make as vehicleMake, v.model as vehicleModel, v.registration as vehicleRegistration
+     FROM reminders r
+     JOIN vehicles v ON r.vehicle_id = v.id
+     WHERE r.completed_at IS NULL AND v.archived = 0 AND v.sold = 0
+     ORDER BY r.due_date IS NULL, r.due_date ASC, r.id ASC`
+  );
+}
+
 // ─── Service Intervals ───────────────────────────────────────────────────────
 
 export async function listServiceIntervals(): Promise<ServiceInterval[]> {

@@ -1,3 +1,4 @@
+import { Platform } from "react-native";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import * as DocumentPicker from "expo-document-picker";
@@ -30,14 +31,34 @@ export async function exportBackup(): Promise<void> {
   };
 
   const date = new Date().toISOString().slice(0, 10);
-  const path = FileSystem.documentDirectory + `carvey_backup_${date}.json`;
-  await FileSystem.writeAsStringAsync(path, JSON.stringify(backup, null, 2));
+  const fileName = `carvey_backup_${date}.json`;
+  const content = JSON.stringify(backup, null, 2);
 
+  if (Platform.OS === "android") {
+    try {
+      const permissions = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
+      if (permissions.granted) {
+        const fileUri = await FileSystem.StorageAccessFramework.createFileAsync(
+          permissions.directoryUri,
+          fileName,
+          "application/json"
+        );
+        await FileSystem.writeAsStringAsync(fileUri, content, { encoding: FileSystem.EncodingType.UTF8 });
+        return;
+      }
+    } catch {
+      // Fall through to share sheet
+    }
+  }
+
+  const path = (FileSystem.documentDirectory ?? "") + fileName;
+  await FileSystem.writeAsStringAsync(path, content);
   const isAvailable = await Sharing.isAvailableAsync();
   if (isAvailable) {
     await Sharing.shareAsync(path, {
       mimeType: "application/json",
       dialogTitle: "Export Carvey Backup",
+      UTI: "public.json",
     });
   }
 }

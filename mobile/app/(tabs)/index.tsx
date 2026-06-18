@@ -90,6 +90,7 @@ export default function GarageScreen() {
               textSecondary={textSecondary}
               highlight={openReminders > 0}
               accent={accent}
+              onPress={openReminders > 0 ? () => router.push("/reminders") : undefined}
             />
             <StatCard
               label="To buy"
@@ -153,6 +154,7 @@ function StatCard({
   textSecondary,
   highlight,
   accent,
+  onPress,
 }: {
   label: string;
   value: string;
@@ -161,8 +163,9 @@ function StatCard({
   textSecondary: string;
   highlight?: boolean;
   accent?: string;
+  onPress?: () => void;
 }) {
-  return (
+  const inner = (
     <View
       style={{
         flex: 1,
@@ -186,6 +189,15 @@ function StatCard({
       <Text style={{ fontSize: 11, marginTop: 2, color: textSecondary }}>{label}</Text>
     </View>
   );
+
+  if (onPress) {
+    return (
+      <Pressable style={{ flex: 1 }} onPress={onPress} android_ripple={{ color: "rgba(0,0,0,0.06)" }}>
+        {inner}
+      </Pressable>
+    );
+  }
+  return inner;
 }
 
 function VehicleCard({
@@ -220,21 +232,21 @@ function VehicleCard({
           {vehicle.thumbnailPath ? (
             <Image
               source={{ uri: vehicle.thumbnailPath }}
-              style={{ width: 40, height: 40, borderRadius: 8 }}
+              style={{ width: 56, height: 56, borderRadius: 10 }}
               resizeMode="cover"
             />
           ) : (
             <View
               style={{
-                width: 40,
-                height: 40,
-                borderRadius: 8,
+                width: 56,
+                height: 56,
+                borderRadius: 10,
                 alignItems: "center",
                 justifyContent: "center",
                 backgroundColor: isDark ? "#374151" : "#f3f4f6",
               }}
             >
-              <Car size={20} color={textSecondary} />
+              <Car size={26} color={textSecondary} />
             </View>
           )}
           <View style={{ flex: 1 }}>

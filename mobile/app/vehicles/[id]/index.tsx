@@ -34,6 +34,7 @@ import {
   type Vehicle,
 } from "@/lib/db";
 import { formatCurrency, formatDate, formatMiles, formatMotResult } from "@/lib/format";
+
 import { getReminderStatus } from "@/lib/reminders";
 import { useSettings } from "@/lib/SettingsContext";
 import { useTheme } from "@/lib/theme";
@@ -165,21 +166,21 @@ export default function VehicleDetailScreen() {
               {vehicle.photoPath ? (
                 <Image
                   source={{ uri: vehicle.photoPath }}
-                  style={{ width: 64, height: 64, borderRadius: 10 }}
+                  style={{ width: 80, height: 80, borderRadius: 10 }}
                   resizeMode="cover"
                 />
               ) : (
                 <View
                   style={{
-                    width: 64,
-                    height: 64,
+                    width: 80,
+                    height: 80,
                     borderRadius: 10,
                     alignItems: "center",
                     justifyContent: "center",
                     backgroundColor: isDark ? "#374151" : "#f3f4f6",
                   }}
                 >
-                  <Car size={28} color={textSecondary} />
+                  <Car size={34} color={textSecondary} />
                 </View>
               )}
               <View
@@ -477,18 +478,39 @@ function RecordRow({
 
   if (tab === "purchases") {
     const r = item as PlannedPurchase;
+    const bought = !!r.purchasedDate;
     return (
-      <View style={rowStyle}>
-        <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-          <Text style={{ fontSize: 14, fontWeight: "600", color: textPrimary, flex: 1 }} numberOfLines={1}>
+      <View style={[rowStyle, bought ? { opacity: 0.75 } : {}]}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+          <Text
+            style={{
+              fontSize: 14,
+              fontWeight: "600",
+              color: textPrimary,
+              flex: 1,
+              textDecorationLine: bought ? "line-through" : "none",
+            }}
+            numberOfLines={1}
+          >
             {r.itemName}
           </Text>
-          <Text style={{ fontSize: 14, fontWeight: "600", color: textPrimary, marginLeft: 8 }}>
-            {formatCurrency(r.estimatedCost, settings)}
-          </Text>
+          {bought ? (
+            <View style={{ backgroundColor: "#16a34a20", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 12, marginLeft: 8 }}>
+              <Text style={{ fontSize: 11, fontWeight: "600", color: "#16a34a" }}>Bought</Text>
+            </View>
+          ) : (
+            <Text style={{ fontSize: 14, fontWeight: "600", color: textPrimary, marginLeft: 8 }}>
+              {formatCurrency(r.estimatedCost, settings)}
+            </Text>
+          )}
         </View>
-        {r.supplier ? (
+        {r.supplier && !bought ? (
           <Text style={{ fontSize: 12, color: textSecondary, marginTop: 2 }}>{r.supplier}</Text>
+        ) : null}
+        {bought && r.purchasedDate ? (
+          <Text style={{ fontSize: 12, color: "#16a34a", marginTop: 2 }}>
+            Purchased {formatDate(r.purchasedDate, settings)}
+          </Text>
         ) : null}
       </View>
     );
