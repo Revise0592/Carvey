@@ -12,6 +12,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { createReminder } from "@/lib/db";
 import { useTheme } from "@/lib/theme";
 import { Field, FieldDivider } from "@/components/FormField";
+import { DatePickerField } from "@/components/DatePickerField";
 
 const RECURRENCE_OPTIONS = [
   { label: "None", value: "" },
@@ -38,16 +39,12 @@ export default function NewReminderScreen() {
       Alert.alert("Required fields", "Please enter a reminder title.");
       return;
     }
-    if (dueDate && !/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) {
-      Alert.alert("Invalid date", "Please use YYYY-MM-DD format (e.g. 2026-06-17).");
-      return;
-    }
     setSaving(true);
     try {
       await createReminder({
         vehicleId,
         title: title.trim(),
-        dueDate: dueDate.trim() || null,
+        dueDate: dueDate || null,
         dueOdometer: dueOdometer ? parseInt(dueOdometer, 10) : null,
         recurrence: recurrence || null,
       });
@@ -76,12 +73,12 @@ export default function NewReminderScreen() {
             inputBg={inputBg}
           />
           <FieldDivider borderColor={borderColor} />
-          <Field
-            label="Due Date (YYYY-MM-DD)"
+          <DatePickerField
+            label="Due Date"
             value={dueDate}
-            onChangeText={setDueDate}
-            placeholder="Optional"
-            autoCapitalize="none"
+            onChange={setDueDate}
+            optional
+            accent={accent}
             textPrimary={textPrimary}
             textSecondary={textSecondary}
             borderColor={borderColor}
@@ -101,7 +98,6 @@ export default function NewReminderScreen() {
           />
           <FieldDivider borderColor={borderColor} />
 
-          {/* Recurrence */}
           <Text style={{ fontSize: 13, color: textSecondary, marginBottom: 8 }}>Repeat</Text>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
             {RECURRENCE_OPTIONS.map((opt) => {
