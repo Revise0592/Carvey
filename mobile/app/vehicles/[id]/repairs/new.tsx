@@ -12,6 +12,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { createRepair } from "@/lib/db";
 import { useTheme } from "@/lib/theme";
 import { Field, FieldDivider } from "@/components/FormField";
+import { WorkshopPicker } from "@/components/WorkshopPicker";
 
 const today = new Date().toISOString().slice(0, 10);
 
@@ -22,6 +23,7 @@ export default function NewRepairScreen() {
   const [date, setDate] = useState(today);
   const [fault, setFault] = useState("");
   const [garage, setGarage] = useState("");
+  const [workshopId, setWorkshopId] = useState<number | null>(null);
   const [cost, setCost] = useState("");
   const [odometer, setOdometer] = useState("");
   const [notes, setNotes] = useState("");
@@ -45,7 +47,7 @@ export default function NewRepairScreen() {
         date,
         fault: fault.trim(),
         garage: garage.trim() || null,
-        workshopId: null,
+        workshopId,
         cost: cost ? parseFloat(cost) : 0,
         odometer: odometer ? parseInt(odometer, 10) : null,
         notes: notes.trim() || null,
@@ -90,12 +92,23 @@ export default function NewRepairScreen() {
           <Field
             label="Garage / Workshop"
             value={garage}
-            onChangeText={setGarage}
+            onChangeText={(v) => { setGarage(v); if (v !== garage) setWorkshopId(null); }}
             placeholder="e.g. Halfords Autocentre"
             textPrimary={textPrimary}
             textSecondary={textSecondary}
             borderColor={borderColor}
             inputBg={inputBg}
+          />
+          <WorkshopPicker
+            workshopId={workshopId}
+            garageName={garage}
+            onSelect={(id, name) => { setWorkshopId(id); setGarage(name); }}
+            textPrimary={textPrimary}
+            textSecondary={textSecondary}
+            borderColor={borderColor}
+            cardBg={cardBg}
+            bg={bg}
+            accent={accent}
           />
           <FieldDivider borderColor={borderColor} />
           <Field

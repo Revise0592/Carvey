@@ -24,18 +24,20 @@ export function formatMiles(
   return settings?.distanceUnit === "km" ? `${formatted} km` : `${formatted} miles`;
 }
 
+const MONTHS_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
 export function formatDate(
   value: string | null | undefined,
   settings?: { dateFormat?: "dd-mon-yyyy" | "iso" }
 ): string {
   if (!value) return "Not set";
-  if (settings?.dateFormat === "iso") return value.slice(0, 10);
-  const dateValue = value.includes("T") || value.includes(" ") ? value : `${value}T12:00:00`;
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(new Date(dateValue));
+  const iso = value.slice(0, 10);
+  if (settings?.dateFormat === "iso") return iso;
+  const parts = iso.split("-");
+  if (parts.length !== 3) return iso;
+  const monthIdx = parseInt(parts[1], 10) - 1;
+  if (monthIdx < 0 || monthIdx > 11) return iso;
+  return `${parts[2]} ${MONTHS_SHORT[monthIdx]} ${parts[0]}`;
 }
 
 export function todayIso(): string {

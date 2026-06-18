@@ -1,5 +1,6 @@
 import "../global.css";
 import { Stack } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import * as SplashScreen from "expo-splash-screen";
 import * as LocalAuthentication from "expo-local-authentication";
 import { useEffect, useRef, useState } from "react";
@@ -150,13 +151,15 @@ function RootLayoutNav() {
   }
 
   return (
-    <Stack
-      screenOptions={{
-        headerStyle: { backgroundColor: headerBg },
-        headerTintColor: headerTint,
-        contentStyle: { backgroundColor: contentBg },
-      }}
-    >
+    <>
+      <StatusBar style={isDark ? "light" : "dark"} />
+      <Stack
+        screenOptions={{
+          headerStyle: { backgroundColor: headerBg },
+          headerTintColor: headerTint,
+          contentStyle: { backgroundColor: contentBg },
+        }}
+      >
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="modal" options={{ presentation: "modal" }} />
       <Stack.Screen name="vehicles/new" options={{ title: "Add Vehicle", presentation: "modal" }} />
@@ -176,6 +179,8 @@ function RootLayoutNav() {
       <Stack.Screen name="workshops/new" options={{ title: "Add Workshop", presentation: "modal" }} />
       <Stack.Screen name="workshops/[wid]/edit" options={{ title: "Edit Workshop", presentation: "modal" }} />
       <Stack.Screen name="categories" options={{ title: "Maintenance Categories" }} />
+      <Stack.Screen name="reminders" options={{ title: "Reminders" }} />
     </Stack>
+    </>
   );
 }
