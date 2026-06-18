@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { FlatList, Modal, Pressable, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronRight } from "lucide-react-native";
 import { listMaintenanceCategories, type MaintenanceCategory } from "@/lib/db";
 
@@ -52,7 +53,7 @@ export function CategoryPicker({
       </Pressable>
 
       <Modal visible={open} animationType="slide" presentationStyle="pageSheet">
-        <View style={{ flex: 1, backgroundColor: bg }}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
           <View
             style={{
               flexDirection: "row",
@@ -92,7 +93,7 @@ export function CategoryPicker({
               </Pressable>
             )}
           />
-        </View>
+        </SafeAreaView>
       </Modal>
     </>
   );
