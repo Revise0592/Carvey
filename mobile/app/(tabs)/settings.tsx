@@ -192,7 +192,7 @@ export default function SettingsScreen() {
 
       <Section title="Manage" cardBg={cardBg} textPrimary={textPrimary} borderColor={borderColor}>
         <Pressable
-          onPress={() => router.push("/workshops/index")}
+          onPress={() => router.push("/workshops")}
           android_ripple={{ color: "rgba(0,0,0,0.08)" }}
         >
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
@@ -207,7 +207,7 @@ export default function SettingsScreen() {
         </Pressable>
         <RowDivider borderColor={borderColor} />
         <Pressable
-          onPress={() => router.push("/categories/index")}
+          onPress={() => router.push("/categories")}
           android_ripple={{ color: "rgba(0,0,0,0.08)" }}
         >
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
