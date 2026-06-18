@@ -4,8 +4,8 @@ import { Car, Settings } from "lucide-react-native";
 import { useSettings } from "@/lib/SettingsContext";
 import { useTheme } from "@/lib/theme";
 
-const logoLight = require("../../assets/images/Carvey-light.png");
-const logoDark = require("../../assets/images/Carvey-dark.png");
+const logoLight = require("../../assets/images/Carvey-plate-rear.png");
+const logoDark = require("../../assets/images/Carvey-plate-front.png");
 
 export default function TabLayout() {
   const { settings } = useSettings();
@@ -22,6 +22,7 @@ export default function TabLayout() {
         },
         headerStyle: { backgroundColor: isDark ? "#111827" : "#ffffff" },
         headerTintColor: isDark ? "#f9fafb" : "#111827",
+        headerTitleAlign: "center",
       }}
     >
       <Tabs.Screen
@@ -32,7 +33,7 @@ export default function TabLayout() {
           headerTitle: () => (
             <Image
               source={isDark ? logoDark : logoLight}
-              style={{ height: 28, width: 110 }}
+              style={{ height: 30, width: 160 }}
               resizeMode="contain"
             />
           ),
