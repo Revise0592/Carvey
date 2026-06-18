@@ -8,7 +8,13 @@ import {
 } from "react-native";
 import { FormScrollView } from "@/components/FormScrollView";
 import { router, useLocalSearchParams } from "expo-router";
-import { deletePlannedPurchase, getPlannedPurchase, updatePlannedPurchase } from "@/lib/db";
+import {
+  convertPlannedPurchaseToMaintenance,
+  convertPlannedPurchaseToRepair,
+  deletePlannedPurchase,
+  getPlannedPurchase,
+  updatePlannedPurchase,
+} from "@/lib/db";
 import { useTheme } from "@/lib/theme";
 import { Field, FieldDivider } from "@/components/FormField";
 import { DatePickerField } from "@/components/DatePickerField";
@@ -28,6 +34,9 @@ export default function EditPurchaseScreen() {
   const [dueDate, setDueDate] = useState("");
   const [notes, setNotes] = useState("");
   const [isPurchased, setIsPurchased] = useState(false);
+  const [purchasedDate, setPurchasedDate] = useState<string | null>(null);
+  const [convertedAt, setConvertedAt] = useState<string | null>(null);
+  const [convertedToType, setConvertedToType] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   const { accent, bg, cardBg, textPrimary, textSecondary, borderColor, inputBg } = useTheme();
@@ -42,6 +51,9 @@ export default function EditPurchaseScreen() {
       setDueDate(r.dueDate ?? "");
       setNotes(r.notes ?? "");
       setIsPurchased(!!r.purchasedDate);
+      setPurchasedDate(r.purchasedDate ?? null);
+      setConvertedAt(r.convertedAt ?? null);
+      setConvertedToType(r.convertedToType ?? null);
       setLoading(false);
     });
   }, [recordId, vehicleId]);
@@ -79,6 +91,59 @@ export default function EditPurchaseScreen() {
         },
       },
     ]);
+  }
+
+  function handleConvertMaintenance() {
+    const date = purchasedDate ?? today;
+    Alert.alert(
+      "Add as Maintenance Record",
+      `Create a maintenance record for "${itemName}"?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Add Record",
+          onPress: async () => {
+            await convertPlannedPurchaseToMaintenance(recordId, vehicleId, {
+              vehicleId,
+              date,
+              odometer: null,
+              category: itemName,
+              description: itemName,
+              cost: estimatedCost ? parseFloat(estimatedCost) : 0,
+              notes: notes.trim() || null,
+            });
+            router.back();
+          },
+        },
+      ]
+    );
+  }
+
+  function handleConvertRepair() {
+    const date = purchasedDate ?? today;
+    Alert.alert(
+      "Add as Repair Record",
+      `Create a repair record for "${itemName}"?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Add Record",
+          onPress: async () => {
+            await convertPlannedPurchaseToRepair(recordId, vehicleId, {
+              vehicleId,
+              date,
+              odometer: null,
+              fault: itemName,
+              garage: null,
+              workshopId: null,
+              cost: estimatedCost ? parseFloat(estimatedCost) : 0,
+              notes: notes.trim() || null,
+            });
+            router.back();
+          },
+        },
+      ]
+    );
   }
 
   function handleDelete() {
@@ -210,6 +275,45 @@ export default function EditPurchaseScreen() {
           >
             <Text style={{ color: "#16a34a", fontSize: 15, fontWeight: "600" }}>Mark as Bought</Text>
           </Pressable>
+        ) : null}
+
+        {isPurchased && !convertedAt ? (
+          <View style={{ marginTop: 16 }}>
+            <Text style={{ fontSize: 13, color: textSecondary, textAlign: "center", marginBottom: 10 }}>
+              Add to maintenance history
+            </Text>
+            <Pressable
+              onPress={handleConvertMaintenance}
+              android_ripple={{ color: "rgba(0,0,0,0.08)" }}
+              style={{
+                paddingVertical: 14,
+                borderRadius: 12,
+                alignItems: "center",
+                borderWidth: 1,
+                borderColor: accent,
+              }}
+            >
+              <Text style={{ color: accent, fontSize: 15, fontWeight: "600" }}>Add as Maintenance Record</Text>
+            </Pressable>
+            <Pressable
+              onPress={handleConvertRepair}
+              android_ripple={{ color: "rgba(0,0,0,0.08)" }}
+              style={{
+                marginTop: 10,
+                paddingVertical: 14,
+                borderRadius: 12,
+                alignItems: "center",
+                borderWidth: 1,
+                borderColor: accent,
+              }}
+            >
+              <Text style={{ color: accent, fontSize: 15, fontWeight: "600" }}>Add as Repair Record</Text>
+            </Pressable>
+          </View>
+        ) : isPurchased && convertedAt ? (
+          <Text style={{ fontSize: 13, color: textSecondary, textAlign: "center", marginTop: 16 }}>
+            Converted to {convertedToType} record
+          </Text>
         ) : null}
 
         <Pressable

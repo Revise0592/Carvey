@@ -1,4 +1,5 @@
-import { Alert, ScrollView, Switch, Text, View, Pressable } from "react-native";
+import { Alert, ScrollView, Switch, Text, TextInput, View, Pressable } from "react-native";
+import { useState } from "react";
 import { router } from "expo-router";
 import { useSettings, paletteAccentColors, type ThemePalette } from "@/lib/SettingsContext";
 import { useTheme } from "@/lib/theme";
@@ -47,7 +48,8 @@ const PALETTES: Array<{ label: string; value: ThemePalette }> = [
 
 export default function SettingsScreen() {
   const { settings, updateSetting } = useSettings();
-  const { isDark, accent, bg, cardBg, textPrimary, textSecondary, borderColor } = useTheme();
+  const { isDark, accent, bg, cardBg, textPrimary, textSecondary, borderColor, inputBg } = useTheme();
+  const [nameInput, setNameInput] = useState(settings.collectionName);
 
   async function handleExport() {
     try {
@@ -76,6 +78,42 @@ export default function SettingsScreen() {
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: bg }} contentContainerStyle={{ paddingBottom: 40 }}>
+      <Section title="Personalisation" cardBg={cardBg} textPrimary={textPrimary} borderColor={borderColor}>
+        <Text style={{ fontSize: 13, color: textSecondary, marginBottom: 8 }}>Collection name</Text>
+        <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+          <TextInput
+            value={nameInput}
+            onChangeText={setNameInput}
+            maxLength={40}
+            returnKeyType="done"
+            onSubmitEditing={() => updateSetting("collectionName", nameInput.trim() || "My cars")}
+            style={{
+              flex: 1,
+              backgroundColor: inputBg,
+              borderRadius: 8,
+              paddingHorizontal: 10,
+              paddingVertical: 8,
+              fontSize: 14,
+              color: textPrimary,
+              borderWidth: 1,
+              borderColor,
+            }}
+          />
+          <Pressable
+            onPress={() => updateSetting("collectionName", nameInput.trim() || "My cars")}
+            android_ripple={{ color: "rgba(255,255,255,0.25)" }}
+            style={{
+              backgroundColor: accent,
+              paddingHorizontal: 14,
+              paddingVertical: 9,
+              borderRadius: 8,
+            }}
+          >
+            <Text style={{ color: "#fff", fontSize: 14, fontWeight: "600" }}>Save</Text>
+          </Pressable>
+        </View>
+      </Section>
+
       <Section title="Regional" cardBg={cardBg} textPrimary={textPrimary} borderColor={borderColor}>
         <SegmentedRow
           label="Currency"

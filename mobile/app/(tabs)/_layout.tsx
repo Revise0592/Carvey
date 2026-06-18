@@ -1,7 +1,11 @@
+import { Image } from "react-native";
 import { Tabs } from "expo-router";
 import { Car, Settings } from "lucide-react-native";
 import { useSettings } from "@/lib/SettingsContext";
 import { useTheme } from "@/lib/theme";
+
+const logoLight = require("../../assets/images/Carvey-light.png");
+const logoDark = require("../../assets/images/Carvey-dark.png");
 
 export default function TabLayout() {
   const { settings } = useSettings();
@@ -23,9 +27,15 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: settings.collectionName,
           tabBarLabel: "Garage",
           tabBarIcon: ({ color, size }) => <Car size={size} color={color} />,
+          headerTitle: () => (
+            <Image
+              source={isDark ? logoDark : logoLight}
+              style={{ height: 28, width: 110 }}
+              resizeMode="contain"
+            />
+          ),
         }}
       />
       <Tabs.Screen
