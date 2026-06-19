@@ -32,7 +32,13 @@
       "Bash(git commit -m ' *)",
       "Bash(git push *)",
       "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\('exports', d.get\\('main', 'no exports'\\)\\), indent=2\\)\\)\")",
-      "Bash(sed -i 's/<ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>/<ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>/g' \\\\ *)"
+      "Bash(sed -i 's/<ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>/<ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>/g' \\\\ *)",
+      "Bash(file /home/harvey/vscode/Carvey/mobile/assets/images/*.png)",
+      "Bash(identify /home/harvey/vscode/Carvey/mobile/assets/images/*.png)",
+      "Bash(python3 -c ' *)",
+      "Bash(git pull *)",
+      "Bash(git stash *)",
+      "Bash(git fetch *)"
     ],
     "additionalDirectories": [
       "/home/harvey/vscode/Carvey/mobile/app/vehicles/[id]/maintenance"
