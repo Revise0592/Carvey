@@ -103,6 +103,22 @@ export function formatFuelEconomy(
   return `${(distance / (volumeLitres / 4.54609)).toFixed(1)} mpg`;
 }
 
+export function computeAverageFuelEconomy(
+  records: Array<{ odometer: number; volumeLitres: number; fullTank: number }>,
+  settings: { distanceUnit?: string; currency?: string }
+): string | null {
+  const sorted = [...records].sort((a, b) => a.odometer - b.odometer);
+  const fullTanks = sorted.filter(r => r.fullTank);
+  if (fullTanks.length < 2) return null;
+  const first = fullTanks[0];
+  const last = fullTanks[fullTanks.length - 1];
+  const distance = last.odometer - first.odometer;
+  const totalVolume = sorted
+    .filter(r => r.odometer > first.odometer && r.odometer <= last.odometer)
+    .reduce((sum, r) => sum + r.volumeLitres, 0);
+  return formatFuelEconomy(distance, totalVolume, settings);
+}
+
 export function computeFuelEconomies(
   records: Array<{ id: number; odometer: number; volumeLitres: number; fullTank: number }>,
   settings: { distanceUnit?: string; currency?: string }
