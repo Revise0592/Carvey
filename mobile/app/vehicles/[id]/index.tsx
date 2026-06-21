@@ -14,18 +14,21 @@ import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { Camera, Car, Edit, Plus } from "lucide-react-native";
 import { pickAndSaveVehiclePhoto } from "@/lib/photos";
 import {
+  deleteFuelRecord,
   deleteMaintenance,
   deleteMot,
   deletePlannedPurchase,
   deleteReminder,
   deleteRepair,
   getVehicle,
+  listFuelRecords,
   listMaintenance,
   listMots,
   listPlannedPurchases,
   listReminders,
   listRepairs,
   setVehiclePhoto,
+  type FuelRecord,
   type MaintenanceRecord,
   type MotRecord,
   type PlannedPurchase,
@@ -33,13 +36,13 @@ import {
   type RepairRecord,
   type Vehicle,
 } from "@/lib/db";
-import { formatCurrency, formatDate, formatMiles, formatMotResult } from "@/lib/format";
+import { computeFuelEconomies, formatCurrency, formatDate, formatMiles, formatMotResult, formatVolume } from "@/lib/format";
 
 import { getReminderStatus } from "@/lib/reminders";
 import { useSettings } from "@/lib/SettingsContext";
 import { useTheme } from "@/lib/theme";
 
-type Tab = "maintenance" | "repairs" | "tests" | "reminders" | "purchases";
+type Tab = "maintenance" | "repairs" | "tests" | "reminders" | "purchases" | "fuel";
 
 function testTabLabel(motFeature: string): string {
   if (motFeature === "emissionsTest") return "Emissions Test";
@@ -53,6 +56,7 @@ const ADD_PATH: Record<Tab, string> = {
   tests: "tests/new",
   reminders: "reminders/new",
   purchases: "purchases/new",
+  fuel: "fuel/new",
 };
 
 export default function VehicleDetailScreen() {
@@ -65,6 +69,7 @@ export default function VehicleDetailScreen() {
   const [mots, setMots] = useState<MotRecord[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [purchases, setPurchases] = useState<PlannedPurchase[]>([]);
+  const [fuelRecords, setFuelRecords] = useState<FuelRecord[]>([]);
   const [activeTab, setActiveTab] = useState<Tab>("maintenance");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -78,16 +83,18 @@ export default function VehicleDetailScreen() {
     { id: "tests", label: testTabLabel(settings.motFeature) },
     { id: "reminders", label: "Reminders" },
     { id: "purchases", label: "Purchases" },
+    ...(settings.fuelDisabled !== "true" ? [{ id: "fuel" as Tab, label: "Fuel" }] : []),
   ];
 
   async function loadData() {
-    const [v, m, r, mo, rem, pur] = await Promise.all([
+    const [v, m, r, mo, rem, pur, fuel] = await Promise.all([
       getVehicle(vehicleId),
       listMaintenance(vehicleId),
       listRepairs(vehicleId),
       listMots(vehicleId),
       listReminders(vehicleId),
       listPlannedPurchases(vehicleId),
+      listFuelRecords(vehicleId),
     ]);
     setVehicle(v);
     setMaintenance(m);
@@ -95,6 +102,7 @@ export default function VehicleDetailScreen() {
     setMots(mo);
     setReminders(rem);
     setPurchases(pur);
+    setFuelRecords(fuel);
   }
 
   useFocusEffect(
@@ -149,7 +157,12 @@ export default function VehicleDetailScreen() {
     tests: mots,
     reminders,
     purchases,
+    fuel: fuelRecords,
   }[activeTab];
+
+  const fuelEconomies = activeTab === "fuel"
+    ? computeFuelEconomies(fuelRecords, settings)
+    : new Map<number, string>();
 
   return (
     <View style={{ flex: 1, backgroundColor: bg }}>
@@ -309,6 +322,7 @@ export default function VehicleDetailScreen() {
               tests: `${basePath}/tests/${record.id}/edit`,
               reminders: `${basePath}/reminders/${record.id}/edit`,
               purchases: `${basePath}/purchases/${record.id}/edit`,
+              fuel: `${basePath}/fuel/${record.id}/edit`,
             };
             router.push(pathMap[activeTab]);
           }
@@ -324,6 +338,7 @@ export default function VehicleDetailScreen() {
                   else if (activeTab === "tests") await deleteMot(record.id, vehicleId);
                   else if (activeTab === "reminders") await deleteReminder(record.id, vehicleId);
                   else if (activeTab === "purchases") await deletePlannedPurchase(record.id, vehicleId);
+                  else if (activeTab === "fuel") await deleteFuelRecord(record.id, vehicleId);
                   await loadData();
                 },
               },
@@ -342,6 +357,7 @@ export default function VehicleDetailScreen() {
                   textSecondary={textSecondary}
                   borderColor={borderColor}
                   settings={settings}
+                  fuelEconomy={fuelEconomies.get((item as { id: number }).id)}
                 />
               </Pressable>
             </View>
@@ -363,6 +379,7 @@ function RecordRow({
   textSecondary,
   borderColor,
   settings,
+  fuelEconomy,
 }: {
   tab: Tab;
   item: unknown;
@@ -373,6 +390,7 @@ function RecordRow({
   textSecondary: string;
   borderColor: string;
   settings: { currency?: "GBP" | "USD" | "EUR"; distanceUnit?: "miles" | "km"; dateFormat?: "dd-mon-yyyy" | "iso" };
+  fuelEconomy?: string;
 }) {
   const rowStyle = {
     backgroundColor: cardBg,
@@ -512,6 +530,41 @@ function RecordRow({
             Purchased {formatDate(r.purchasedDate, settings)}
           </Text>
         ) : null}
+      </View>
+    );
+  }
+
+  if (tab === "fuel") {
+    const r = item as FuelRecord;
+    return (
+      <View style={rowStyle}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 14, fontWeight: "600", color: textPrimary }}>
+              {formatVolume(r.volumeLitres, settings)}
+              {r.station ? ` · ${r.station}` : ""}
+            </Text>
+            <Text style={{ fontSize: 12, color: textSecondary, marginTop: 2 }}>
+              {formatDate(r.date, settings)} · {formatMiles(r.odometer, settings)}
+              {r.fuelType !== "petrol" ? ` · ${r.fuelType}` : ""}
+            </Text>
+          </View>
+          <View style={{ alignItems: "flex-end", marginLeft: 8 }}>
+            {r.totalCost != null ? (
+              <Text style={{ fontSize: 14, fontWeight: "600", color: textPrimary }}>
+                {formatCurrency(r.totalCost, settings)}
+              </Text>
+            ) : null}
+            {fuelEconomy ? (
+              <View style={{ backgroundColor: "#3b82f620", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8, marginTop: 2 }}>
+                <Text style={{ fontSize: 11, fontWeight: "600", color: "#3b82f6" }}>{fuelEconomy}</Text>
+              </View>
+            ) : null}
+            {!r.fullTank ? (
+              <Text style={{ fontSize: 10, color: textSecondary, marginTop: 2 }}>Partial</Text>
+            ) : null}
+          </View>
+        </View>
       </View>
     );
   }

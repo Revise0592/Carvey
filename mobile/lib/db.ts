@@ -149,6 +149,20 @@ export type VehicleServiceInterval = {
   intervalMileage: number | null;
 };
 
+export type FuelRecord = {
+  id: number;
+  vehicleId: number;
+  date: string;
+  odometer: number;
+  volumeLitres: number;
+  totalCost: number | null;
+  fuelType: string;
+  fullTank: number;
+  station: string | null;
+  notes: string | null;
+  createdAt: string;
+};
+
 export const defaultCollectionName = "My cars";
 
 // ─── Singleton ───────────────────────────────────────────────────────────────
@@ -325,6 +339,20 @@ async function migrate(database: SQLiteDatabase) {
       UNIQUE(vehicle_id, service_interval_id)
     );
 
+    CREATE TABLE IF NOT EXISTS fuel_records (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      vehicle_id INTEGER NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
+      date TEXT NOT NULL,
+      odometer INTEGER NOT NULL,
+      volume_litres REAL NOT NULL,
+      total_cost REAL,
+      fuel_type TEXT NOT NULL DEFAULT 'petrol',
+      full_tank INTEGER NOT NULL DEFAULT 1,
+      station TEXT,
+      notes TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
     CREATE INDEX IF NOT EXISTS idx_vehicles_archived ON vehicles(archived);
     CREATE INDEX IF NOT EXISTS idx_workshops_preferred ON workshops(preferred);
     CREATE INDEX IF NOT EXISTS idx_maintenance_vehicle ON maintenance_records(vehicle_id);
@@ -335,6 +363,7 @@ async function migrate(database: SQLiteDatabase) {
     CREATE INDEX IF NOT EXISTS idx_attachments_record ON record_attachments(record_type, record_id);
     CREATE INDEX IF NOT EXISTS idx_attachments_vehicle ON record_attachments(vehicle_id);
     CREATE INDEX IF NOT EXISTS idx_vehicle_service_intervals_vehicle ON vehicle_service_intervals(vehicle_id);
+    CREATE INDEX IF NOT EXISTS idx_fuel_vehicle ON fuel_records(vehicle_id);
   `);
 }
 
@@ -1262,4 +1291,76 @@ export async function getUpcomingMots(): Promise<
     today,
     ninety
   );
+}
+
+// ─── Fuel Records ─────────────────────────────────────────────────────────────
+
+export async function listFuelRecords(vehicleId: number): Promise<FuelRecord[]> {
+  const db = await getDb();
+  return db.getAllAsync<FuelRecord>(
+    `SELECT id, vehicle_id as vehicleId, date, odometer, volume_litres as volumeLitres,
+            total_cost as totalCost, fuel_type as fuelType, full_tank as fullTank,
+            station, notes, created_at as createdAt
+     FROM fuel_records WHERE vehicle_id = ? ORDER BY date DESC, id DESC`,
+    vehicleId
+  );
+}
+
+export async function getFuelRecord(id: number, vehicleId: number): Promise<FuelRecord | null> {
+  const db = await getDb();
+  return db.getFirstAsync<FuelRecord>(
+    `SELECT id, vehicle_id as vehicleId, date, odometer, volume_litres as volumeLitres,
+            total_cost as totalCost, fuel_type as fuelType, full_tank as fullTank,
+            station, notes, created_at as createdAt
+     FROM fuel_records WHERE id = ? AND vehicle_id = ?`,
+    id,
+    vehicleId
+  );
+}
+
+export async function createFuelRecord(input: Omit<FuelRecord, "id" | "createdAt">): Promise<number> {
+  const db = await getDb();
+  const result = await db.runAsync(
+    `INSERT INTO fuel_records (vehicle_id, date, odometer, volume_litres, total_cost, fuel_type, full_tank, station, notes)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    input.vehicleId,
+    input.date,
+    input.odometer,
+    input.volumeLitres,
+    input.totalCost,
+    input.fuelType,
+    input.fullTank,
+    input.station,
+    input.notes
+  );
+  return result.lastInsertRowId;
+}
+
+export async function updateFuelRecord(
+  id: number,
+  vehicleId: number,
+  input: Omit<FuelRecord, "id" | "vehicleId" | "createdAt">
+): Promise<void> {
+  const db = await getDb();
+  await db.runAsync(
+    `UPDATE fuel_records
+     SET date = ?, odometer = ?, volume_litres = ?, total_cost = ?,
+         fuel_type = ?, full_tank = ?, station = ?, notes = ?
+     WHERE id = ? AND vehicle_id = ?`,
+    input.date,
+    input.odometer,
+    input.volumeLitres,
+    input.totalCost,
+    input.fuelType,
+    input.fullTank,
+    input.station,
+    input.notes,
+    id,
+    vehicleId
+  );
+}
+
+export async function deleteFuelRecord(id: number, vehicleId: number): Promise<void> {
+  const db = await getDb();
+  await db.runAsync("DELETE FROM fuel_records WHERE id = ? AND vehicle_id = ?", id, vehicleId);
 }

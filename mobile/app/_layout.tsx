@@ -175,6 +175,8 @@ function RootLayoutNav() {
       <Stack.Screen name="vehicles/[id]/tests/[rid]/edit" options={{ title: editTestTitle, presentation: "modal" }} />
       <Stack.Screen name="vehicles/[id]/reminders/[rid]/edit" options={{ title: "Edit Reminder", presentation: "modal" }} />
       <Stack.Screen name="vehicles/[id]/purchases/[rid]/edit" options={{ title: "Edit Purchase", presentation: "modal" }} />
+      <Stack.Screen name="vehicles/[id]/fuel/new" options={{ title: "Add Fill-up", presentation: "modal" }} />
+      <Stack.Screen name="vehicles/[id]/fuel/[rid]/edit" options={{ title: "Edit Fill-up", presentation: "modal" }} />
       <Stack.Screen name="workshops" options={{ title: "Workshops" }} />
       <Stack.Screen name="workshops/new" options={{ title: "Add Workshop", presentation: "modal" }} />
       <Stack.Screen name="workshops/[wid]/edit" options={{ title: "Edit Workshop", presentation: "modal" }} />

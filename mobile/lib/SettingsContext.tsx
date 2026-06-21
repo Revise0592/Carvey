@@ -7,6 +7,7 @@ export type RegionalSettings = {
   dateFormat: "dd-mon-yyyy" | "iso";
   distanceUnit: "miles" | "km";
   plateStyle: "uk-yellow" | "uk-white";
+  fuelDisabled: "true" | "false";
 };
 
 export type ThemePalette =
@@ -34,6 +35,7 @@ const defaults: AppSettings = {
   dateFormat: "dd-mon-yyyy",
   distanceUnit: "miles",
   plateStyle: "uk-yellow",
+  fuelDisabled: "false",
   palette: "default",
   darkMode: "system",
   collectionName: "My cars",

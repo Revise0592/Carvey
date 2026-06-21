@@ -129,6 +129,20 @@ export type AuthSession = {
   revokedAt: string | null;
 };
 
+export type FuelRecord = {
+  id: number;
+  vehicleId: number;
+  date: string;
+  odometer: number;
+  volumeLitres: number;
+  totalCost: number | null;
+  fuelType: string;
+  fullTank: number;
+  station: string | null;
+  notes: string | null;
+  createdAt: string;
+};
+
 export type Workshop = {
   id: number;
   name: string;
@@ -371,6 +385,20 @@ function migrate(database: Database.Database) {
       UNIQUE(vehicle_id, service_interval_id)
     );
 
+    CREATE TABLE IF NOT EXISTS fuel_records (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      vehicle_id INTEGER NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
+      date TEXT NOT NULL,
+      odometer INTEGER NOT NULL,
+      volume_litres REAL NOT NULL,
+      total_cost REAL,
+      fuel_type TEXT NOT NULL DEFAULT 'petrol',
+      full_tank INTEGER NOT NULL DEFAULT 1,
+      station TEXT,
+      notes TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
     CREATE INDEX IF NOT EXISTS idx_vehicles_archived ON vehicles(archived);
     CREATE INDEX IF NOT EXISTS idx_auth_sessions_admin ON auth_sessions(admin_user_id);
     CREATE INDEX IF NOT EXISTS idx_workshops_preferred ON workshops(preferred);
@@ -384,6 +412,7 @@ function migrate(database: Database.Database) {
     CREATE INDEX IF NOT EXISTS idx_attachments_vehicle ON record_attachments(vehicle_id);
     CREATE INDEX IF NOT EXISTS idx_vehicle_service_intervals_vehicle ON vehicle_service_intervals(vehicle_id);
     CREATE INDEX IF NOT EXISTS idx_vehicle_service_intervals_reminder ON vehicle_service_intervals(reminder_id);
+    CREATE INDEX IF NOT EXISTS idx_fuel_vehicle ON fuel_records(vehicle_id);
   `);
   ensureColumn(database, "vehicles", "purchase_price", "REAL");
   ensureColumn(database, "vehicles", "purchase_date", "TEXT");
@@ -1171,9 +1200,11 @@ export function getVehicleLoggedSpend(vehicleId: number) {
         SELECT cost FROM mot_records WHERE vehicle_id = ?
         UNION ALL
         SELECT COALESCE(actual_cost, estimated_cost) as cost FROM planned_purchases WHERE vehicle_id = ? AND purchased_date IS NOT NULL AND converted_at IS NULL
+        UNION ALL
+        SELECT total_cost as cost FROM fuel_records WHERE vehicle_id = ? AND total_cost IS NOT NULL
       )
     `)
-    .get(vehicleId, vehicleId, vehicleId, vehicleId) as { total: number };
+    .get(vehicleId, vehicleId, vehicleId, vehicleId, vehicleId) as { total: number };
   return row.total;
 }
 
@@ -1345,6 +1376,63 @@ export function deleteAttachment(id: number, vehicleId: number) {
   return getDb()
     .prepare("DELETE FROM record_attachments WHERE id = ? AND vehicle_id = ?")
     .run(id, vehicleId);
+}
+
+// ─── Fuel Records ─────────────────────────────────────────────────────────────
+
+const fuelSelect = `
+  id,
+  vehicle_id as vehicleId,
+  date,
+  odometer,
+  volume_litres as volumeLitres,
+  total_cost as totalCost,
+  fuel_type as fuelType,
+  full_tank as fullTank,
+  station,
+  notes,
+  created_at as createdAt
+`;
+
+export function listFuelRecords(vehicleId: number): FuelRecord[] {
+  return getDb()
+    .prepare(`SELECT ${fuelSelect} FROM fuel_records WHERE vehicle_id = ? ORDER BY date DESC, id DESC`)
+    .all(vehicleId) as FuelRecord[];
+}
+
+export function getFuelRecord(id: number, vehicleId: number): FuelRecord | undefined {
+  return getDb()
+    .prepare(`SELECT ${fuelSelect} FROM fuel_records WHERE id = ? AND vehicle_id = ?`)
+    .get(id, vehicleId) as FuelRecord | undefined;
+}
+
+export function createFuelRecord(input: Omit<FuelRecord, "id" | "createdAt">) {
+  return getDb()
+    .prepare(`INSERT INTO fuel_records (vehicle_id, date, odometer, volume_litres, total_cost, fuel_type, full_tank, station, notes)
+              VALUES (@vehicleId, @date, @odometer, @volumeLitres, @totalCost, @fuelType, @fullTank, @station, @notes)`)
+    .run(input);
+}
+
+export function updateFuelRecord(id: number, vehicleId: number, input: Omit<FuelRecord, "id" | "vehicleId" | "createdAt">) {
+  return getDb()
+    .prepare(`UPDATE fuel_records
+              SET date = @date, odometer = @odometer, volume_litres = @volumeLitres, total_cost = @totalCost,
+                  fuel_type = @fuelType, full_tank = @fullTank, station = @station, notes = @notes
+              WHERE id = @id AND vehicle_id = @vehicleId`)
+    .run({ id, vehicleId, ...input });
+}
+
+export function deleteFuelRecord(id: number, vehicleId: number) {
+  return getDb()
+    .prepare("DELETE FROM fuel_records WHERE id = ? AND vehicle_id = ?")
+    .run(id, vehicleId);
+}
+
+export function getVehicleFuelSpend(vehicleId: number): number {
+  const row = getDb()
+    .prepare("SELECT COALESCE(SUM(total_cost), 0) as total FROM fuel_records WHERE vehicle_id = ? AND total_cost IS NOT NULL")
+    .get(vehicleId) as { total: number };
+  return row.total;
 }
 
 export function listAndDeleteAttachmentsForRecord(recordType: string, recordId: number): RecordAttachment[] {
