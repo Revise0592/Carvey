@@ -2,6 +2,13 @@
 
 All notable changes to Carvey will be documented here.
 
+## [1.0.5] - 2026-06-21
+
+### Added
+
+- Fuel logging — record fill-ups per vehicle with date, odometer, volume, cost, fuel type, and notes; displayed as a sortable list on the vehicle page
+- Vehicle photo gallery — browse all uploaded photos for a vehicle in a scrollable grid; photos are sourced from maintenance, repair, and other record attachments
+
 ## [1.0.4] - 2026-06-16
 
 ### Changed
