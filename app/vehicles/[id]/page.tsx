@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { BadgeCheck, CalendarDays, Check, ExternalLink, Fuel, Hammer, PackagePlus, Plus, Printer, RefreshCw, ShieldCheck, Wrench } from "lucide-react";
+import { BadgeCheck, CalendarDays, Check, ExternalLink, Fuel, Hammer, Images, PackagePlus, Plus, Printer, RefreshCw, ShieldCheck, Trash2, Wrench } from "lucide-react";
 import { AppFrame } from "@/components/AppFrame";
 import { BackButton } from "@/components/BackButton";
 import {
@@ -17,6 +17,7 @@ import {
   EditReminderForm,
   EditRepairForm,
   FuelRecordForm,
+  GalleryUploadForm,
   MarkPlannedPurchaseBoughtForm,
   MaintenanceForm,
   MileagePill,
@@ -29,18 +30,19 @@ import { ExplosionEffect } from "@/components/ExplosionEffect";
 import { RegistrationPlate } from "@/components/RegistrationPlate";
 import { VehiclePhotoUploadForm } from "@/components/VehiclePhotoUploadForm";
 import { VehiclePhoto } from "@/components/VehiclePhoto";
-import { getCollectionName, getVehicle, getVehicleActivePlannedPurchaseSummary, getVehicleLoggedSpend, listAttachments, listFuelRecords, listMaintenance, listMaintenanceCategories, listMots, listPlannedPurchases, listReminders, listRepairs, listServiceIntervals, listVehicleServiceIntervals, listWorkshops, type FuelRecord, type ServiceInterval, type Vehicle, type VehicleServiceInterval } from "@/lib/db";
+import { getCollectionName, getVehicle, getVehicleActivePlannedPurchaseSummary, getVehicleLoggedSpend, listAllAttachmentsForVehicle, listAttachments, listFuelRecords, listMaintenance, listMaintenanceCategories, listMots, listPlannedPurchases, listReminders, listRepairs, listServiceIntervals, listVehicleServiceIntervals, listVehicleGalleryPhotos, listWorkshops, type FuelRecord, type GalleryPhoto, type ServiceInterval, type Vehicle, type VehicleServiceInterval } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { debugEasterEggsEnabled } from "@/lib/debug";
-import { computeFuelEconomies, formatCurrency, formatDate, formatMiles, formatMotResult, formatPlannedPurchaseStatus, formatReminderStatus, formatVolume, todayIso, type MotResult, type PlannedPurchaseStatus, type ReminderStatusLabel } from "@/lib/format";
+import { computeAverageFuelEconomy, computeFuelEconomies, formatCurrency, formatDate, formatMiles, formatMotResult, formatPlannedPurchaseStatus, formatReminderStatus, formatVolume, todayIso, type MotResult, type PlannedPurchaseStatus, type ReminderStatusLabel } from "@/lib/format";
 import { getRegionalSettings, type RegionalSettings } from "@/lib/regional-settings";
 import { getReminderStatus } from "@/lib/reminders";
 import { AttachmentSection } from "@/components/AttachmentSection";
 import { ModalPanel } from "@/components/ModalPanel";
-import { assignServiceIntervalAction, deleteAttachmentAction, recordServiceDoneAction, removeVehicleServiceIntervalAction } from "@/app/actions";
+import { assignServiceIntervalAction, deleteAttachmentAction, deleteGalleryPhotoAction, recordServiceDoneAction, removeVehicleServiceIntervalAction } from "@/app/actions";
+import { GalleryGrid, type GalleryItem } from "@/components/GalleryGrid";
 import { ConfirmDelete } from "@/components/ConfirmDelete";
 
-const allTabs = ["overview", "maintenance", "repairs", "mots", "to-buy", "reminders", "service-plan", "fuel"] as const;
+const allTabs = ["overview", "maintenance", "repairs", "mots", "to-buy", "reminders", "service-plan", "fuel", "gallery"] as const;
 type Tab = (typeof allTabs)[number];
 
 export default async function VehiclePage({
@@ -68,6 +70,9 @@ export default async function VehiclePage({
   const mots = listMots(vehicle.id);
   const reminders = listReminders(vehicle.id);
   const fuelRecords = listFuelRecords(vehicle.id);
+  const avgFuelEconomy = computeAverageFuelEconomy(fuelRecords, settings);
+  const allAttachments = activeTab === "gallery" ? listAllAttachmentsForVehicle(vehicle.id) : [];
+  const galleryPhotos = activeTab === "gallery" ? listVehicleGalleryPhotos(vehicle.id) : [];
   const vehicleServiceIntervals = listVehicleServiceIntervals(vehicle.id);
   const allServiceIntervals = listServiceIntervals();
   const unassignedIntervals = allServiceIntervals.filter(
@@ -130,7 +135,7 @@ export default async function VehiclePage({
       <nav className="tabs" aria-label="Vehicle sections">
         {tabs.map((tab) => (
           <Link className={activeTab === tab ? "active" : ""} href={`/vehicles/${vehicle.id}?tab=${tab}`} key={tab} scroll={false}>
-            {tab === "mots" ? `${motLabel}s` : tab === "to-buy" ? "To Buy" : tab === "service-plan" ? "Service Plan" : tab === "fuel" ? "Fuel" : tab[0].toUpperCase() + tab.slice(1)}
+            {tab === "mots" ? `${motLabel}s` : tab === "to-buy" ? "To Buy" : tab === "service-plan" ? "Service Plan" : tab === "fuel" ? "Fuel" : tab === "gallery" ? "Gallery" : tab[0].toUpperCase() + tab.slice(1)}
           </Link>
         ))}
       </nav>
@@ -156,6 +161,12 @@ export default async function VehiclePage({
               <strong>{activePlannedSummary.count}</strong>
               <span>Upcoming estimate</span>
               <strong>{formatCurrency(activePlannedSummary.estimatedTotal, settings)}</strong>
+              {!settings.fuelDisabled && avgFuelEconomy ? (
+                <>
+                  <span>Avg. economy</span>
+                  <strong>{avgFuelEconomy}</strong>
+                </>
+              ) : null}
               <span>Purchase date</span>
               <strong>{formatDate(vehicle.purchaseDate, settings)}</strong>
               <span>Purchase price</span>
@@ -545,6 +556,8 @@ export default async function VehiclePage({
                   <strong>{fuelRecords.length}</strong>
                   <span>Total fuel spend</span>
                   <strong>{formatCurrency(totalFuelSpend, settings)}</strong>
+                  <span>Avg. economy</span>
+                  <strong>{avgFuelEconomy ?? "—"}</strong>
                 </div>
                 <SortBar vehicleId={vehicle.id} tab="fuel" activeSort={sort} activeDir={dir} options={[
                   { key: "date", label: "Date" },
@@ -585,6 +598,76 @@ export default async function VehiclePage({
               <div className="empty-state records-empty-state">
                 <h3>No fuel logged</h3>
                 <p>Log fill-ups to track spend and fuel economy over time.</p>
+              </div>
+            )}
+          </section>
+        );
+      })() : null}
+
+      {activeTab === "gallery" ? (() => {
+        const imageAttachments = allAttachments.filter(a =>
+          ["image/jpeg", "image/png", "image/webp"].includes(a.mimeType)
+        );
+        const maintenanceMap = new Map(maintenance.map(m => [m.id, m]));
+        const repairsMap = new Map(repairs.map(r => [r.id, r]));
+        const motsMap = new Map(mots.map(m => [m.id, m]));
+        const boundDeleteGalleryPhoto = deleteGalleryPhotoAction.bind(null, vehicle.id);
+
+        type GalleryEntry =
+          | { kind: "attachment"; data: (typeof imageAttachments)[number] }
+          | { kind: "gallery"; data: GalleryPhoto };
+        const entries: GalleryEntry[] = [
+          ...imageAttachments.map(a => ({ kind: "attachment" as const, data: a })),
+          ...galleryPhotos.map(p => ({ kind: "gallery" as const, data: p })),
+        ].sort((a, b) => b.data.createdAt.localeCompare(a.data.createdAt));
+
+        function resolveRecord(recordType: string | null, recordId: number | null) {
+          if (recordType === "maintenance" && recordId) {
+            const r = maintenanceMap.get(recordId);
+            return { description: r?.description ?? "", date: r?.date ?? "", tab: "maintenance" };
+          }
+          if (recordType === "repair" && recordId) {
+            const r = repairsMap.get(recordId);
+            return { description: r?.fault ?? "", date: r?.date ?? "", tab: "repairs" };
+          }
+          if (recordType === "mot" && recordId) {
+            const r = motsMap.get(recordId);
+            return { description: r ? formatMotResult(r.result as MotResult) : "", date: r?.testDate ?? "", tab: "mots" };
+          }
+          return { description: "", date: "", tab: "" };
+        }
+
+        const galleryItems: GalleryItem[] = entries.map((entry) => {
+          const { description, date, tab } = resolveRecord(
+            entry.data.recordType ?? null,
+            entry.kind === "attachment" ? entry.data.recordId : (entry.data.recordId ?? null)
+          );
+          return {
+            id: `${entry.kind}-${entry.data.id}`,
+            filePath: entry.data.filePath,
+            originalFilename: entry.data.originalFilename,
+            caption: entry.kind === "gallery" ? entry.data.caption : null,
+            recordType: entry.data.recordType ?? null,
+            recordDescription: description,
+            recordDate: date ? formatDate(date, settings) : "",
+            recordTab: tab,
+            isStandalone: entry.kind === "gallery",
+            photoId: entry.kind === "gallery" ? entry.data.id : null,
+          };
+        });
+
+        return (
+          <section className="records-shell">
+            <div className="section-heading">
+              <h2><Images size={19} /> Gallery</h2>
+              <GalleryUploadForm vehicleId={vehicle.id} maintenance={maintenance} repairs={repairs} />
+            </div>
+            {galleryItems.length > 0 ? (
+              <GalleryGrid items={galleryItems} vehicleId={vehicle.id} deleteAction={boundDeleteGalleryPhoto} />
+            ) : (
+              <div className="empty-state records-empty-state">
+                <h3>No photos yet</h3>
+                <p>Upload photos directly, or attach images to repair and maintenance records.</p>
               </div>
             )}
           </section>

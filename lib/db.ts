@@ -121,6 +121,20 @@ export type RecordAttachment = {
   createdAt: string;
 };
 
+export type GalleryPhoto = {
+  id: number;
+  vehicleId: number;
+  recordType: "maintenance" | "repair" | "mot" | null;
+  recordId: number | null;
+  filename: string;
+  originalFilename: string;
+  mimeType: string;
+  fileSize: number;
+  filePath: string;
+  caption: string | null;
+  createdAt: string;
+};
+
 export type AuthSession = {
   id: string;
   adminUserId: number;
@@ -350,6 +364,22 @@ function migrate(database: Database.Database) {
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE TABLE IF NOT EXISTS vehicle_gallery_photos (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      vehicle_id INTEGER NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
+      record_type TEXT CHECK (record_type IS NULL OR record_type IN ('maintenance', 'repair', 'mot')),
+      record_id INTEGER,
+      filename TEXT NOT NULL,
+      original_filename TEXT NOT NULL,
+      mime_type TEXT NOT NULL,
+      file_size INTEGER NOT NULL,
+      file_path TEXT NOT NULL,
+      caption TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_gallery_photos_vehicle ON vehicle_gallery_photos(vehicle_id);
 
     CREATE TABLE IF NOT EXISTS record_attachments (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1344,6 +1374,55 @@ const attachmentSelect = `
   file_path as filePath,
   created_at as createdAt
 `;
+
+export function listAllAttachmentsForVehicle(vehicleId: number): RecordAttachment[] {
+  return getDb()
+    .prepare(`SELECT ${attachmentSelect} FROM record_attachments WHERE vehicle_id = ? ORDER BY created_at DESC`)
+    .all(vehicleId) as RecordAttachment[];
+}
+
+// ─── Gallery Photos ───────────────────────────────────────────────────────────
+
+const galleryPhotoSelect = `
+  id,
+  vehicle_id as vehicleId,
+  record_type as recordType,
+  record_id as recordId,
+  filename,
+  original_filename as originalFilename,
+  mime_type as mimeType,
+  file_size as fileSize,
+  file_path as filePath,
+  caption,
+  created_at as createdAt
+`;
+
+export function listVehicleGalleryPhotos(vehicleId: number): GalleryPhoto[] {
+  return getDb()
+    .prepare(`SELECT ${galleryPhotoSelect} FROM vehicle_gallery_photos WHERE vehicle_id = ? ORDER BY created_at DESC`)
+    .all(vehicleId) as GalleryPhoto[];
+}
+
+export function getGalleryPhoto(id: number, vehicleId: number): GalleryPhoto | null {
+  return (getDb()
+    .prepare(`SELECT ${galleryPhotoSelect} FROM vehicle_gallery_photos WHERE id = ? AND vehicle_id = ?`)
+    .get(id, vehicleId) as GalleryPhoto | undefined) ?? null;
+}
+
+export function createGalleryPhoto(input: Omit<GalleryPhoto, "id" | "createdAt">) {
+  return getDb()
+    .prepare(`
+      INSERT INTO vehicle_gallery_photos (vehicle_id, record_type, record_id, filename, original_filename, mime_type, file_size, file_path, caption)
+      VALUES (@vehicleId, @recordType, @recordId, @filename, @originalFilename, @mimeType, @fileSize, @filePath, @caption)
+    `)
+    .run(input);
+}
+
+export function deleteGalleryPhoto(id: number, vehicleId: number) {
+  return getDb()
+    .prepare("DELETE FROM vehicle_gallery_photos WHERE id = ? AND vehicle_id = ?")
+    .run(id, vehicleId);
+}
 
 export function listAttachments(recordType: string, recordId: number): RecordAttachment[] {
   return getDb()

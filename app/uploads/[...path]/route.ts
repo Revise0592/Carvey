@@ -31,10 +31,12 @@ export async function GET(_request: Request, { params }: { params: Promise<{ pat
     const attachment = getAttachmentByFilename(filename);
     const contentType = attachment?.mimeType ?? contentTypeFromExt(path.extname(filename));
     const originalName = attachment?.originalFilename ?? filename;
+    const isImage = contentType.startsWith("image/");
+    const disposition = isImage ? "inline" : "attachment";
     return new NextResponse(new Uint8Array(file), {
       headers: {
         "content-type": contentType,
-        "content-disposition": `attachment; filename="${encodeURIComponent(originalName)}"`,
+        "content-disposition": `${disposition}; filename="${encodeURIComponent(originalName)}"`,
         "cache-control": "private, max-age=31536000, immutable"
       }
     });

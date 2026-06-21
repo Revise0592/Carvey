@@ -347,7 +347,7 @@ export function CreateMaintenanceFromPurchaseForm({ record, categories }: { reco
   return (
     <ModalPanel trigger={<><Wrench size={17} /> Add to maintenance</>} title="Add purchase to maintenance">
       <form action={action} className="record-form">
-        <Field label="Date"><input name="date" type="date" defaultValue={record.purchasedDate ?? todayIso()} required /></Field>
+        <Field label="Date"><input name="date" type="date" defaultValue={todayIso()} required /></Field>
         <Field label="Odometer"><input name="odometer" type="number" min="0" /></Field>
         <Field label="Category">
           <input name="category" list="category-suggestions" autoComplete="off" required />
@@ -369,7 +369,7 @@ export function CreateRepairFromPurchaseForm({ record, workshops }: { record: Pl
   return (
     <ModalPanel trigger={<><Hammer size={17} /> Add to repairs</>} title="Add purchase to repairs">
       <form action={action} className="record-form">
-        <Field label="Date"><input name="date" type="date" defaultValue={record.purchasedDate ?? todayIso()} required /></Field>
+        <Field label="Date"><input name="date" type="date" defaultValue={todayIso()} required /></Field>
         <Field label="Odometer"><input name="odometer" type="number" min="0" /></Field>
         <Field label="Fault or repair"><input name="fault" defaultValue={record.itemName} required /></Field>
         <Field label="Garage/Workshop">
@@ -493,6 +493,50 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       <span>{label}</span>
       {children}
     </label>
+  );
+}
+
+export function GalleryUploadForm({
+  vehicleId,
+  maintenance,
+  repairs,
+}: {
+  vehicleId: number;
+  maintenance: MaintenanceRecord[];
+  repairs: RepairRecord[];
+}) {
+  return (
+    <ModalPanel trigger={<><Plus size={17} /> Add photo</>} title="Add photo to gallery">
+      <form action="/api/gallery-photos" method="post" encType="multipart/form-data" className="record-form">
+        <input type="hidden" name="vehicleId" value={vehicleId} />
+        <Field label="Photo">
+          <input name="file" type="file" accept="image/jpeg,image/png,image/webp" required />
+        </Field>
+        <Field label="Caption">
+          <input name="caption" type="text" placeholder="Optional caption" />
+        </Field>
+        <Field label="Link to record (optional)">
+          <select name="recordType" defaultValue="">
+            <option value="">— Not linked —</option>
+            {maintenance.length > 0 ? (
+              <optgroup label="Maintenance">
+                {maintenance.map(r => (
+                  <option key={r.id} value={`maintenance:${r.id}`}>{r.date} · {r.description}</option>
+                ))}
+              </optgroup>
+            ) : null}
+            {repairs.length > 0 ? (
+              <optgroup label="Repairs">
+                {repairs.map(r => (
+                  <option key={r.id} value={`repair:${r.id}`}>{r.date} · {r.fault}</option>
+                ))}
+              </optgroup>
+            ) : null}
+          </select>
+        </Field>
+        <button className="primary-button" type="submit">Upload photo</button>
+      </form>
+    </ModalPanel>
   );
 }
 

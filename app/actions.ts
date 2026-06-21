@@ -23,6 +23,8 @@ import {
   createWorkshop,
   createVehicle,
   deleteAttachment,
+  deleteGalleryPhoto,
+  getGalleryPhoto,
   deleteFuelRecord,
   deleteMaintenance,
   deleteMaintenanceCategory,
@@ -666,6 +668,16 @@ export async function deleteAttachmentAction(vehicleId: number, formData: FormDa
   if (!attachment) return;
   deleteAttachment(attachmentId, vehicleId);
   await removeUploadFile(attachment.filePath);
+  revalidateVehicle(vehicleId);
+}
+
+export async function deleteGalleryPhotoAction(vehicleId: number, formData: FormData) {
+  await requireUser();
+  const photoId = z.coerce.number().int().positive().parse(str(formData, "photoId"));
+  const photo = getGalleryPhoto(photoId, vehicleId);
+  if (!photo) return;
+  deleteGalleryPhoto(photoId, vehicleId);
+  await removeUploadFile(photo.filePath);
   revalidateVehicle(vehicleId);
 }
 
