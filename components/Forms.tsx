@@ -1,6 +1,7 @@
-import { CalendarDays, Check, Gauge, Hammer, PackagePlus, Plus, ShieldCheck, ShoppingCart, Trash2, Wrench } from "lucide-react";
+import { CalendarDays, Check, Fuel, Gauge, Hammer, PackagePlus, Plus, ShieldCheck, ShoppingCart, Trash2, Wrench } from "lucide-react";
 import {
   completeReminderAction,
+  createFuelRecordAction,
   createMaintenanceFromPurchaseAction,
   createPlannedPurchaseAction,
   createVehicleAction,
@@ -9,6 +10,7 @@ import {
   createReminderAction,
   createRepairFromPurchaseAction,
   createRepairAction,
+  deleteFuelRecordAction,
   deletePlannedPurchaseAction,
   deleteVehicleAction,
   deleteMaintenanceAction,
@@ -17,6 +19,7 @@ import {
   deleteRepairAction,
   markPlannedPurchaseBoughtAction,
   updateVehicleDebugAction,
+  updateFuelRecordAction,
   updateMaintenanceAction,
   updateMotAction,
   updatePlannedPurchaseAction,
@@ -25,8 +28,9 @@ import {
   updateRepairAction,
   updateVehicleAction
 } from "@/app/actions";
-import type { MaintenanceCategory, MaintenanceRecord, MotRecord, PlannedPurchase, Reminder, RepairRecord, Vehicle, Workshop } from "@/lib/db";
-import { todayIso } from "@/lib/format";
+import type { FuelRecord, MaintenanceCategory, MaintenanceRecord, MotRecord, PlannedPurchase, Reminder, RepairRecord, Vehicle, Workshop } from "@/lib/db";
+import { formatVolume, todayIso } from "@/lib/format";
+import type { RegionalSettings } from "@/lib/regional-settings";
 import { ConfirmDelete } from "./ConfirmDelete";
 import { EditPanel } from "./EditPanel";
 import { ModalPanel } from "./ModalPanel";
@@ -390,6 +394,76 @@ function purchaseRecordNotes(record: PlannedPurchase) {
     record.supplier ? `Supplier: ${record.supplier}` : null,
     record.url ? `URL: ${record.url}` : null
   ].filter(Boolean).join("\n");
+}
+
+export function FuelRecordForm({ vehicleId, settings }: { vehicleId: number; settings: RegionalSettings }) {
+  const action = createFuelRecordAction.bind(null, vehicleId);
+  const isKm = settings.distanceUnit === "km";
+  const isUSD = settings.currency === "USD";
+  const petrolLabel = isUSD ? "Gasoline" : "Petrol";
+  const volumeLabel = isUSD ? "Gallons" : "Litres";
+  return (
+    <ModalPanel trigger={<><Fuel size={17} /> Add fill-up</>} title="Log fuel">
+      <form action={action} className="record-form">
+        <Field label="Date"><input name="date" type="date" defaultValue={todayIso()} required /></Field>
+        <Field label={isKm ? "Odometer (km)" : "Mileage"}><input name="odometer" type="number" min="0" required /></Field>
+        <Field label="Fuel type">
+          <select name="fuelType" defaultValue="petrol">
+            <option value="petrol">{petrolLabel}</option>
+            <option value="diesel">Diesel</option>
+            <option value="lpg">LPG</option>
+            <option value="other">Other</option>
+          </select>
+        </Field>
+        <Field label={volumeLabel}><input name="volume" type="number" min="0" step="0.01" required /></Field>
+        <label className="checkbox-field">
+          <input name="fullTank" type="checkbox" defaultChecked />
+          Full tank
+        </label>
+        <Field label="Total cost"><input name="totalCost" type="number" min="0" step="0.01" /></Field>
+        <Field label="Station"><input name="station" /></Field>
+        <Field label="Notes"><textarea name="notes" /></Field>
+        <button className="primary-button" type="submit">Save fill-up</button>
+      </form>
+    </ModalPanel>
+  );
+}
+
+export function EditFuelRecordForm({ record, settings }: { record: FuelRecord; settings: RegionalSettings }) {
+  const updateAction = updateFuelRecordAction.bind(null, record.vehicleId, record.id);
+  const deleteAction = deleteFuelRecordAction.bind(null, record.vehicleId, record.id);
+  const isKm = settings.distanceUnit === "km";
+  const isUSD = settings.currency === "USD";
+  const petrolLabel = isUSD ? "Gasoline" : "Petrol";
+  const volumeLabel = isUSD ? "Gallons" : "Litres";
+  const displayVolume = isUSD
+    ? (record.volumeLitres / 3.78541).toFixed(2)
+    : record.volumeLitres.toFixed(2);
+  return (
+    <EditPanel deleteAction={deleteAction} title="Edit fill-up">
+      <form action={updateAction} className="record-form">
+        <Field label="Date"><input name="date" type="date" defaultValue={record.date} required /></Field>
+        <Field label={isKm ? "Odometer (km)" : "Mileage"}><input name="odometer" type="number" min="0" defaultValue={record.odometer} required /></Field>
+        <Field label="Fuel type">
+          <select name="fuelType" defaultValue={record.fuelType}>
+            <option value="petrol">{petrolLabel}</option>
+            <option value="diesel">Diesel</option>
+            <option value="lpg">LPG</option>
+            <option value="other">Other</option>
+          </select>
+        </Field>
+        <Field label={volumeLabel}><input name="volume" type="number" min="0" step="0.01" defaultValue={displayVolume} required /></Field>
+        <label className="checkbox-field">
+          <input name="fullTank" type="checkbox" defaultChecked={Boolean(record.fullTank)} />
+          Full tank
+        </label>
+        <Field label="Total cost"><input name="totalCost" type="number" min="0" step="0.01" defaultValue={record.totalCost ?? ""} /></Field>
+        <Field label="Station"><input name="station" defaultValue={record.station ?? ""} /></Field>
+        <Field label="Notes"><textarea name="notes" defaultValue={record.notes ?? ""} /></Field>
+        <button className="primary-button" type="submit">Save fill-up</button>
+      </form>
+    </EditPanel>
+  );
 }
 
 export function CompleteReminderButton({ vehicleId, id }: { vehicleId: number; id: number }) {

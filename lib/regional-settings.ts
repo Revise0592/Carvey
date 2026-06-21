@@ -7,6 +7,7 @@ export type RegionalSettings = {
   distanceUnit: "miles" | "km";
   plateStyle: "uk-yellow" | "uk-white";
   authDisabled: boolean;
+  fuelDisabled: boolean;
 };
 
 export function getRegionalSettings(): RegionalSettings {
@@ -16,7 +17,8 @@ export function getRegionalSettings(): RegionalSettings {
     dateFormat: (getAppSetting("dateFormat") as RegionalSettings["dateFormat"]) ?? "dd-mon-yyyy",
     distanceUnit: (getAppSetting("distanceUnit") as RegionalSettings["distanceUnit"]) ?? "miles",
     plateStyle: (getAppSetting("plateStyle") as RegionalSettings["plateStyle"]) ?? "uk-yellow",
-    authDisabled: getAppSetting("authDisabled") === "true"
+    authDisabled: getAppSetting("authDisabled") === "true",
+    fuelDisabled: getAppSetting("fuelDisabled") === "true"
   };
 }
 
@@ -27,4 +29,5 @@ export function updateRegionalSettings(input: Partial<RegionalSettings>) {
   if (input.distanceUnit !== undefined) setAppSetting("distanceUnit", input.distanceUnit);
   if (input.plateStyle !== undefined) setAppSetting("plateStyle", input.plateStyle);
   if (input.authDisabled !== undefined) setAppSetting("authDisabled", input.authDisabled ? "true" : "false");
+  if (input.fuelDisabled !== undefined) setAppSetting("fuelDisabled", input.fuelDisabled ? "true" : "false");
 }
