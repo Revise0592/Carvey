@@ -174,6 +174,10 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                   <option value="km">Kilometres (km)</option>
                 </select>
               </label>
+              <label className="checkbox-field">
+                <input name="fuelDisabled" type="checkbox" defaultChecked={regionalSettings.fuelDisabled} />
+                Disable fuel tracking
+              </label>
               <button className="primary-button" type="submit">Save regional settings</button>
             </form>
           </article>

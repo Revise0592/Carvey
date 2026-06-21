@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { BadgeCheck, CalendarDays, Check, ExternalLink, Hammer, PackagePlus, Plus, Printer, RefreshCw, ShieldCheck, Wrench } from "lucide-react";
+import { BadgeCheck, CalendarDays, Check, ExternalLink, Fuel, Hammer, PackagePlus, Plus, Printer, RefreshCw, ShieldCheck, Wrench } from "lucide-react";
 import { AppFrame } from "@/components/AppFrame";
 import { BackButton } from "@/components/BackButton";
 import {
@@ -8,6 +8,7 @@ import {
   CreateMaintenanceFromPurchaseForm,
   CreateRepairFromPurchaseForm,
   DebugVehicleForm,
+  EditFuelRecordForm,
   EditPlannedPurchaseBoughtDateForm,
   EditVehicleForm,
   EditMaintenanceForm,
@@ -15,6 +16,7 @@ import {
   EditPlannedPurchaseForm,
   EditReminderForm,
   EditRepairForm,
+  FuelRecordForm,
   MarkPlannedPurchaseBoughtForm,
   MaintenanceForm,
   MileagePill,
@@ -27,10 +29,10 @@ import { ExplosionEffect } from "@/components/ExplosionEffect";
 import { RegistrationPlate } from "@/components/RegistrationPlate";
 import { VehiclePhotoUploadForm } from "@/components/VehiclePhotoUploadForm";
 import { VehiclePhoto } from "@/components/VehiclePhoto";
-import { getCollectionName, getVehicle, getVehicleActivePlannedPurchaseSummary, getVehicleLoggedSpend, listAttachments, listMaintenance, listMaintenanceCategories, listMots, listPlannedPurchases, listReminders, listRepairs, listServiceIntervals, listVehicleServiceIntervals, listWorkshops, type ServiceInterval, type Vehicle, type VehicleServiceInterval } from "@/lib/db";
+import { getCollectionName, getVehicle, getVehicleActivePlannedPurchaseSummary, getVehicleLoggedSpend, listAttachments, listFuelRecords, listMaintenance, listMaintenanceCategories, listMots, listPlannedPurchases, listReminders, listRepairs, listServiceIntervals, listVehicleServiceIntervals, listWorkshops, type FuelRecord, type ServiceInterval, type Vehicle, type VehicleServiceInterval } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { debugEasterEggsEnabled } from "@/lib/debug";
-import { formatCurrency, formatDate, formatMiles, formatMotResult, formatPlannedPurchaseStatus, formatReminderStatus, todayIso, type MotResult, type PlannedPurchaseStatus, type ReminderStatusLabel } from "@/lib/format";
+import { computeFuelEconomies, formatCurrency, formatDate, formatMiles, formatMotResult, formatPlannedPurchaseStatus, formatReminderStatus, formatVolume, todayIso, type MotResult, type PlannedPurchaseStatus, type ReminderStatusLabel } from "@/lib/format";
 import { getRegionalSettings, type RegionalSettings } from "@/lib/regional-settings";
 import { getReminderStatus } from "@/lib/reminders";
 import { AttachmentSection } from "@/components/AttachmentSection";
@@ -38,7 +40,7 @@ import { ModalPanel } from "@/components/ModalPanel";
 import { assignServiceIntervalAction, deleteAttachmentAction, recordServiceDoneAction, removeVehicleServiceIntervalAction } from "@/app/actions";
 import { ConfirmDelete } from "@/components/ConfirmDelete";
 
-const allTabs = ["overview", "maintenance", "repairs", "mots", "to-buy", "reminders", "service-plan"] as const;
+const allTabs = ["overview", "maintenance", "repairs", "mots", "to-buy", "reminders", "service-plan", "fuel"] as const;
 type Tab = (typeof allTabs)[number];
 
 export default async function VehiclePage({
@@ -57,14 +59,15 @@ export default async function VehiclePage({
   const query = await searchParams;
   const settings = getRegionalSettings();
   const motLabel = settings.motFeature === "emissionsTest" ? "Emissions Test" : "MOT";
-  const tabs = settings.motFeature === "disabled"
-    ? allTabs.filter((t) => t !== "mots")
-    : allTabs;
+  const tabs = allTabs
+    .filter((t) => t !== "mots" || settings.motFeature !== "disabled")
+    .filter((t) => t !== "fuel" || !settings.fuelDisabled);
   const activeTab = (tabs as readonly string[]).includes(query.tab as string) ? (query.tab as Tab) : "overview";
   const maintenance = listMaintenance(vehicle.id);
   const repairs = listRepairs(vehicle.id);
   const mots = listMots(vehicle.id);
   const reminders = listReminders(vehicle.id);
+  const fuelRecords = listFuelRecords(vehicle.id);
   const vehicleServiceIntervals = listVehicleServiceIntervals(vehicle.id);
   const allServiceIntervals = listServiceIntervals();
   const unassignedIntervals = allServiceIntervals.filter(
@@ -127,7 +130,7 @@ export default async function VehiclePage({
       <nav className="tabs" aria-label="Vehicle sections">
         {tabs.map((tab) => (
           <Link className={activeTab === tab ? "active" : ""} href={`/vehicles/${vehicle.id}?tab=${tab}`} key={tab} scroll={false}>
-            {tab === "mots" ? `${motLabel}s` : tab === "to-buy" ? "To Buy" : tab === "service-plan" ? "Service Plan" : tab[0].toUpperCase() + tab.slice(1)}
+            {tab === "mots" ? `${motLabel}s` : tab === "to-buy" ? "To Buy" : tab === "service-plan" ? "Service Plan" : tab === "fuel" ? "Fuel" : tab[0].toUpperCase() + tab.slice(1)}
           </Link>
         ))}
       </nav>
@@ -512,6 +515,76 @@ export default async function VehiclePage({
               <div className="empty-state records-empty-state">
                 <h3>No planned purchases</h3>
                 <p>Add parts or supplies you need to buy before the next job.</p>
+              </div>
+            )}
+          </section>
+        );
+      })() : null}
+
+      {activeTab === "fuel" ? (() => {
+        const sort = query.sort || "date";
+        const dir: "asc" | "desc" = query.dir === "asc" ? "asc" : "desc";
+        const sorted = [...fuelRecords].sort((a, b) => {
+          const m = dir === "asc" ? 1 : -1;
+          if (sort === "cost") return m * ((a.totalCost ?? 0) - (b.totalCost ?? 0));
+          if (sort === "odometer") return m * (a.odometer - b.odometer);
+          return m * a.date.localeCompare(b.date);
+        });
+        const economies = computeFuelEconomies(fuelRecords, settings);
+        const totalFuelSpend = fuelRecords.reduce((sum, r) => sum + (r.totalCost ?? 0), 0);
+        return (
+          <section className="records-shell">
+            <div className="section-heading">
+              <h2><Fuel size={19} /> Fuel</h2>
+              <FuelRecordForm vehicleId={vehicle.id} settings={settings} />
+            </div>
+            {fuelRecords.length > 0 ? (
+              <>
+                <div className="metric-list" style={{ marginBottom: "1rem" }}>
+                  <span>Fill-ups logged</span>
+                  <strong>{fuelRecords.length}</strong>
+                  <span>Total fuel spend</span>
+                  <strong>{formatCurrency(totalFuelSpend, settings)}</strong>
+                </div>
+                <SortBar vehicleId={vehicle.id} tab="fuel" activeSort={sort} activeDir={dir} options={[
+                  { key: "date", label: "Date" },
+                  { key: "cost", label: "Cost" },
+                  { key: "odometer", label: "Odometer" },
+                ]} />
+                <div className="record-list">
+                  {sorted.map((record) => {
+                    const economy = economies.get(record.id);
+                    return (
+                      <div className="record-entry" key={record.id}>
+                        <div className="record-row">
+                          <span className="tag tag-neutral">{record.fuelType}</span>
+                          <div className="record-row-content">
+                            <strong>
+                              {formatVolume(record.volumeLitres, settings)}
+                              {record.station ? ` · ${record.station}` : ""}
+                            </strong>
+                            <p className="record-row-meta">
+                              {formatDate(record.date, settings)} · {formatMiles(record.odometer, settings)}
+                              {!record.fullTank ? " · Partial" : ""}
+                              {economy ? ` · ${economy}` : ""}
+                            </p>
+                          </div>
+                          {record.totalCost != null ? (
+                            <strong className="record-row-value">{formatCurrency(record.totalCost, settings)}</strong>
+                          ) : null}
+                          <div className="record-row-actions">
+                            <EditFuelRecordForm record={record} settings={settings} />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            ) : (
+              <div className="empty-state records-empty-state">
+                <h3>No fuel logged</h3>
+                <p>Log fill-ups to track spend and fuel economy over time.</p>
               </div>
             )}
           </section>

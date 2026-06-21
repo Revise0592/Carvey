@@ -12,6 +12,7 @@ import {
   convertPlannedPurchaseToMaintenance,
   convertPlannedPurchaseToRepair,
   createAttachment,
+  createFuelRecord,
   createMaintenance,
   createMaintenanceCategory,
   createMot,
@@ -22,6 +23,7 @@ import {
   createWorkshop,
   createVehicle,
   deleteAttachment,
+  deleteFuelRecord,
   deleteMaintenance,
   deleteMaintenanceCategory,
   deleteMot,
@@ -40,6 +42,7 @@ import {
   removeVehicleServiceInterval,
   setVehicleDebugDestroyed,
   updateCollectionName,
+  updateFuelRecord,
   updateMaintenance,
   updateMaintenanceCategory,
   updateMot,
@@ -53,7 +56,7 @@ import {
   upsertMotReminder
 } from "@/lib/db";
 import { changePassword, changeUsername, createFirstAdmin, login, logout, requireUser } from "@/lib/auth";
-import { updateRegionalSettings } from "@/lib/regional-settings";
+import { getRegionalSettings, updateRegionalSettings } from "@/lib/regional-settings";
 import { debugEasterEggsEnabled } from "@/lib/debug";
 import { safeUploadPath } from "@/lib/paths";
 
@@ -640,7 +643,8 @@ export async function updateRegionalSettingsAction(formData: FormData) {
   const dateFormat = z.enum(["dd-mon-yyyy", "iso"]).parse(str(formData, "dateFormat"));
   const distanceUnit = z.enum(["miles", "km"]).parse(str(formData, "distanceUnit"));
   const plateStyle = z.enum(["uk-yellow", "uk-white"]).parse(str(formData, "plateStyle"));
-  updateRegionalSettings({ currency, motFeature, dateFormat, distanceUnit, plateStyle });
+  const fuelDisabled = str(formData, "fuelDisabled") === "on";
+  updateRegionalSettings({ currency, motFeature, dateFormat, distanceUnit, plateStyle, fuelDisabled });
   revalidatePath("/");
   redirect("/settings?tab=regional&app=regional-updated");
 }
@@ -662,6 +666,44 @@ export async function deleteAttachmentAction(vehicleId: number, formData: FormDa
   if (!attachment) return;
   deleteAttachment(attachmentId, vehicleId);
   await removeUploadFile(attachment.filePath);
+  revalidateVehicle(vehicleId);
+}
+
+function fuelInput(formData: FormData, settings: { currency?: string }) {
+  const rawVolume = z.coerce.number().positive().parse(str(formData, "volume"));
+  const volumeLitres = settings.currency === "USD" ? rawVolume * 3.78541 : rawVolume;
+  return {
+    date: z.string().min(1).parse(str(formData, "date")),
+    odometer: z.coerce.number().int().nonnegative().parse(str(formData, "odometer")),
+    volumeLitres,
+    totalCost: nullableMoney(formData, "totalCost"),
+    fuelType: z.enum(["petrol", "diesel", "lpg", "other"]).parse(str(formData, "fuelType")),
+    fullTank: str(formData, "fullTank") === "on" ? 1 : 0,
+    station: nullableStr(formData, "station"),
+    notes: nullableStr(formData, "notes"),
+  };
+}
+
+export async function createFuelRecordAction(vehicleId: number, formData: FormData) {
+  await requireUser();
+  const settings = getRegionalSettings();
+  createFuelRecord({ vehicleId, ...fuelInput(formData, settings) });
+  await syncCurrentDemoAfterMutation();
+  revalidateVehicle(vehicleId);
+}
+
+export async function updateFuelRecordAction(vehicleId: number, id: number, formData: FormData) {
+  await requireUser();
+  const settings = getRegionalSettings();
+  updateFuelRecord(id, vehicleId, fuelInput(formData, settings));
+  await syncCurrentDemoAfterMutation();
+  revalidateVehicle(vehicleId);
+}
+
+export async function deleteFuelRecordAction(vehicleId: number, id: number) {
+  await requireUser();
+  deleteFuelRecord(id, vehicleId);
+  await syncCurrentDemoAfterMutation();
   revalidateVehicle(vehicleId);
 }
 
