@@ -1,6 +1,6 @@
 {
   "name": "carvey",
-  "version": "1.0.1",
+  "version": "1.0.5",
   "private": true,
   "engines": {
     "node": ">=24"
