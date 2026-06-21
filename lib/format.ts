@@ -75,3 +75,53 @@ export function formatPlannedPurchaseStatus(value: PlannedPurchaseStatus) {
   };
   return labels[value];
 }
+
+// USD → US gallons; GBP/EUR → litres
+export function getVolumeUnit(settings: { currency?: string }): "litres" | "gallons" {
+  return settings.currency === "USD" ? "gallons" : "litres";
+}
+
+export function formatVolume(litres: number, settings: { currency?: string }): string {
+  if (settings.currency === "USD") {
+    return `${(litres / 3.78541).toFixed(2)} gal`;
+  }
+  return `${litres.toFixed(2)} L`;
+}
+
+export function formatFuelEconomy(
+  distance: number,
+  volumeLitres: number,
+  settings: { distanceUnit?: string; currency?: string }
+): string | null {
+  if (!distance || !volumeLitres) return null;
+  if (settings.distanceUnit === "km") {
+    return `${((volumeLitres / distance) * 100).toFixed(1)} L/100km`;
+  }
+  if (settings.currency === "USD") {
+    return `${(distance / (volumeLitres / 3.78541)).toFixed(1)} mpg`;
+  }
+  return `${(distance / (volumeLitres / 4.54609)).toFixed(1)} mpg`;
+}
+
+export function computeFuelEconomies(
+  records: Array<{ id: number; odometer: number; volumeLitres: number; fullTank: number }>,
+  settings: { distanceUnit?: string; currency?: string }
+): Map<number, string> {
+  const sorted = [...records].sort((a, b) => a.odometer - b.odometer);
+  const result = new Map<number, string>();
+  for (let i = 0; i < sorted.length; i++) {
+    const current = sorted[i];
+    if (!current.fullTank) continue;
+    let prevFullIdx = -1;
+    for (let j = i - 1; j >= 0; j--) {
+      if (sorted[j].fullTank) { prevFullIdx = j; break; }
+    }
+    if (prevFullIdx === -1) continue;
+    const prevFull = sorted[prevFullIdx];
+    const distance = current.odometer - prevFull.odometer;
+    const volume = sorted.slice(prevFullIdx + 1, i + 1).reduce((sum, r) => sum + r.volumeLitres, 0);
+    const eco = formatFuelEconomy(distance, volume, settings);
+    if (eco) result.set(current.id, eco);
+  }
+  return result;
+}

@@ -162,6 +162,21 @@ export default function SettingsScreen() {
           textSecondary={textSecondary}
           borderColor={borderColor}
         />
+        <RowDivider borderColor={borderColor} />
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+          <View style={{ flex: 1, marginRight: 12 }}>
+            <Text style={{ fontSize: 14, color: textPrimary, fontWeight: "500" }}>Fuel tracking</Text>
+            <Text style={{ fontSize: 12, color: textSecondary, marginTop: 2 }}>
+              Show the fuel tab on vehicle pages
+            </Text>
+          </View>
+          <Switch
+            value={settings.fuelDisabled !== "true"}
+            onValueChange={(v) => updateSetting("fuelDisabled", v ? "false" : "true")}
+            thumbColor={settings.fuelDisabled !== "true" ? accent : "#9ca3af"}
+            trackColor={{ false: isDark ? "#374151" : "#d1d5db", true: accent + "80" }}
+          />
+        </View>
       </Section>
 
       <Section title="Appearance" cardBg={cardBg} textPrimary={textPrimary} borderColor={borderColor}>
