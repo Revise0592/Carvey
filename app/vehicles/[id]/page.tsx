@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BadgeCheck, CalendarDays, Check, ExternalLink, Fuel, Hammer, Images, PackagePlus, Plus, Printer, RefreshCw, ShieldCheck, Trash2, Wrench } from "lucide-react";
 import { AppFrame } from "@/components/AppFrame";
-import { BackButton } from "@/components/BackButton";
 import {
   CompleteReminderButton,
   CreateMaintenanceFromPurchaseForm,
@@ -98,7 +97,6 @@ export default async function VehiclePage({
   return (
     <AppFrame>
       {debugEnabled ? <ExplosionEffect active={Boolean(vehicle.debugDestroyed)} /> : null}
-      <BackButton />
       <section className="vehicle-hero">
         <div className="photo-frame hero-photo-frame">
           <VehiclePhoto src={vehicle.photoPath} alt={`${vehicle.make} ${vehicle.model}`} className="hero-photo" />

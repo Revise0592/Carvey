@@ -91,14 +91,14 @@ export function GalleryGrid({
               />
             </button>
             <div className="gallery-card-meta">
-              {item.recordType ? <span className="tag tag-neutral">{item.recordType}</span> : null}
+              {item.recordType ? <span className="tag tag-neutral" style={{ textTransform: "capitalize" }}>{item.recordType}</span> : null}
               {item.caption || item.recordDescription ? (
                 <strong>{item.caption || item.recordDescription}</strong>
               ) : null}
               {item.recordDate ? <p className="record-row-meta">{item.recordDate}</p> : null}
               {item.recordTab ? (
                 <Link href={`/vehicles/${vehicleId}?tab=${item.recordTab}`} className="gallery-record-link">
-                  View record →
+                  View Record →
                 </Link>
               ) : null}
               {item.isStandalone && item.photoId !== null ? (
