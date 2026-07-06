@@ -11,6 +11,7 @@ import { debugEasterEggsEnabled } from "@/lib/debug";
 import { getCollectionName, listMaintenanceCategories, listServiceIntervals, listWorkshops, type ServiceInterval } from "@/lib/db";
 import { formatDate } from "@/lib/format";
 import { CURRENCY_CODES, getRegionalSettings } from "@/lib/regional-settings";
+import packageJson from "@/package.json";
 
 export const dynamic = "force-dynamic";
 
@@ -295,7 +296,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
               <span>Region defaults</span>
               <strong>{regionalSettings.currency}, {regionalSettings.distanceUnit}, {regionalSettings.dateFormat === "iso" ? "ISO dates" : "UK dates"}</strong>
               <span>Version</span>
-              <strong>0.1.0</strong>
+              <strong>{packageJson.version}</strong>
             </dl>
           </article>
 
