@@ -1,19 +1,11 @@
-export const currencyFormatter = new Intl.NumberFormat("en-GB", {
-  style: "currency",
-  currency: "GBP"
-});
-
 export const numberFormatter = new Intl.NumberFormat("en-GB");
 
-export function formatCurrency(value: number | null | undefined, settings?: { currency?: "GBP" | "USD" | "EUR" }) {
+// en-US gives bare symbols ($, £, €) for the common currencies and sensible
+// ISO-prefixed symbols (CA$, CHF, etc.) for everything else, so one locale
+// covers the full ISO 4217 list without per-currency branching.
+export function formatCurrency(value: number | null | undefined, settings?: { currency?: string }) {
   const currency = settings?.currency ?? "GBP";
-  if (currency === "USD") {
-    return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value ?? 0);
-  }
-  if (currency === "EUR") {
-    return new Intl.NumberFormat("en-IE", { style: "currency", currency: "EUR" }).format(value ?? 0);
-  }
-  return currencyFormatter.format(value ?? 0);
+  return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(value ?? 0);
 }
 
 export function formatMiles(value: number | null | undefined, settings?: { distanceUnit?: "miles" | "km" }) {
@@ -76,13 +68,12 @@ export function formatPlannedPurchaseStatus(value: PlannedPurchaseStatus) {
   return labels[value];
 }
 
-// USD → US gallons; GBP/EUR → litres
-export function getVolumeUnit(settings: { currency?: string }): "litres" | "gallons" {
-  return settings.currency === "USD" ? "gallons" : "litres";
+export function getVolumeUnit(settings: { fuelVolumeUnit?: string }): "litres" | "gallons" {
+  return settings.fuelVolumeUnit === "gallons" ? "gallons" : "litres";
 }
 
-export function formatVolume(litres: number, settings: { currency?: string }): string {
-  if (settings.currency === "USD") {
+export function formatVolume(litres: number, settings: { fuelVolumeUnit?: string }): string {
+  if (settings.fuelVolumeUnit === "gallons") {
     return `${(litres / 3.78541).toFixed(2)} gal`;
   }
   return `${litres.toFixed(2)} L`;
@@ -91,13 +82,13 @@ export function formatVolume(litres: number, settings: { currency?: string }): s
 export function formatFuelEconomy(
   distance: number,
   volumeLitres: number,
-  settings: { distanceUnit?: string; currency?: string }
+  settings: { distanceUnit?: string; fuelVolumeUnit?: string }
 ): string | null {
   if (!distance || !volumeLitres) return null;
   if (settings.distanceUnit === "km") {
     return `${((volumeLitres / distance) * 100).toFixed(1)} L/100km`;
   }
-  if (settings.currency === "USD") {
+  if (settings.fuelVolumeUnit === "gallons") {
     return `${(distance / (volumeLitres / 3.78541)).toFixed(1)} mpg`;
   }
   return `${(distance / (volumeLitres / 4.54609)).toFixed(1)} mpg`;
@@ -105,7 +96,7 @@ export function formatFuelEconomy(
 
 export function computeAverageFuelEconomy(
   records: Array<{ odometer: number; volumeLitres: number; fullTank: number }>,
-  settings: { distanceUnit?: string; currency?: string }
+  settings: { distanceUnit?: string; fuelVolumeUnit?: string }
 ): string | null {
   const sorted = [...records].sort((a, b) => a.odometer - b.odometer);
   const fullTanks = sorted.filter(r => r.fullTank);
@@ -121,7 +112,7 @@ export function computeAverageFuelEconomy(
 
 export function computeFuelEconomies(
   records: Array<{ id: number; odometer: number; volumeLitres: number; fullTank: number }>,
-  settings: { distanceUnit?: string; currency?: string }
+  settings: { distanceUnit?: string; fuelVolumeUnit?: string }
 ): Map<number, string> {
   const sorted = [...records].sort((a, b) => a.odometer - b.odometer);
   const result = new Map<number, string>();

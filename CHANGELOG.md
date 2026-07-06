@@ -2,6 +2,17 @@
 
 All notable changes to Carvey will be documented here.
 
+## [1.0.6] - 2026-07-06
+
+### Added
+
+- Currency setting now supports every ISO 4217 currency, not just GBP/USD/EUR
+- New independent "Fuel volume unit" setting (Litres / Gallons) in Settings → Regional, controlling volume and fuel economy display (litres vs gallons, mpg vs L/100km)
+
+### Fixed
+
+- Fuel volume and economy units were previously inferred from currency (only USD showed gallons/mpg), which could show the wrong units for currency/distance combinations outside GBP, USD, and EUR — this is now controlled by its own setting
+
 ## [1.0.5] - 2026-06-21
 
 ### Added

@@ -399,9 +399,9 @@ function purchaseRecordNotes(record: PlannedPurchase) {
 export function FuelRecordForm({ vehicleId, settings }: { vehicleId: number; settings: RegionalSettings }) {
   const action = createFuelRecordAction.bind(null, vehicleId);
   const isKm = settings.distanceUnit === "km";
-  const isUSD = settings.currency === "USD";
-  const petrolLabel = isUSD ? "Gasoline" : "Petrol";
-  const volumeLabel = isUSD ? "Gallons" : "Litres";
+  const isGallons = settings.fuelVolumeUnit === "gallons";
+  const petrolLabel = isGallons ? "Gasoline" : "Petrol";
+  const volumeLabel = isGallons ? "Gallons" : "Litres";
   return (
     <ModalPanel trigger={<><Fuel size={17} /> Add fill-up</>} title="Log fuel">
       <form action={action} className="record-form">
@@ -433,10 +433,10 @@ export function EditFuelRecordForm({ record, settings }: { record: FuelRecord; s
   const updateAction = updateFuelRecordAction.bind(null, record.vehicleId, record.id);
   const deleteAction = deleteFuelRecordAction.bind(null, record.vehicleId, record.id);
   const isKm = settings.distanceUnit === "km";
-  const isUSD = settings.currency === "USD";
-  const petrolLabel = isUSD ? "Gasoline" : "Petrol";
-  const volumeLabel = isUSD ? "Gallons" : "Litres";
-  const displayVolume = isUSD
+  const isGallons = settings.fuelVolumeUnit === "gallons";
+  const petrolLabel = isGallons ? "Gasoline" : "Petrol";
+  const volumeLabel = isGallons ? "Gallons" : "Litres";
+  const displayVolume = isGallons
     ? (record.volumeLitres / 3.78541).toFixed(2)
     : record.volumeLitres.toFixed(2);
   return (

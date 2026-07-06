@@ -58,7 +58,7 @@ import {
   upsertMotReminder
 } from "@/lib/db";
 import { changePassword, changeUsername, createFirstAdmin, login, logout, requireUser } from "@/lib/auth";
-import { getRegionalSettings, updateRegionalSettings } from "@/lib/regional-settings";
+import { CURRENCY_CODES, getRegionalSettings, updateRegionalSettings } from "@/lib/regional-settings";
 import { debugEasterEggsEnabled } from "@/lib/debug";
 import { safeUploadPath } from "@/lib/paths";
 
@@ -640,13 +640,14 @@ export async function saveCurrentShowcaseDemoDataAction() {
 
 export async function updateRegionalSettingsAction(formData: FormData) {
   await requireUser();
-  const currency = z.enum(["GBP", "USD", "EUR"]).parse(str(formData, "currency"));
+  const currency = z.string().refine(code => CURRENCY_CODES.includes(code)).parse(str(formData, "currency"));
+  const fuelVolumeUnit = z.enum(["litres", "gallons"]).parse(str(formData, "fuelVolumeUnit"));
   const motFeature = z.enum(["mot", "emissionsTest", "disabled"]).parse(str(formData, "motFeature"));
   const dateFormat = z.enum(["dd-mon-yyyy", "iso"]).parse(str(formData, "dateFormat"));
   const distanceUnit = z.enum(["miles", "km"]).parse(str(formData, "distanceUnit"));
   const plateStyle = z.enum(["uk-yellow", "uk-white"]).parse(str(formData, "plateStyle"));
   const fuelDisabled = str(formData, "fuelDisabled") === "on";
-  updateRegionalSettings({ currency, motFeature, dateFormat, distanceUnit, plateStyle, fuelDisabled });
+  updateRegionalSettings({ currency, fuelVolumeUnit, motFeature, dateFormat, distanceUnit, plateStyle, fuelDisabled });
   revalidatePath("/");
   redirect("/settings?tab=regional&app=regional-updated");
 }
@@ -681,9 +682,9 @@ export async function deleteGalleryPhotoAction(vehicleId: number, formData: Form
   revalidateVehicle(vehicleId);
 }
 
-function fuelInput(formData: FormData, settings: { currency?: string }) {
+function fuelInput(formData: FormData, settings: { fuelVolumeUnit?: string }) {
   const rawVolume = z.coerce.number().positive().parse(str(formData, "volume"));
-  const volumeLitres = settings.currency === "USD" ? rawVolume * 3.78541 : rawVolume;
+  const volumeLitres = settings.fuelVolumeUnit === "gallons" ? rawVolume * 3.78541 : rawVolume;
   return {
     date: z.string().min(1).parse(str(formData, "date")),
     odometer: z.coerce.number().int().nonnegative().parse(str(formData, "odometer")),

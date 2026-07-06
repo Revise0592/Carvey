@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatCurrency, formatDate, formatMiles, formatMotResult, formatPlannedPurchaseStatus, formatReminderStatus } from "@/lib/format";
+import { formatCurrency, formatDate, formatFuelEconomy, formatMiles, formatMotResult, formatPlannedPurchaseStatus, formatReminderStatus, formatVolume } from "@/lib/format";
 
 describe("format helpers", () => {
   it("formats plain dates and SQLite timestamps", () => {
@@ -26,6 +26,22 @@ describe("format helpers", () => {
   it("formats currency in GBP mode (default)", () => {
     expect(formatCurrency(100)).toBe("£100.00");
     expect(formatCurrency(100, { currency: "GBP" })).toBe("£100.00");
+  });
+
+  it("formats currency for any ISO 4217 code", () => {
+    expect(formatCurrency(100, { currency: "JPY" })).toBe("¥100");
+    expect(formatCurrency(100, { currency: "CAD" })).toBe("CA$100.00");
+  });
+
+  it("uses fuelVolumeUnit, not currency, to decide litres vs gallons", () => {
+    expect(formatVolume(10, { fuelVolumeUnit: "litres" })).toBe("10.00 L");
+    expect(formatVolume(37.8541, { fuelVolumeUnit: "gallons" })).toBe("10.00 gal");
+  });
+
+  it("uses fuelVolumeUnit to pick mpg formula independent of currency", () => {
+    expect(formatFuelEconomy(300, 37.8541, { fuelVolumeUnit: "gallons" })).toBe("30.0 mpg");
+    expect(formatFuelEconomy(300, 37.8541, { fuelVolumeUnit: "litres" })).toBe("36.0 mpg");
+    expect(formatFuelEconomy(300, 30, { distanceUnit: "km" })).toBe("10.0 L/100km");
   });
 
   it("formats distance in km mode", () => {
