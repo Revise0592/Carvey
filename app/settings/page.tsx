@@ -10,12 +10,22 @@ import { getShowcaseDemoStatus, readRestoreSummary } from "@/lib/backup";
 import { debugEasterEggsEnabled } from "@/lib/debug";
 import { getCollectionName, listMaintenanceCategories, listServiceIntervals, listWorkshops, type ServiceInterval } from "@/lib/db";
 import { formatDate } from "@/lib/format";
-import { getRegionalSettings } from "@/lib/regional-settings";
+import { CURRENCY_CODES, getRegionalSettings } from "@/lib/regional-settings";
 
 export const dynamic = "force-dynamic";
 
 const settingsTabs = ["personalisation", "admin", "regional", "workshops", "categories", "service-intervals", "backup"] as const;
 type SettingsTab = (typeof settingsTabs)[number];
+
+const COMMON_CURRENCIES = ["GBP", "USD", "EUR"];
+const currencyDisplayNames = new Intl.DisplayNames("en", { type: "currency" });
+const otherCurrencies = CURRENCY_CODES
+  .filter(code => !COMMON_CURRENCIES.includes(code))
+  .sort((a, b) => a.localeCompare(b));
+
+function currencyOptionLabel(code: string) {
+  return `${code} — ${currencyDisplayNames.of(code)}`;
+}
 
 export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ tab?: string; account?: string; app?: string; workshop?: string; category?: string; interval?: string; restore?: string; token?: string; debug?: string; message?: string }> }) {
   const user = await requireUser();
@@ -140,9 +150,23 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
               <label>
                 Currency
                 <select name="currency" defaultValue={regionalSettings.currency}>
-                  <option value="GBP">GBP (£) — British Pound</option>
-                  <option value="USD">USD ($) — US Dollar</option>
-                  <option value="EUR">EUR (€) — Euro</option>
+                  <optgroup label="Common">
+                    {COMMON_CURRENCIES.map(code => (
+                      <option key={code} value={code}>{currencyOptionLabel(code)}</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="All currencies">
+                    {otherCurrencies.map(code => (
+                      <option key={code} value={code}>{currencyOptionLabel(code)}</option>
+                    ))}
+                  </optgroup>
+                </select>
+              </label>
+              <label>
+                Fuel volume unit
+                <select name="fuelVolumeUnit" defaultValue={regionalSettings.fuelVolumeUnit}>
+                  <option value="litres">Litres</option>
+                  <option value="gallons">Gallons (US)</option>
                 </select>
               </label>
               <label>

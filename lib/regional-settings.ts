@@ -1,7 +1,10 @@
 import { getAppSetting, setAppSetting } from "./db";
 
+export const CURRENCY_CODES = Intl.supportedValuesOf("currency");
+
 export type RegionalSettings = {
-  currency: "GBP" | "USD" | "EUR";
+  currency: string;
+  fuelVolumeUnit: "litres" | "gallons";
   motFeature: "mot" | "emissionsTest" | "disabled";
   dateFormat: "dd-mon-yyyy" | "iso";
   distanceUnit: "miles" | "km";
@@ -11,8 +14,11 @@ export type RegionalSettings = {
 };
 
 export function getRegionalSettings(): RegionalSettings {
+  const currency = getAppSetting("currency") ?? "GBP";
   return {
-    currency: (getAppSetting("currency") as RegionalSettings["currency"]) ?? "GBP",
+    currency,
+    // Legacy installs never set fuelVolumeUnit explicitly; it used to be inferred from currency === "USD".
+    fuelVolumeUnit: (getAppSetting("fuelVolumeUnit") as RegionalSettings["fuelVolumeUnit"]) ?? (currency === "USD" ? "gallons" : "litres"),
     motFeature: (getAppSetting("motFeature") as RegionalSettings["motFeature"]) ?? "mot",
     dateFormat: (getAppSetting("dateFormat") as RegionalSettings["dateFormat"]) ?? "dd-mon-yyyy",
     distanceUnit: (getAppSetting("distanceUnit") as RegionalSettings["distanceUnit"]) ?? "miles",
@@ -24,6 +30,7 @@ export function getRegionalSettings(): RegionalSettings {
 
 export function updateRegionalSettings(input: Partial<RegionalSettings>) {
   if (input.currency !== undefined) setAppSetting("currency", input.currency);
+  if (input.fuelVolumeUnit !== undefined) setAppSetting("fuelVolumeUnit", input.fuelVolumeUnit);
   if (input.motFeature !== undefined) setAppSetting("motFeature", input.motFeature);
   if (input.dateFormat !== undefined) setAppSetting("dateFormat", input.dateFormat);
   if (input.distanceUnit !== undefined) setAppSetting("distanceUnit", input.distanceUnit);

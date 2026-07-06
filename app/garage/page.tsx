@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BadgeCheck, CalendarClock, DollarSign, PackagePlus, PoundSterling, Wrench } from "lucide-react";
+import { BadgeCheck, Banknote, CalendarClock, DollarSign, Euro, PackagePlus, PoundSterling, Wrench } from "lucide-react";
 import { AppFrame } from "@/components/AppFrame";
 import { CreateVehicleForm } from "@/components/Forms";
 import { RegistrationPlate } from "@/components/RegistrationPlate";
@@ -34,7 +34,7 @@ export default async function GaragePage() {
           <strong>{stats.vehicles.length}</strong>
         </article>
         <article className="stat-card stat-card-spend">
-          {settings.currency === "USD" ? <DollarSign size={20} /> : <PoundSterling size={20} />}
+          {settings.currency === "USD" ? <DollarSign size={20} /> : settings.currency === "GBP" ? <PoundSterling size={20} /> : settings.currency === "EUR" ? <Euro size={20} /> : <Banknote size={20} />}
           <span>Spent this year</span>
           <strong>{formatCurrency(stats.yearlySpend, settings)}</strong>
         </article>
