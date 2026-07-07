@@ -2,6 +2,17 @@
 
 All notable changes to Carvey will be documented here.
 
+## [1.0.7] - 2026-07-07
+
+### Added
+
+- Annual vehicle test terminology now offers "Inspection" alongside "MOT", plus a "Custom" option to type your own name for it (e.g. "Kontroll", "TÜV", "Roadworthy Certificate") — replaces the old fixed "Emissions Test" choice, which still loads correctly for existing installs
+- Gallery photos can now be edited after upload — change the caption or the record it's linked to via a new "Edit" button on each photo
+
+### Fixed
+
+- Deleting a gallery photo now requires confirmation, matching every other record type in the app — previously it deleted immediately on click with no confirmation step
+
 ## [1.0.6] - 2026-07-06
 
 ### Added

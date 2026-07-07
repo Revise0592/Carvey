@@ -4,7 +4,7 @@ import { PrintButton } from "@/components/PrintButton";
 import { RegistrationPlate } from "@/components/RegistrationPlate";
 import { requireUser } from "@/lib/auth";
 import { formatCurrency, formatDate, formatMiles, formatMotResult } from "@/lib/format";
-import { getRegionalSettings } from "@/lib/regional-settings";
+import { getMotLabel, getRegionalSettings } from "@/lib/regional-settings";
 import { getSellerSheetData } from "@/lib/seller-sheet";
 
 export default async function VehiclePrintPage({ params }: { params: Promise<{ id: string }> }) {
@@ -16,7 +16,7 @@ export default async function VehiclePrintPage({ params }: { params: Promise<{ i
 
   const { vehicle, maintenance, repairs, mots, reminders, totals } = report;
   const settings = getRegionalSettings();
-  const motLabel = settings.motFeature === "emissionsTest" ? "Emissions Test" : "MOT";
+  const motLabel = getMotLabel(settings);
   const regMode = settings.plateStyle;
   const generatedAt = settings.dateFormat === "iso"
     ? new Date().toISOString().slice(0, 10)

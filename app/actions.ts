@@ -51,6 +51,7 @@ import {
   updatePlannedPurchase,
   updatePlannedPurchasePurchasedDate,
   updateReminder,
+  updateGalleryPhoto,
   updateRepair,
   updateServiceInterval,
   updateVehicle,
@@ -58,7 +59,7 @@ import {
   upsertMotReminder
 } from "@/lib/db";
 import { changePassword, changeUsername, createFirstAdmin, login, logout, requireUser } from "@/lib/auth";
-import { CURRENCY_CODES, getRegionalSettings, updateRegionalSettings } from "@/lib/regional-settings";
+import { CURRENCY_CODES, getMotLabel, getRegionalSettings, updateRegionalSettings } from "@/lib/regional-settings";
 import { debugEasterEggsEnabled } from "@/lib/debug";
 import { safeUploadPath } from "@/lib/paths";
 
@@ -318,7 +319,7 @@ export async function createMotAction(vehicleId: number, formData: FormData) {
     cost: money(formData, "cost"),
     certificateRef: nullableStr(formData, "certificateRef")
   });
-  upsertMotReminder(vehicleId, expiryDate);
+  upsertMotReminder(vehicleId, expiryDate, getMotLabel(getRegionalSettings()));
   await syncCurrentDemoAfterMutation();
   revalidatePath("/garage");
   revalidatePath(`/vehicles/${vehicleId}`);
@@ -336,7 +337,7 @@ export async function updateMotAction(vehicleId: number, id: number, formData: F
     cost: money(formData, "cost"),
     certificateRef: nullableStr(formData, "certificateRef")
   });
-  upsertMotReminder(vehicleId, expiryDate);
+  upsertMotReminder(vehicleId, expiryDate, getMotLabel(getRegionalSettings()));
   await syncCurrentDemoAfterMutation();
   revalidateVehicle(vehicleId);
 }
@@ -642,12 +643,13 @@ export async function updateRegionalSettingsAction(formData: FormData) {
   await requireUser();
   const currency = z.string().refine(code => CURRENCY_CODES.includes(code)).parse(str(formData, "currency"));
   const fuelVolumeUnit = z.enum(["litres", "gallons"]).parse(str(formData, "fuelVolumeUnit"));
-  const motFeature = z.enum(["mot", "emissionsTest", "disabled"]).parse(str(formData, "motFeature"));
+  const motFeature = z.enum(["mot", "inspection", "custom", "disabled"]).parse(str(formData, "motFeature"));
+  const motCustomLabel = nullableStr(formData, "motCustomLabel") ?? "";
   const dateFormat = z.enum(["dd-mon-yyyy", "iso"]).parse(str(formData, "dateFormat"));
   const distanceUnit = z.enum(["miles", "km"]).parse(str(formData, "distanceUnit"));
   const plateStyle = z.enum(["uk-yellow", "uk-white"]).parse(str(formData, "plateStyle"));
   const fuelDisabled = str(formData, "fuelDisabled") === "on";
-  updateRegionalSettings({ currency, fuelVolumeUnit, motFeature, dateFormat, distanceUnit, plateStyle, fuelDisabled });
+  updateRegionalSettings({ currency, fuelVolumeUnit, motFeature, motCustomLabel, dateFormat, distanceUnit, plateStyle, fuelDisabled });
   revalidatePath("/");
   redirect("/settings?tab=regional&app=regional-updated");
 }
@@ -679,6 +681,23 @@ export async function deleteGalleryPhotoAction(vehicleId: number, formData: Form
   if (!photo) return;
   deleteGalleryPhoto(photoId, vehicleId);
   await removeUploadFile(photo.filePath);
+  revalidateVehicle(vehicleId);
+}
+
+const galleryRecordTypeSchema = z.enum(["maintenance", "repair", "mot"]).nullable();
+
+export async function updateGalleryPhotoAction(vehicleId: number, formData: FormData) {
+  await requireUser();
+  const photoId = z.coerce.number().int().positive().parse(str(formData, "photoId"));
+  const photo = getGalleryPhoto(photoId, vehicleId);
+  if (!photo) return;
+  const caption = nullableStr(formData, "caption");
+  // recordType field may be "maintenance:42", "repair:7", or "" (unlinked)
+  const rawLinked = str(formData, "recordType") || "";
+  const [rawType, rawId] = rawLinked.includes(":") ? rawLinked.split(":") : [null, null];
+  const recordType = galleryRecordTypeSchema.parse(rawType || null);
+  const recordId = rawId ? Number.parseInt(rawId, 10) : null;
+  updateGalleryPhoto(photoId, vehicleId, { caption, recordType, recordId });
   revalidateVehicle(vehicleId);
 }
 

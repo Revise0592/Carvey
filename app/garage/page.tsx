@@ -7,7 +7,7 @@ import { VehiclePhoto } from "@/components/VehiclePhoto";
 import { getCollectionName, getDashboardStats } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { formatCurrency, formatDate, formatMiles } from "@/lib/format";
-import { getRegionalSettings } from "@/lib/regional-settings";
+import { getMotLabel, getRegionalSettings } from "@/lib/regional-settings";
 
 export default async function GaragePage() {
   await requireUser();
@@ -15,7 +15,7 @@ export default async function GaragePage() {
   const collectionName = getCollectionName();
   const settings = getRegionalSettings();
   const regMode = settings.plateStyle;
-  const motLabel = settings.motFeature === "emissionsTest" ? "Emissions Test" : "MOT";
+  const motLabel = getMotLabel(settings);
 
   return (
     <AppFrame>

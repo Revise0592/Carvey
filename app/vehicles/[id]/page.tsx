@@ -33,11 +33,11 @@ import { getCollectionName, getVehicle, getVehicleActivePlannedPurchaseSummary, 
 import { requireUser } from "@/lib/auth";
 import { debugEasterEggsEnabled } from "@/lib/debug";
 import { computeAverageFuelEconomy, computeFuelEconomies, formatCurrency, formatDate, formatMiles, formatMotResult, formatPlannedPurchaseStatus, formatReminderStatus, formatVolume, todayIso, type MotResult, type PlannedPurchaseStatus, type ReminderStatusLabel } from "@/lib/format";
-import { getRegionalSettings, type RegionalSettings } from "@/lib/regional-settings";
+import { getMotLabel, getRegionalSettings, type RegionalSettings } from "@/lib/regional-settings";
 import { getReminderStatus } from "@/lib/reminders";
 import { AttachmentSection } from "@/components/AttachmentSection";
 import { ModalPanel } from "@/components/ModalPanel";
-import { assignServiceIntervalAction, deleteAttachmentAction, deleteGalleryPhotoAction, recordServiceDoneAction, removeVehicleServiceIntervalAction } from "@/app/actions";
+import { assignServiceIntervalAction, deleteAttachmentAction, deleteGalleryPhotoAction, recordServiceDoneAction, removeVehicleServiceIntervalAction, updateGalleryPhotoAction } from "@/app/actions";
 import { GalleryGrid, type GalleryItem } from "@/components/GalleryGrid";
 import { ConfirmDelete } from "@/components/ConfirmDelete";
 
@@ -59,7 +59,7 @@ export default async function VehiclePage({
 
   const query = await searchParams;
   const settings = getRegionalSettings();
-  const motLabel = settings.motFeature === "emissionsTest" ? "Emissions Test" : "MOT";
+  const motLabel = getMotLabel(settings);
   const tabs = allTabs
     .filter((t) => t !== "mots" || settings.motFeature !== "disabled")
     .filter((t) => t !== "fuel" || !settings.fuelDisabled);
@@ -382,7 +382,7 @@ export default async function VehiclePage({
                           </div>
                           <div className="record-row-actions">
                             {!record.completedAt ? <CompleteReminderButton vehicleId={vehicle.id} id={record.id} /> : null}
-                            <EditReminderForm record={record} isLinked={linkedReminderIds.has(record.id)} />
+                            <EditReminderForm record={record} isLinked={linkedReminderIds.has(record.id)} motLabel={motLabel} />
                           </div>
                         </div>
                       </div>
@@ -610,6 +610,7 @@ export default async function VehiclePage({
         const repairsMap = new Map(repairs.map(r => [r.id, r]));
         const motsMap = new Map(mots.map(m => [m.id, m]));
         const boundDeleteGalleryPhoto = deleteGalleryPhotoAction.bind(null, vehicle.id);
+        const boundUpdateGalleryPhoto = updateGalleryPhotoAction.bind(null, vehicle.id);
 
         type GalleryEntry =
           | { kind: "attachment"; data: (typeof imageAttachments)[number] }
@@ -646,6 +647,7 @@ export default async function VehiclePage({
             originalFilename: entry.data.originalFilename,
             caption: entry.kind === "gallery" ? entry.data.caption : null,
             recordType: entry.data.recordType ?? null,
+            recordId: entry.data.recordId ?? null,
             recordDescription: description,
             recordDate: date ? formatDate(date, settings) : "",
             recordTab: tab,
@@ -661,7 +663,14 @@ export default async function VehiclePage({
               <GalleryUploadForm vehicleId={vehicle.id} maintenance={maintenance} repairs={repairs} />
             </div>
             {galleryItems.length > 0 ? (
-              <GalleryGrid items={galleryItems} vehicleId={vehicle.id} deleteAction={boundDeleteGalleryPhoto} />
+              <GalleryGrid
+                items={galleryItems}
+                vehicleId={vehicle.id}
+                deleteAction={boundDeleteGalleryPhoto}
+                updateAction={boundUpdateGalleryPhoto}
+                maintenance={maintenance}
+                repairs={repairs}
+              />
             ) : (
               <div className="empty-state records-empty-state">
                 <h3>No photos yet</h3>

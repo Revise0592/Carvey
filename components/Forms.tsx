@@ -167,10 +167,10 @@ export function EditMotForm({ record, motLabel = "MOT" }: { record: MotRecord; m
   );
 }
 
-export function EditReminderForm({ record, isLinked = false }: { record: Reminder; isLinked?: boolean }) {
+export function EditReminderForm({ record, isLinked = false, motLabel = "MOT" }: { record: Reminder; isLinked?: boolean; motLabel?: string }) {
   const updateAction = updateReminderAction.bind(null, record.vehicleId, record.id);
   const deleteAction = deleteReminderAction.bind(null, record.vehicleId, record.id);
-  const isMotReminder = record.title.toLowerCase() === "mot due";
+  const isMotReminder = record.title.toLowerCase() === `${motLabel} due`.toLowerCase();
   const editForm = (
     <form action={updateAction} className="record-form">
       <Field label="Title"><input name="title" defaultValue={record.title} required /></Field>
