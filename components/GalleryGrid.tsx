@@ -2,7 +2,9 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, X, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { EditPanel } from "./EditPanel";
+import type { MaintenanceRecord, RepairRecord } from "@/lib/db";
 
 export type GalleryItem = {
   id: string;
@@ -10,6 +12,7 @@ export type GalleryItem = {
   originalFilename: string;
   caption: string | null;
   recordType: string | null;
+  recordId: number | null;
   recordDescription: string;
   recordDate: string;
   recordTab: string;
@@ -21,10 +24,16 @@ export function GalleryGrid({
   items,
   vehicleId,
   deleteAction,
+  updateAction,
+  maintenance,
+  repairs,
 }: {
   items: GalleryItem[];
   vehicleId: number;
   deleteAction: (formData: FormData) => Promise<void>;
+  updateAction: (formData: FormData) => Promise<void>;
+  maintenance: MaintenanceRecord[];
+  repairs: RepairRecord[];
 }) {
   const [open, setOpen] = useState<number | null>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -102,12 +111,49 @@ export function GalleryGrid({
                 </Link>
               ) : null}
               {item.isStandalone && item.photoId !== null ? (
-                <form action={deleteAction} style={{ marginTop: "0.25rem" }}>
-                  <input type="hidden" name="photoId" value={item.photoId} />
-                  <button type="submit" className="icon-button gallery-delete-btn" title="Delete photo">
-                    <Trash2 size={13} />
-                  </button>
-                </form>
+                <div style={{ marginTop: "0.25rem" }}>
+                  <EditPanel
+                    title="Edit photo"
+                    deleteAction={async (formData) => {
+                      formData.append("photoId", String(item.photoId));
+                      await deleteAction(formData);
+                    }}
+                  >
+                    <form
+                      action={async (formData) => {
+                        formData.append("photoId", String(item.photoId));
+                        await updateAction(formData);
+                      }}
+                      className="record-form"
+                    >
+                      <label className="form-field">
+                        <span>Caption</span>
+                        <input name="caption" type="text" defaultValue={item.caption ?? ""} placeholder="Optional caption" />
+                      </label>
+                      <label className="form-field">
+                        <span>Link to record (optional)</span>
+                        <select name="recordType" defaultValue={item.recordType && item.recordId ? `${item.recordType}:${item.recordId}` : ""}>
+                          <option value="">— Not linked —</option>
+                          {maintenance.length > 0 ? (
+                            <optgroup label="Maintenance">
+                              {maintenance.map(m => (
+                                <option key={m.id} value={`maintenance:${m.id}`}>{m.date} · {m.description}</option>
+                              ))}
+                            </optgroup>
+                          ) : null}
+                          {repairs.length > 0 ? (
+                            <optgroup label="Repairs">
+                              {repairs.map(r => (
+                                <option key={r.id} value={`repair:${r.id}`}>{r.date} · {r.fault}</option>
+                              ))}
+                            </optgroup>
+                          ) : null}
+                        </select>
+                      </label>
+                      <button className="primary-button" type="submit">Save changes</button>
+                    </form>
+                  </EditPanel>
+                </div>
               ) : null}
             </div>
           </div>

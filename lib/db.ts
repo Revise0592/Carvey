@@ -901,10 +901,11 @@ export function createReminder(input: Omit<Reminder, "id" | "createdAt" | "compl
     .run(input);
 }
 
-export function upsertMotReminder(vehicleId: number, dueDate: string) {
+export function upsertMotReminder(vehicleId: number, dueDate: string, motLabel = "MOT") {
+  const title = `${motLabel} due`;
   const existing = getDb()
     .prepare("SELECT id FROM reminders WHERE vehicle_id = ? AND title = ? AND completed_at IS NULL ORDER BY id DESC LIMIT 1")
-    .get(vehicleId, "MOT due") as { id: number } | undefined;
+    .get(vehicleId, title) as { id: number } | undefined;
 
   if (existing) {
     return getDb()
@@ -914,7 +915,7 @@ export function upsertMotReminder(vehicleId: number, dueDate: string) {
 
   return createReminder({
     vehicleId,
-    title: "MOT due",
+    title,
     dueDate,
     dueOdometer: null,
     recurrence: "12 months"
@@ -1416,6 +1417,12 @@ export function createGalleryPhoto(input: Omit<GalleryPhoto, "id" | "createdAt">
       VALUES (@vehicleId, @recordType, @recordId, @filename, @originalFilename, @mimeType, @fileSize, @filePath, @caption)
     `)
     .run(input);
+}
+
+export function updateGalleryPhoto(id: number, vehicleId: number, input: { caption: string | null; recordType: GalleryPhoto["recordType"]; recordId: number | null }) {
+  return getDb()
+    .prepare("UPDATE vehicle_gallery_photos SET caption = @caption, record_type = @recordType, record_id = @recordId WHERE id = @id AND vehicle_id = @vehicleId")
+    .run({ id, vehicleId, ...input });
 }
 
 export function deleteGalleryPhoto(id: number, vehicleId: number) {

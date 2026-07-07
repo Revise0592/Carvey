@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Bug, Building2, Download, Globe, HardDrive, KeyRound, Monitor, Palette, RefreshCw, RotateCcw, Server, Settings2, ShieldCheck, Tag, Upload, UserRound } from "lucide-react";
 import { AppFrame } from "@/components/AppFrame";
 import { ThemeControls } from "@/components/ThemeControls";
+import { MotFeatureField } from "@/components/MotFeatureField";
 import { InstallAppPanel } from "@/components/InstallAppPanel";
 import { CategoryCard, ServiceIntervalCard, WorkshopCard } from "@/components/SettingsCards";
 import { createMaintenanceCategoryAction, createServiceIntervalAction, createWorkshopAction, loadShowcaseDemoDataAction, restorePreviousDemoDataAction, saveCurrentShowcaseDemoDataAction, updateAuthSettingsAction, updateCollectionNameAction, updateMaintenanceCategoryAction, updatePasswordAction, updateRegionalSettingsAction, updateServiceIntervalAction, updateUsernameAction, updateWorkshopAction } from "@/app/actions";
@@ -177,14 +178,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                   <option value="uk-white">White (front plate)</option>
                 </select>
               </label>
-              <label>
-                Annual vehicle test
-                <select name="motFeature" defaultValue={regionalSettings.motFeature}>
-                  <option value="mot">MOT</option>
-                  <option value="emissionsTest">Emissions Test</option>
-                  <option value="disabled">Disabled (hide feature)</option>
-                </select>
-              </label>
+              <MotFeatureField motFeature={regionalSettings.motFeature} motCustomLabel={regionalSettings.motCustomLabel} />
               <label>
                 Date format
                 <select name="dateFormat" defaultValue={regionalSettings.dateFormat}>
