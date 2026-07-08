@@ -45,5 +45,5 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Claude Code local settings (machine-specific permissions)
-.claude/settings.local.json
+# Claude Code local settings/config
+.claude/
