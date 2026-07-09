@@ -5,6 +5,8 @@
   </picture>
 </p>
 
+Feedback is always welcome - please suggest your ideas here: [https://carvey.userjot.com/](https://carvey.userjot.com/)
+
 Carvey is a self-hosted, local-first car maintenance tracker for managing vehicles, repairs, maintenance, MOTs, reminders and running costs. Your "digital service history" for your older cars, or your digital backup of all that paperwork you've got stuffed in a slippery fish.
 
 ## Screenshots
