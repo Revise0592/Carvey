@@ -5,8 +5,6 @@
   </picture>
 </p>
 
-Feedback is always welcome - please suggest your ideas here: [https://carvey.userjot.com/](https://carvey.userjot.com/)
-
 Carvey is a self-hosted, local-first car maintenance tracker for managing vehicles, repairs, maintenance, MOTs, reminders and running costs. Your "digital service history" for your older cars, or your digital backup of all that paperwork you've got stuffed in a slippery fish.
 
 ## Screenshots
@@ -95,3 +93,6 @@ Add `CARVEY_RESET_PASSWORD=yournewpassword` to your Docker Compose environment, 
 - SQLite via `better-sqlite3`
 - Sharp for image processing
 - Vitest for tests
+
+## Issues and Feedback
+Please raise issues / bugs in the issues tab. Any feedback about features you'd like to see, raise [here](https://carvey.userjot.com/)
