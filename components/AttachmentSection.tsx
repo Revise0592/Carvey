@@ -21,7 +21,7 @@ export function AttachmentSection({
   const [uploading, setUploading] = useState(false);
 
   return (
-    <div className="attachment-section">
+    <div className="attachment-section" id={`attachments-${recordType}-${recordId}`}>
       {attachments.length > 0 ? (
         <div className="attachment-list">
           {attachments.map((attachment) => (
