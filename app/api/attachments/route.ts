@@ -68,7 +68,14 @@ export async function POST(request: Request) {
   });
 
   revalidatePath(`/vehicles/${vehicleId}`);
-  return new Response(null, { status: 303, headers: { Location: `/vehicles/${vehicleId}` } });
+  const tab = tabForRecordType(recordType.data);
+  const location = `/vehicles/${vehicleId}?tab=${tab}#attachments-${recordType.data}-${recordId}`;
+  return new Response(null, { status: 303, headers: { Location: location } });
+}
+
+function tabForRecordType(recordType: "maintenance" | "repair" | "mot") {
+  const map = { maintenance: "maintenance", repair: "repairs", mot: "mots" } as const;
+  return map[recordType];
 }
 
 function extensionFromMime(mime: string) {
