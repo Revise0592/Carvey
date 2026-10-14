@@ -219,7 +219,7 @@ function restoreDatabaseContents(backupDbPath: string) {
     },
     {
       name: "maintenance_records",
-      columns: ["id", "vehicle_id", "date", "odometer", "category", "description", "cost", "notes", "created_at"]
+      columns: ["id", "vehicle_id", "date", "odometer", "category", "description", "garage", "workshop_id", "cost", "notes", "created_at"]
     },
     {
       name: "repair_records",
@@ -248,6 +248,9 @@ function restoreDatabaseContents(backupDbPath: string) {
     const restoreRepairColumns = restoreTables.has("repair_records")
       ? new Set((database.prepare("PRAGMA restore_backup.table_info(repair_records)").all() as Array<{ name: string }>).map((column) => column.name))
       : new Set<string>();
+    const restoreMaintenanceColumns = restoreTables.has("maintenance_records")
+      ? new Set((database.prepare("PRAGMA restore_backup.table_info(maintenance_records)").all() as Array<{ name: string }>).map((column) => column.name))
+      : new Set<string>();
     const restorePlannedPurchaseColumns = restoreTables.has("planned_purchases")
       ? new Set((database.prepare("PRAGMA restore_backup.table_info(planned_purchases)").all() as Array<{ name: string }>).map((column) => column.name))
       : new Set<string>();
@@ -263,6 +266,7 @@ function restoreDatabaseContents(backupDbPath: string) {
       const sourceColumns = table.columns.map((column) => {
         if (table.name === "vehicles" && column === "debug_destroyed" && !restoreVehicleColumns.has(column)) return "0 AS debug_destroyed";
         if (table.name === "vehicles" && column === "sold" && !restoreVehicleColumns.has(column)) return "0 AS sold";
+        if (table.name === "maintenance_records" && (column === "garage" || column === "workshop_id") && !restoreMaintenanceColumns.has(column)) return `NULL AS ${column}`;
         if (table.name === "repair_records" && column === "workshop_id" && !restoreRepairColumns.has(column)) return "NULL AS workshop_id";
         if (table.name === "planned_purchases" && !restorePlannedPurchaseColumns.has(column)) return `NULL AS ${column}`;
         return column;
