@@ -6,21 +6,21 @@ All notable changes to Carvey will be documented here.
 
 ### Added
 
-- Maintenance records now have a Garage/Workshop field, matching repairs — pick from your saved garages or type a new one (it's added to Settings → Garages & Workshops automatically). Shown on the maintenance list and the printable vehicle history
+- Garage/Workshop field on maintenance records
 
 ### Fixed
 
-- To Buy list (and any record list with several action buttons) no longer runs off the side of the screen on mobile — action buttons now wrap onto their own line beneath each entry, so Edit/Delete and the other actions are reachable without sideways scrolling
-- Vehicle and Settings tab strips no longer overhang the page edge by a couple of pixels on small phones, which allowed the whole page to shift sideways
-- Record titles on mobile now wrap onto a second line instead of being cut off with "…", since the action buttons no longer compete for the space
-- Printable vehicle history tables scroll sideways within their section on phones instead of stretching the whole page
-- Long Data directory paths in Settings → Backup now wrap instead of pushing the panel off-screen on small phones
+- To Buy and other record lists overflowing the screen on mobile, leaving Edit/Delete off-screen
+- Tab strips overhanging the page edge on small phones
+- Record titles truncated on mobile
+- Printable history tables overflowing on mobile
+- Long data directory path overflowing in Settings → Backup
 
 ## [1.0.8] - 2026-07-14
 
 ### Fixed
 
-- Adding an attachment to a maintenance, repair, or MOT record no longer drops you back to the overview tab — you're returned to the record you were working on
+- Adding an attachment returning you to the overview tab instead of the record
 
 ## [1.0.7] - 2026-07-07
 
