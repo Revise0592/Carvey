@@ -1748,7 +1748,9 @@ textarea:focus-visible {
 }
 
 .metric-list strong {
+  min-width: 0;
   letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
 }
 
 .explosion-overlay {
@@ -2050,6 +2052,17 @@ textarea:focus-visible {
   margin: 0.3rem 0 0;
 }
 
+@media screen and (max-width: 760px) {
+  .print-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .print-table {
+    min-width: 560px;
+  }
+}
+
 @media (max-width: 760px) {
   .app-shell {
     width: min(100% - 24px, 1180px);
@@ -2176,6 +2189,11 @@ textarea:focus-visible {
 
   .record-row {
     flex-wrap: wrap;
+  }
+
+  .record-row-content > strong {
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 
   .record-row-actions {
