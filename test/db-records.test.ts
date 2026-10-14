@@ -147,6 +147,8 @@ describe("record mutation helpers", () => {
       odometer: 42100,
       category: "Service",
       description: "Oil and filter",
+      garage: "Village Motors",
+      workshopId: null,
       cost: 120,
       notes: "Corrected"
     });
@@ -155,6 +157,7 @@ describe("record mutation helpers", () => {
       date: "2026-04-02",
       category: "Service",
       description: "Oil and filter",
+      garage: "Village Motors",
       cost: 120,
       notes: "Corrected"
     });
@@ -508,6 +511,59 @@ describe("record mutation helpers", () => {
     expect(db.listMots(vehicleId)).toHaveLength(0);
     expect(db.listReminders(vehicleId)).toHaveLength(1);
     expect(db.listReminders(vehicleId)[0].title).toBe("MOT due");
+    db.closeDbForTests();
+  });
+
+  it("resets a completed MOT reminder when a new test is logged instead of leaving a stale done entry", async () => {
+    const db = await freshDb();
+    const vehicleId = Number(db.createVehicle({ make: "Volvo", model: "V70", year: 2008, registration: "AB12 CDE", vin: null, currentOdometer: 160000, purchasePrice: null, purchaseDate: null, notes: null }).lastInsertRowid);
+    db.upsertMotReminder(vehicleId, "2026-06-30");
+    const reminderId = db.listReminders(vehicleId)[0].id;
+    db.completeReminder(reminderId, vehicleId);
+    // A stray older completed copy, as left behind by previous versions.
+    db.completeReminder(Number(db.createReminder({ vehicleId, title: "MOT due", dueDate: "2025-06-30", dueOdometer: null, recurrence: "12 months" }).lastInsertRowid), vehicleId);
+
+    db.upsertMotReminder(vehicleId, "2027-06-30");
+
+    const reminders = db.listReminders(vehicleId);
+    expect(reminders).toHaveLength(1);
+    expect(reminders[0]).toMatchObject({ dueDate: "2027-06-30", completedAt: null, recurrence: "12 months" });
+    db.closeDbForTests();
+  });
+
+  it("rolls recurring reminders forward when completed and marks one-off reminders done", async () => {
+    const db = await freshDb();
+    const vehicleId = Number(db.createVehicle({ make: "Honda", model: "Civic", year: 2019, registration: "XY19 ZZZ", vin: null, currentOdometer: 41000, purchasePrice: null, purchaseDate: null, notes: null }).lastInsertRowid);
+    const yearly = Number(db.createReminder({ vehicleId, title: "Annual service", dueDate: "2026-10-01", dueOdometer: 40000, recurrence: "12 months" }).lastInsertRowid);
+    const mileage = Number(db.createReminder({ vehicleId, title: "Oil change", dueDate: null, dueOdometer: 40000, recurrence: "5000 miles" }).lastInsertRowid);
+    const oneOff = Number(db.createReminder({ vehicleId, title: "Fit dashcam", dueDate: "2026-10-01", dueOdometer: null, recurrence: null }).lastInsertRowid);
+
+    db.completeOrRepeatReminder(yearly, vehicleId, "2026-10-14");
+    db.completeOrRepeatReminder(mileage, vehicleId, "2026-10-14");
+    db.completeOrRepeatReminder(oneOff, vehicleId, "2026-10-14");
+
+    const byTitle = Object.fromEntries(db.listReminders(vehicleId).map((reminder) => [reminder.title, reminder]));
+    expect(byTitle["Annual service"]).toMatchObject({ dueDate: "2027-10-14", dueOdometer: null, completedAt: null });
+    expect(byTitle["Oil change"]).toMatchObject({ dueOdometer: 46000, completedAt: null });
+    expect(byTitle["Fit dashcam"].completedAt).not.toBeNull();
+    db.closeDbForTests();
+  });
+
+  it("replaces the Service Plan reminder when a service is recorded instead of leaving a done copy", async () => {
+    const db = await freshDb();
+    const vehicleId = Number(db.createVehicle({ make: "Honda", model: "Civic", year: 2019, registration: "XY19 ZZZ", vin: null, currentOdometer: 41000, purchasePrice: null, purchaseDate: null, notes: null }).lastInsertRowid);
+    const intervalId = Number(db.createServiceInterval({ name: "Oil service", intervalMonths: 12, intervalMileage: null }).lastInsertRowid);
+    db.assignServiceInterval(vehicleId, intervalId);
+    const planId = db.listVehicleServiceIntervals(vehicleId)[0].id;
+
+    db.recordServiceDone(planId, vehicleId, { serviceDate: "2026-01-10", serviceOdometer: 40000, cost: 90 });
+    db.recordServiceDone(planId, vehicleId, { serviceDate: "2026-10-14", serviceOdometer: 41000, cost: 95 });
+
+    const reminders = db.listReminders(vehicleId);
+    expect(reminders).toHaveLength(1);
+    expect(reminders[0]).toMatchObject({ title: "Oil service", dueDate: "2027-10-14", completedAt: null });
+    expect(db.listVehicleServiceIntervals(vehicleId)[0].reminderId).toBe(reminders[0].id);
+    expect(db.listMaintenance(vehicleId)).toHaveLength(2);
     db.closeDbForTests();
   });
 });

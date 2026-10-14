@@ -7,19 +7,29 @@ export function ModalPanel({
   trigger,
   children,
   title,
-  tone = "normal"
+  tone = "normal",
+  triggerClassName,
+  triggerLabel
 }: {
   trigger: React.ReactNode;
   children: React.ReactNode;
   title?: string;
   tone?: "normal" | "danger";
+  triggerClassName?: string;
+  triggerLabel?: string;
 }) {
   const [open, setOpen] = useState(false);
   const titleId = title ? `modal-title-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}` : undefined;
 
   return (
     <>
-      <button className={`modal-trigger ${tone === "danger" ? "danger-trigger" : ""}`} type="button" onClick={() => setOpen(true)}>
+      <button
+        className={triggerClassName ?? `modal-trigger ${tone === "danger" ? "danger-trigger" : ""}`}
+        type="button"
+        title={triggerLabel}
+        aria-label={triggerLabel}
+        onClick={() => setOpen(true)}
+      >
         {trigger}
       </button>
       {open ? (
