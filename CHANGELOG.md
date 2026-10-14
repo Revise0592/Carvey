@@ -2,6 +2,18 @@
 
 All notable changes to Carvey will be documented here.
 
+## [1.0.9] - 2026-10-14
+
+### Added
+
+- Maintenance records now have a Garage/Workshop field, matching repairs — pick from your saved garages or type a new one (it's added to Settings → Garages & Workshops automatically). Shown on the maintenance list and the printable vehicle history
+
+## [1.0.8] - 2026-07-14
+
+### Fixed
+
+- Adding an attachment to a maintenance, repair, or MOT record no longer drops you back to the overview tab — you're returned to the record you were working on
+
 ## [1.0.7] - 2026-07-07
 
 ### Added

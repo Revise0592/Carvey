@@ -147,6 +147,8 @@ describe("record mutation helpers", () => {
       odometer: 42100,
       category: "Service",
       description: "Oil and filter",
+      garage: "Village Motors",
+      workshopId: null,
       cost: 120,
       notes: "Corrected"
     });
@@ -155,6 +157,7 @@ describe("record mutation helpers", () => {
       date: "2026-04-02",
       category: "Service",
       description: "Oil and filter",
+      garage: "Village Motors",
       cost: 120,
       notes: "Corrected"
     });

@@ -69,7 +69,7 @@ export default async function VehiclePrintPage({ params }: { params: Promise<{ i
           <tr key={record.id}>
             <td>{formatDate(record.date, settings)}</td>
             <td>{formatMiles(record.odometer, settings)}</td>
-            <td>{record.category}</td>
+            <td>{record.category}{record.garage ? <p>{record.garage}</p> : null}</td>
             <td>{record.description}{record.notes ? <p>{record.notes}</p> : null}</td>
             <td>{formatCurrency(record.cost, settings)}</td>
           </tr>

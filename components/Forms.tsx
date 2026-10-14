@@ -98,7 +98,7 @@ export function DebugVehicleForm({ vehicle }: { vehicle: Vehicle }) {
   );
 }
 
-export function EditMaintenanceForm({ record, categories }: { record: MaintenanceRecord; categories: MaintenanceCategory[] }) {
+export function EditMaintenanceForm({ record, categories, workshops }: { record: MaintenanceRecord; categories: MaintenanceCategory[]; workshops: Workshop[] }) {
   const updateAction = updateMaintenanceAction.bind(null, record.vehicleId, record.id);
   const deleteAction = deleteMaintenanceAction.bind(null, record.vehicleId, record.id);
   return (
@@ -114,6 +114,12 @@ export function EditMaintenanceForm({ record, categories }: { record: Maintenanc
         </Field>
         <Field label="Cost"><input name="cost" type="number" min="0" step="0.01" defaultValue={record.cost} /></Field>
         <Field label="Description"><input name="description" defaultValue={record.description} required /></Field>
+        <Field label="Garage/Workshop">
+          <input name="garage" list="workshop-suggestions" defaultValue={record.garage ?? ""} autoComplete="off" />
+          <datalist id="workshop-suggestions">
+            {workshops.map((w) => <option value={w.name} key={w.id} />)}
+          </datalist>
+        </Field>
         <Field label="Notes"><textarea name="notes" defaultValue={record.notes ?? ""} /></Field>
         <button className="primary-button" type="submit">Save changes</button>
       </form>
@@ -218,7 +224,7 @@ export function EditPlannedPurchaseForm({ record }: { record: PlannedPurchase })
   );
 }
 
-export function MaintenanceForm({ vehicleId, categories }: { vehicleId: number; categories: MaintenanceCategory[] }) {
+export function MaintenanceForm({ vehicleId, categories, workshops }: { vehicleId: number; categories: MaintenanceCategory[]; workshops: Workshop[] }) {
   const action = createMaintenanceAction.bind(null, vehicleId);
   return (
     <ModalPanel trigger={<><Wrench size={17} /> Add maintenance</>} title="Add maintenance">
@@ -233,6 +239,12 @@ export function MaintenanceForm({ vehicleId, categories }: { vehicleId: number; 
         </Field>
         <Field label="Cost"><input name="cost" type="number" min="0" step="0.01" /></Field>
         <Field label="Description"><input name="description" required /></Field>
+        <Field label="Garage/Workshop">
+          <input name="garage" list="workshop-suggestions" autoComplete="off" />
+          <datalist id="workshop-suggestions">
+            {workshops.map((w) => <option value={w.name} key={w.id} />)}
+          </datalist>
+        </Field>
         <Field label="Notes"><textarea name="notes" /></Field>
         <button className="primary-button" type="submit">Save maintenance</button>
       </form>
@@ -342,7 +354,7 @@ export function EditPlannedPurchaseBoughtDateForm({ record }: { record: PlannedP
   );
 }
 
-export function CreateMaintenanceFromPurchaseForm({ record, categories }: { record: PlannedPurchase; categories: MaintenanceCategory[] }) {
+export function CreateMaintenanceFromPurchaseForm({ record, categories, workshops }: { record: PlannedPurchase; categories: MaintenanceCategory[]; workshops: Workshop[] }) {
   const action = createMaintenanceFromPurchaseAction.bind(null, record.vehicleId, record.id);
   return (
     <ModalPanel trigger={<><Wrench size={17} /> Add to maintenance</>} title="Add purchase to maintenance">
@@ -357,6 +369,12 @@ export function CreateMaintenanceFromPurchaseForm({ record, categories }: { reco
         </Field>
         <Field label="Cost"><input name="cost" type="number" min="0" step="0.01" defaultValue={record.actualCost ?? record.estimatedCost} /></Field>
         <Field label="Description"><input name="description" defaultValue={record.itemName} required /></Field>
+        <Field label="Garage/Workshop">
+          <input name="garage" list="workshop-suggestions" autoComplete="off" />
+          <datalist id="workshop-suggestions">
+            {workshops.map((w) => <option value={w.name} key={w.id} />)}
+          </datalist>
+        </Field>
         <Field label="Notes"><textarea name="notes" defaultValue={purchaseRecordNotes(record)} /></Field>
         <button className="primary-button" type="submit">Save maintenance</button>
       </form>

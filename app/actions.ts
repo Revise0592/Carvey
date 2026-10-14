@@ -101,7 +101,7 @@ function workshopInput(formData: FormData) {
   };
 }
 
-function repairWorkshopInput(formData: FormData) {
+function recordWorkshopInput(formData: FormData) {
   const raw = nullableStr(formData, "garage");
   if (!raw) return { garage: null, workshopId: null };
   const workshop = getOrCreateWorkshopByName(raw);
@@ -198,12 +198,15 @@ export async function updateVehicleDebugAction(vehicleId: number, formData: Form
 
 export async function createMaintenanceAction(vehicleId: number, formData: FormData) {
   await requireUser();
+  const workshop = recordWorkshopInput(formData);
   createMaintenance({
     vehicleId,
     date: z.string().min(1).parse(str(formData, "date")),
     odometer: nullableInt(formData, "odometer"),
     category: z.string().min(1).parse(str(formData, "category")),
     description: z.string().min(1).parse(str(formData, "description")),
+    garage: workshop.garage,
+    workshopId: workshop.workshopId,
     cost: money(formData, "cost"),
     notes: nullableStr(formData, "notes")
   });
@@ -213,11 +216,14 @@ export async function createMaintenanceAction(vehicleId: number, formData: FormD
 
 export async function createMaintenanceFromPurchaseAction(vehicleId: number, purchaseId: number, formData: FormData) {
   await requireUser();
+  const workshop = recordWorkshopInput(formData);
   convertPlannedPurchaseToMaintenance(purchaseId, vehicleId, {
     date: z.string().min(1).parse(str(formData, "date")),
     odometer: nullableInt(formData, "odometer"),
     category: z.string().min(1).parse(str(formData, "category")),
     description: z.string().min(1).parse(str(formData, "description")),
+    garage: workshop.garage,
+    workshopId: workshop.workshopId,
     cost: money(formData, "cost"),
     notes: nullableStr(formData, "notes")
   });
@@ -227,11 +233,14 @@ export async function createMaintenanceFromPurchaseAction(vehicleId: number, pur
 
 export async function updateMaintenanceAction(vehicleId: number, id: number, formData: FormData) {
   await requireUser();
+  const workshop = recordWorkshopInput(formData);
   updateMaintenance(id, vehicleId, {
     date: z.string().min(1).parse(str(formData, "date")),
     odometer: nullableInt(formData, "odometer"),
     category: z.string().min(1).parse(str(formData, "category")),
     description: z.string().min(1).parse(str(formData, "description")),
+    garage: workshop.garage,
+    workshopId: workshop.workshopId,
     cost: money(formData, "cost"),
     notes: nullableStr(formData, "notes")
   });
@@ -250,7 +259,7 @@ export async function deleteMaintenanceAction(vehicleId: number, id: number) {
 
 export async function createRepairAction(vehicleId: number, formData: FormData) {
   await requireUser();
-  const workshop = repairWorkshopInput(formData);
+  const workshop = recordWorkshopInput(formData);
   createRepair({
     vehicleId,
     date: z.string().min(1).parse(str(formData, "date")),
@@ -267,7 +276,7 @@ export async function createRepairAction(vehicleId: number, formData: FormData) 
 
 export async function createRepairFromPurchaseAction(vehicleId: number, purchaseId: number, formData: FormData) {
   await requireUser();
-  const workshop = repairWorkshopInput(formData);
+  const workshop = recordWorkshopInput(formData);
   convertPlannedPurchaseToRepair(purchaseId, vehicleId, {
     date: z.string().min(1).parse(str(formData, "date")),
     odometer: nullableInt(formData, "odometer"),
@@ -283,7 +292,7 @@ export async function createRepairFromPurchaseAction(vehicleId: number, purchase
 
 export async function updateRepairAction(vehicleId: number, id: number, formData: FormData) {
   await requireUser();
-  const workshop = repairWorkshopInput(formData);
+  const workshop = recordWorkshopInput(formData);
   updateRepair(id, vehicleId, {
     date: z.string().min(1).parse(str(formData, "date")),
     odometer: nullableInt(formData, "odometer"),

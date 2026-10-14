@@ -201,7 +201,7 @@ export default async function VehiclePage({
           <section className="records-shell">
             <div className="section-heading">
               <h2><Wrench size={19} /> Maintenance</h2>
-              <MaintenanceForm vehicleId={vehicle.id} categories={categories} />
+              <MaintenanceForm vehicleId={vehicle.id} categories={categories} workshops={workshops} />
             </div>
             {maintenance.length > 0 ? (
               <>
@@ -217,11 +217,11 @@ export default async function VehiclePage({
                         <span className="tag">{record.category}</span>
                         <div className="record-row-content">
                           <strong>{record.description}</strong>
-                          <p className="record-row-meta">{formatDate(record.date, settings)} · {formatMiles(record.odometer, settings)}</p>
+                          <p className="record-row-meta">{formatDate(record.date, settings)} · {formatMiles(record.odometer, settings)}{record.garage ? ` · ${record.garage}` : ""}</p>
                         </div>
                         <strong className="record-row-value">{formatCurrency(record.cost, settings)}</strong>
                         <div className="record-row-actions">
-                          <EditMaintenanceForm record={record} categories={categories} />
+                          <EditMaintenanceForm record={record} categories={categories} workshops={workshops} />
                         </div>
                       </div>
                       <AttachmentSection attachments={listAttachments("maintenance", record.id)} deleteAction={boundDeleteAttachment} recordType="maintenance" recordId={record.id} vehicleId={vehicle.id} />
@@ -509,7 +509,7 @@ export default async function VehiclePage({
                           {record.url ? <a className="secondary-button" href={record.url} target="_blank" rel="noreferrer"><ExternalLink size={15} /></a> : null}
                           {!record.convertedAt ? (
                             <>
-                              <CreateMaintenanceFromPurchaseForm record={record} categories={categories} />
+                              <CreateMaintenanceFromPurchaseForm record={record} categories={categories} workshops={workshops} />
                               <CreateRepairFromPurchaseForm record={record} workshops={workshops} />
                             </>
                           ) : null}

@@ -31,6 +31,8 @@ export type MaintenanceRecord = {
   odometer: number | null;
   category: string;
   description: string;
+  garage: string | null;
+  workshopId: number | null;
   cost: number;
   notes: string | null;
   createdAt: string;
@@ -302,6 +304,8 @@ function migrate(database: Database.Database) {
       odometer INTEGER,
       category TEXT NOT NULL,
       description TEXT NOT NULL,
+      garage TEXT,
+      workshop_id INTEGER REFERENCES workshops(id) ON DELETE SET NULL,
       cost REAL NOT NULL DEFAULT 0,
       notes TEXT,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -448,6 +452,8 @@ function migrate(database: Database.Database) {
   ensureColumn(database, "vehicles", "purchase_date", "TEXT");
   ensureColumn(database, "vehicles", "debug_destroyed", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn(database, "vehicles", "sold", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(database, "maintenance_records", "garage", "TEXT");
+  ensureColumn(database, "maintenance_records", "workshop_id", "INTEGER REFERENCES workshops(id) ON DELETE SET NULL");
   ensureColumn(database, "repair_records", "workshop_id", "INTEGER REFERENCES workshops(id) ON DELETE SET NULL");
   ensureColumn(database, "planned_purchases", "converted_to_type", "TEXT CHECK (converted_to_type IN ('maintenance', 'repair'))");
   ensureColumn(database, "planned_purchases", "converted_record_id", "INTEGER");
@@ -770,7 +776,7 @@ export function setVehicleDebugDestroyed(id: number, destroyed: boolean) {
 
 export function listMaintenance(vehicleId: number) {
   return getDb()
-    .prepare("SELECT id, vehicle_id as vehicleId, date, odometer, category, description, cost, notes, created_at as createdAt FROM maintenance_records WHERE vehicle_id = ? ORDER BY date DESC, id DESC")
+    .prepare("SELECT id, vehicle_id as vehicleId, date, odometer, category, description, garage, workshop_id as workshopId, cost, notes, created_at as createdAt FROM maintenance_records WHERE vehicle_id = ? ORDER BY date DESC, id DESC")
     .all(vehicleId) as MaintenanceRecord[];
 }
 
@@ -841,16 +847,18 @@ export function getPlannedPurchase(id: number, vehicleId: number) {
     .get(id, vehicleId) as PlannedPurchase | undefined;
 }
 
-export function createMaintenance(input: Omit<MaintenanceRecord, "id" | "createdAt">) {
+type MaintenanceInput = Omit<MaintenanceRecord, "id" | "vehicleId" | "createdAt" | "garage" | "workshopId"> & Partial<Pick<MaintenanceRecord, "garage" | "workshopId">>;
+
+export function createMaintenance(input: MaintenanceInput & { vehicleId: number }) {
   return getDb()
-    .prepare("INSERT INTO maintenance_records (vehicle_id, date, odometer, category, description, cost, notes) VALUES (@vehicleId, @date, @odometer, @category, @description, @cost, @notes)")
-    .run(input);
+    .prepare("INSERT INTO maintenance_records (vehicle_id, date, odometer, category, description, garage, workshop_id, cost, notes) VALUES (@vehicleId, @date, @odometer, @category, @description, @garage, @workshopId, @cost, @notes)")
+    .run({ garage: null, workshopId: null, ...input });
 }
 
-export function updateMaintenance(id: number, vehicleId: number, input: Omit<MaintenanceRecord, "id" | "vehicleId" | "createdAt">) {
+export function updateMaintenance(id: number, vehicleId: number, input: MaintenanceInput) {
   return getDb()
-    .prepare("UPDATE maintenance_records SET date = @date, odometer = @odometer, category = @category, description = @description, cost = @cost, notes = @notes WHERE id = @id AND vehicle_id = @vehicleId")
-    .run({ id, vehicleId, ...input });
+    .prepare("UPDATE maintenance_records SET date = @date, odometer = @odometer, category = @category, description = @description, garage = @garage, workshop_id = @workshopId, cost = @cost, notes = @notes WHERE id = @id AND vehicle_id = @vehicleId")
+    .run({ garage: null, workshopId: null, id, vehicleId, ...input });
 }
 
 export function deleteMaintenance(id: number, vehicleId: number) {
@@ -1171,7 +1179,7 @@ export function updatePlannedPurchasePurchasedDate(id: number, vehicleId: number
 export function convertPlannedPurchaseToMaintenance(
   id: number,
   vehicleId: number,
-  input: Omit<MaintenanceRecord, "id" | "vehicleId" | "createdAt">
+  input: MaintenanceInput
 ) {
   return getDb().transaction(() => {
     const plannedPurchase = getPlannedPurchase(id, vehicleId);
