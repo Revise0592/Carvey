@@ -2,6 +2,33 @@
 
 All notable changes to Carvey will be documented here.
 
+## [1.0.9] - 2026-10-14
+
+### Added
+
+- Garage/Workshop field on maintenance records
+- Ticking the MOT reminder opens a form to log the MOT
+- Ticking a Service Plan reminder opens a form to record the service
+- Completed reminders can be removed directly from the list
+
+### Fixed
+
+- To Buy and other record lists overflowing the screen on mobile, leaving Edit/Delete off-screen
+- Tab strips overhanging the page edge on small phones
+- Record titles truncated on mobile
+- Printable history tables overflowing on mobile
+- Long data directory path overflowing in Settings → Backup
+- Logging an MOT or recording a Service Plan service left the old completed reminder behind instead of resetting it
+- Repeating reminders (e.g. every 12 months / 5,000 miles) not resetting when ticked
+- Editing an older MOT moving the MOT reminder to that test's expiry date
+- Reminders sorted with completed ones first
+
+## [1.0.8] - 2026-07-14
+
+### Fixed
+
+- Adding an attachment returning you to the overview tab instead of the record
+
 ## [1.0.7] - 2026-07-07
 
 ### Added

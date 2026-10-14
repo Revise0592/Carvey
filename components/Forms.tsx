@@ -98,7 +98,7 @@ export function DebugVehicleForm({ vehicle }: { vehicle: Vehicle }) {
   );
 }
 
-export function EditMaintenanceForm({ record, categories }: { record: MaintenanceRecord; categories: MaintenanceCategory[] }) {
+export function EditMaintenanceForm({ record, categories, workshops }: { record: MaintenanceRecord; categories: MaintenanceCategory[]; workshops: Workshop[] }) {
   const updateAction = updateMaintenanceAction.bind(null, record.vehicleId, record.id);
   const deleteAction = deleteMaintenanceAction.bind(null, record.vehicleId, record.id);
   return (
@@ -114,6 +114,12 @@ export function EditMaintenanceForm({ record, categories }: { record: Maintenanc
         </Field>
         <Field label="Cost"><input name="cost" type="number" min="0" step="0.01" defaultValue={record.cost} /></Field>
         <Field label="Description"><input name="description" defaultValue={record.description} required /></Field>
+        <Field label="Garage/Workshop">
+          <input name="garage" list="workshop-suggestions" defaultValue={record.garage ?? ""} autoComplete="off" />
+          <datalist id="workshop-suggestions">
+            {workshops.map((w) => <option value={w.name} key={w.id} />)}
+          </datalist>
+        </Field>
         <Field label="Notes"><textarea name="notes" defaultValue={record.notes ?? ""} /></Field>
         <button className="primary-button" type="submit">Save changes</button>
       </form>
@@ -218,7 +224,7 @@ export function EditPlannedPurchaseForm({ record }: { record: PlannedPurchase })
   );
 }
 
-export function MaintenanceForm({ vehicleId, categories }: { vehicleId: number; categories: MaintenanceCategory[] }) {
+export function MaintenanceForm({ vehicleId, categories, workshops }: { vehicleId: number; categories: MaintenanceCategory[]; workshops: Workshop[] }) {
   const action = createMaintenanceAction.bind(null, vehicleId);
   return (
     <ModalPanel trigger={<><Wrench size={17} /> Add maintenance</>} title="Add maintenance">
@@ -233,6 +239,12 @@ export function MaintenanceForm({ vehicleId, categories }: { vehicleId: number; 
         </Field>
         <Field label="Cost"><input name="cost" type="number" min="0" step="0.01" /></Field>
         <Field label="Description"><input name="description" required /></Field>
+        <Field label="Garage/Workshop">
+          <input name="garage" list="workshop-suggestions" autoComplete="off" />
+          <datalist id="workshop-suggestions">
+            {workshops.map((w) => <option value={w.name} key={w.id} />)}
+          </datalist>
+        </Field>
         <Field label="Notes"><textarea name="notes" /></Field>
         <button className="primary-button" type="submit">Save maintenance</button>
       </form>
@@ -263,24 +275,41 @@ export function RepairForm({ vehicleId, workshops }: { vehicleId: number; worksh
 }
 
 export function MotForm({ vehicleId, motLabel = "MOT" }: { vehicleId: number; motLabel?: string }) {
-  const action = createMotAction.bind(null, vehicleId);
   return (
     <ModalPanel trigger={<><ShieldCheck size={17} /> Add {motLabel}</>} title={`Add ${motLabel}`}>
-      <form action={action} className="record-form">
-        <Field label="Test date"><input name="testDate" type="date" defaultValue={todayIso()} required /></Field>
-        <Field label="Expiry date"><input name="expiryDate" type="date" required /></Field>
-        <Field label="Odometer"><input name="odometer" type="number" min="0" /></Field>
-        <Field label="Result"><select name="result" defaultValue="pass" required>
-            <option value="pass">Pass</option>
-            <option value="advisory">Pass with advisories</option>
-            <option value="fail">Fail</option>
-          </select></Field>
-        <Field label="Cost"><input name="cost" type="number" min="0" step="0.01" /></Field>
-        <Field label="Certificate/reference"><input name="certificateRef" /></Field>
-        <Field label="Advisories"><textarea name="advisories" /></Field>
-        <button className="primary-button" type="submit">Save MOT</button>
-      </form>
+      <MotFields vehicleId={vehicleId} motLabel={motLabel} />
     </ModalPanel>
+  );
+}
+
+// Shown in place of the plain "Mark complete" tick on the MOT reminder: completing it means
+// logging the test, which then resets the reminder to the new expiry date.
+export function CompleteMotReminderButton({ vehicleId, motLabel = "MOT", defaultExpiryDate }: { vehicleId: number; motLabel?: string; defaultExpiryDate?: string }) {
+  return (
+    <ModalPanel trigger={<Check size={17} />} triggerClassName="icon-button" triggerLabel={`Log ${motLabel}`} title={`Log ${motLabel}`}>
+      <p className="muted" style={{ marginTop: 0, marginRight: 44 }}>Record the test result and the reminder will reset to the new expiry date.</p>
+      <MotFields vehicleId={vehicleId} motLabel={motLabel} defaultExpiryDate={defaultExpiryDate} />
+    </ModalPanel>
+  );
+}
+
+function MotFields({ vehicleId, motLabel, defaultExpiryDate }: { vehicleId: number; motLabel: string; defaultExpiryDate?: string }) {
+  const action = createMotAction.bind(null, vehicleId);
+  return (
+    <form action={action} className="record-form">
+      <Field label="Test date"><input name="testDate" type="date" defaultValue={todayIso()} required /></Field>
+      <Field label="Expiry date"><input name="expiryDate" type="date" defaultValue={defaultExpiryDate} required /></Field>
+      <Field label="Odometer"><input name="odometer" type="number" min="0" /></Field>
+      <Field label="Result"><select name="result" defaultValue="pass" required>
+          <option value="pass">Pass</option>
+          <option value="advisory">Pass with advisories</option>
+          <option value="fail">Fail</option>
+        </select></Field>
+      <Field label="Cost"><input name="cost" type="number" min="0" step="0.01" /></Field>
+      <Field label="Certificate/reference"><input name="certificateRef" /></Field>
+      <Field label="Advisories"><textarea name="advisories" /></Field>
+      <button className="primary-button" type="submit">Save {motLabel}</button>
+    </form>
   );
 }
 
@@ -342,7 +371,7 @@ export function EditPlannedPurchaseBoughtDateForm({ record }: { record: PlannedP
   );
 }
 
-export function CreateMaintenanceFromPurchaseForm({ record, categories }: { record: PlannedPurchase; categories: MaintenanceCategory[] }) {
+export function CreateMaintenanceFromPurchaseForm({ record, categories, workshops }: { record: PlannedPurchase; categories: MaintenanceCategory[]; workshops: Workshop[] }) {
   const action = createMaintenanceFromPurchaseAction.bind(null, record.vehicleId, record.id);
   return (
     <ModalPanel trigger={<><Wrench size={17} /> Add to maintenance</>} title="Add purchase to maintenance">
@@ -357,6 +386,12 @@ export function CreateMaintenanceFromPurchaseForm({ record, categories }: { reco
         </Field>
         <Field label="Cost"><input name="cost" type="number" min="0" step="0.01" defaultValue={record.actualCost ?? record.estimatedCost} /></Field>
         <Field label="Description"><input name="description" defaultValue={record.itemName} required /></Field>
+        <Field label="Garage/Workshop">
+          <input name="garage" list="workshop-suggestions" autoComplete="off" />
+          <datalist id="workshop-suggestions">
+            {workshops.map((w) => <option value={w.name} key={w.id} />)}
+          </datalist>
+        </Field>
         <Field label="Notes"><textarea name="notes" defaultValue={purchaseRecordNotes(record)} /></Field>
         <button className="primary-button" type="submit">Save maintenance</button>
       </form>
@@ -475,6 +510,18 @@ export function CompleteReminderButton({ vehicleId, id }: { vehicleId: number; i
         <Check size={17} />
       </button>
     </form>
+  );
+}
+
+export function ClearReminderButton({ record }: { record: Reminder }) {
+  const deleteAction = deleteReminderAction.bind(null, record.vehicleId, record.id);
+  return (
+    <ModalPanel trigger={<Trash2 size={17} />} triggerClassName="icon-button" triggerLabel="Remove reminder" title="Remove completed reminder">
+      <div className="edit-menu">
+        <p className="muted">Remove &ldquo;{record.title}&rdquo; from the reminders list.</p>
+        <ConfirmDelete action={deleteAction} label="Remove" />
+      </div>
+    </ModalPanel>
   );
 }
 

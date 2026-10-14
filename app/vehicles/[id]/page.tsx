@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { BadgeCheck, CalendarDays, Check, ExternalLink, Fuel, Hammer, Images, PackagePlus, Plus, Printer, RefreshCw, ShieldCheck, Trash2, Wrench } from "lucide-react";
 import { AppFrame } from "@/components/AppFrame";
 import {
+  CompleteMotReminderButton,
+  ClearReminderButton,
   CompleteReminderButton,
   CreateMaintenanceFromPurchaseForm,
   CreateRepairFromPurchaseForm,
@@ -201,7 +203,7 @@ export default async function VehiclePage({
           <section className="records-shell">
             <div className="section-heading">
               <h2><Wrench size={19} /> Maintenance</h2>
-              <MaintenanceForm vehicleId={vehicle.id} categories={categories} />
+              <MaintenanceForm vehicleId={vehicle.id} categories={categories} workshops={workshops} />
             </div>
             {maintenance.length > 0 ? (
               <>
@@ -217,11 +219,11 @@ export default async function VehiclePage({
                         <span className="tag">{record.category}</span>
                         <div className="record-row-content">
                           <strong>{record.description}</strong>
-                          <p className="record-row-meta">{formatDate(record.date, settings)} · {formatMiles(record.odometer, settings)}</p>
+                          <p className="record-row-meta">{formatDate(record.date, settings)} · {formatMiles(record.odometer, settings)}{record.garage ? ` · ${record.garage}` : ""}</p>
                         </div>
                         <strong className="record-row-value">{formatCurrency(record.cost, settings)}</strong>
                         <div className="record-row-actions">
-                          <EditMaintenanceForm record={record} categories={categories} />
+                          <EditMaintenanceForm record={record} categories={categories} workshops={workshops} />
                         </div>
                       </div>
                       <AttachmentSection attachments={listAttachments("maintenance", record.id)} deleteAction={boundDeleteAttachment} recordType="maintenance" recordId={record.id} vehicleId={vehicle.id} />
@@ -343,6 +345,10 @@ export default async function VehiclePage({
         const statusOrder: Record<string, number> = { overdue: 0, upcoming: 1, open: 2, done: 3 };
         const sort = query.sort || "status";
         const dir: "asc" | "desc" = query.dir === "asc" ? "asc" : "desc";
+        const servicePlanByReminderId = new Map(vehicleServiceIntervals.filter((v) => v.reminderId !== null).map((v) => [v.reminderId!, v]));
+        const isMotReminder = (reminder: { title: string }) => reminder.title.toLowerCase() === `${motLabel} due`.toLowerCase();
+        // A test taken before expiry keeps the anniversary date; one taken late runs a year from today.
+        const nextMotExpiry = (dueDate: string | null) => addYear(dueDate && dueDate >= todayIso() ? dueDate : todayIso());
         const withStatus = reminders.map((r) => ({ record: r, status: getReminderStatus(r, vehicle) }));
         const sorted = [...withStatus].sort((a, b) => {
           const m = dir === "asc" ? 1 : -1;
@@ -351,7 +357,7 @@ export default async function VehiclePage({
             const bd = b.record.dueDate ?? "9999";
             return m * ad.localeCompare(bd);
           }
-          return m * ((statusOrder[a.status] ?? 4) - (statusOrder[b.status] ?? 4));
+          return m * ((statusOrder[b.status] ?? 4) - (statusOrder[a.status] ?? 4));
         });
         return (
           <section className="records-shell">
@@ -369,7 +375,7 @@ export default async function VehiclePage({
                   {sorted.map(({ record, status }) => {
                     const reminderMeta = [
                       record.dueDate ? `Due ${formatDate(record.dueDate, settings)}` : "No date set",
-                      record.title.toLowerCase() === "mot due" ? null : formatMiles(record.dueOdometer, settings),
+                      isMotReminder(record) ? null : formatMiles(record.dueOdometer, settings),
                       record.recurrence ? `Repeats ${record.recurrence}` : null,
                     ].filter(Boolean).join(" · ");
                     return (
@@ -381,7 +387,13 @@ export default async function VehiclePage({
                             <p className="record-row-meta">{reminderMeta}</p>
                           </div>
                           <div className="record-row-actions">
-                            {!record.completedAt ? <CompleteReminderButton vehicleId={vehicle.id} id={record.id} /> : null}
+                            {!record.completedAt ? (
+                              servicePlanByReminderId.has(record.id)
+                                ? <RecordServiceButton record={servicePlanByReminderId.get(record.id)!} vehicle={vehicle} compact />
+                                : isMotReminder(record) && settings.motFeature !== "disabled"
+                                  ? <CompleteMotReminderButton vehicleId={vehicle.id} motLabel={motLabel} defaultExpiryDate={nextMotExpiry(record.dueDate)} />
+                                  : <CompleteReminderButton vehicleId={vehicle.id} id={record.id} />
+                            ) : !linkedReminderIds.has(record.id) ? <ClearReminderButton record={record} /> : null}
                             <EditReminderForm record={record} isLinked={linkedReminderIds.has(record.id)} motLabel={motLabel} />
                           </div>
                         </div>
@@ -509,7 +521,7 @@ export default async function VehiclePage({
                           {record.url ? <a className="secondary-button" href={record.url} target="_blank" rel="noreferrer"><ExternalLink size={15} /></a> : null}
                           {!record.convertedAt ? (
                             <>
-                              <CreateMaintenanceFromPurchaseForm record={record} categories={categories} />
+                              <CreateMaintenanceFromPurchaseForm record={record} categories={categories} workshops={workshops} />
                               <CreateRepairFromPurchaseForm record={record} workshops={workshops} />
                             </>
                           ) : null}
@@ -709,7 +721,6 @@ function AssignServiceIntervalForm({ vehicleId, intervals }: { vehicleId: number
 }
 
 function ServicePlanCard({ record, vehicle, settings }: { record: VehicleServiceInterval; vehicle: Vehicle; settings: RegionalSettings }) {
-  const recordAction = recordServiceDoneAction.bind(null, vehicle.id, record.id);
   const removeAction = removeVehicleServiceIntervalAction.bind(null, vehicle.id, record.id);
 
   const intervalDesc = [
@@ -729,26 +740,39 @@ function ServicePlanCard({ record, vehicle, settings }: { record: VehicleService
         <p className="muted">Not yet recorded for this vehicle.</p>
       )}
       <div className="record-actions">
-        <ModalPanel trigger={<><Check size={17} /> Record service</>} title={`Record ${record.name}`}>
-          <form action={recordAction} className="record-form">
-            <label>
-              Date
-              <input name="serviceDate" type="date" defaultValue={todayIso()} required />
-            </label>
-            <label>
-              Odometer
-              <input name="serviceOdometer" type="number" min="0" defaultValue={vehicle.effectiveOdometer ?? ""} />
-            </label>
-            <label>
-              Cost
-              <input name="cost" type="number" min="0" step="0.01" defaultValue="0" />
-            </label>
-            <button className="primary-button" type="submit">Save service record</button>
-          </form>
-        </ModalPanel>
+        <RecordServiceButton record={record} vehicle={vehicle} />
         <ConfirmDelete action={removeAction} label="Remove" />
       </div>
     </article>
+  );
+}
+
+function RecordServiceButton({ record, vehicle, compact = false }: { record: VehicleServiceInterval; vehicle: Vehicle; compact?: boolean }) {
+  const recordAction = recordServiceDoneAction.bind(null, vehicle.id, record.id);
+  return (
+    <ModalPanel
+      trigger={compact ? <Check size={17} /> : <><Check size={17} /> Record service</>}
+      triggerClassName={compact ? "icon-button" : undefined}
+      triggerLabel={compact ? `Record ${record.name}` : undefined}
+      title={`Record ${record.name}`}
+    >
+      {compact ? <p className="muted" style={{ marginTop: 0, marginRight: 44 }}>Logs this service in Maintenance and sets the next reminder.</p> : null}
+      <form action={recordAction} className="record-form">
+        <label>
+          Date
+          <input name="serviceDate" type="date" defaultValue={todayIso()} required />
+        </label>
+        <label>
+          Odometer
+          <input name="serviceOdometer" type="number" min="0" defaultValue={vehicle.effectiveOdometer ?? ""} />
+        </label>
+        <label>
+          Cost
+          <input name="cost" type="number" min="0" step="0.01" defaultValue="0" />
+        </label>
+        <button className="primary-button" type="submit">Save service record</button>
+      </form>
+    </ModalPanel>
   );
 }
 
@@ -798,4 +822,9 @@ function SortBar({ vehicleId, tab, options, activeSort, activeDir }: {
       })}
     </div>
   );
+}
+
+function addYear(isoDate: string) {
+  const [year, month, day] = isoDate.split("-");
+  return `${Number(year) + 1}-${month}-${month === "02" && day === "29" ? "28" : day}`;
 }
