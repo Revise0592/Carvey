@@ -2174,6 +2174,16 @@ textarea:focus-visible {
     width: 100%;
   }
 
+  .record-row {
+    flex-wrap: wrap;
+  }
+
+  .record-row-actions {
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
   .record-row .record-actions {
     align-items: center;
     flex-direction: row;
@@ -2245,6 +2255,12 @@ textarea:focus-visible {
 @media (max-width: 480px) {
   .app-shell {
     width: min(100% - 20px, 1180px);
+  }
+
+  .tabs,
+  .settings-tabs {
+    margin-inline: -10px;
+    padding-inline: 10px;
   }
 
   .stat-card,
