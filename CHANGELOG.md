@@ -12,6 +12,9 @@ All notable changes to Carvey will be documented here.
 
 - To Buy list (and any record list with several action buttons) no longer runs off the side of the screen on mobile — action buttons now wrap onto their own line beneath each entry, so Edit/Delete and the other actions are reachable without sideways scrolling
 - Vehicle and Settings tab strips no longer overhang the page edge by a couple of pixels on small phones, which allowed the whole page to shift sideways
+- Record titles on mobile now wrap onto a second line instead of being cut off with "…", since the action buttons no longer compete for the space
+- Printable vehicle history tables scroll sideways within their section on phones instead of stretching the whole page
+- Long Data directory paths in Settings → Backup now wrap instead of pushing the panel off-screen on small phones
 
 ## [1.0.8] - 2026-07-14
 

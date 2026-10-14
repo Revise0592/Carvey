@@ -92,30 +92,32 @@ export default async function VehiclePrintPage({ params }: { params: Promise<{ i
         <section className="print-section">
           <h2>{motLabel} history</h2>
           {mots.length ? (
-            <table className="print-table">
-              <thead>
-                <tr>
-                  <th>Tested</th>
-                  <th>Expires</th>
-                  <th>Mileage</th>
-                  <th>Result</th>
-                  <th>Reference</th>
-                  <th>Cost</th>
-                </tr>
-              </thead>
-              <tbody>
-                {mots.map((record) => (
-                  <tr key={record.id}>
-                    <td>{formatDate(record.testDate, settings)}</td>
-                    <td>{formatDate(record.expiryDate, settings)}</td>
-                    <td>{formatMiles(record.odometer, settings)}</td>
-                    <td>{formatMotResult(record.result)}</td>
-                    <td>{record.certificateRef ?? "Not recorded"}{record.advisories ? <p>{record.advisories}</p> : null}</td>
-                    <td>{formatCurrency(record.cost, settings)}</td>
+            <div className="print-table-wrap">
+              <table className="print-table">
+                <thead>
+                  <tr>
+                    <th>Tested</th>
+                    <th>Expires</th>
+                    <th>Mileage</th>
+                    <th>Result</th>
+                    <th>Reference</th>
+                    <th>Cost</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {mots.map((record) => (
+                    <tr key={record.id}>
+                      <td>{formatDate(record.testDate, settings)}</td>
+                      <td>{formatDate(record.expiryDate, settings)}</td>
+                      <td>{formatMiles(record.odometer, settings)}</td>
+                      <td>{formatMotResult(record.result)}</td>
+                      <td>{record.certificateRef ?? "Not recorded"}{record.advisories ? <p>{record.advisories}</p> : null}</td>
+                      <td>{formatCurrency(record.cost, settings)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           ) : <p className="print-empty">No {motLabel.toLowerCase()}s have been logged.</p>}
         </section>
       ) : null}
@@ -123,24 +125,26 @@ export default async function VehiclePrintPage({ params }: { params: Promise<{ i
       <section className="print-section">
         <h2>Open reminders</h2>
         {reminders.length ? (
-          <table className="print-table">
-            <thead>
-              <tr>
-                <th>Reminder</th>
-                <th>Due date</th>
-                <th>Recurrence</th>
-              </tr>
-            </thead>
-            <tbody>
-              {reminders.map((record) => (
-                <tr key={record.id}>
-                  <td>{record.title}</td>
-                  <td>{formatDate(record.dueDate, settings)}</td>
-                  <td>{record.recurrence ?? "None"}</td>
+          <div className="print-table-wrap">
+            <table className="print-table">
+              <thead>
+                <tr>
+                  <th>Reminder</th>
+                  <th>Due date</th>
+                  <th>Recurrence</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {reminders.map((record) => (
+                  <tr key={record.id}>
+                    <td>{record.title}</td>
+                    <td>{formatDate(record.dueDate, settings)}</td>
+                    <td>{record.recurrence ?? "None"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         ) : <p className="print-empty">No open reminders.</p>}
       </section>
     </main>
@@ -155,18 +159,20 @@ function PrintTable({ title, empty, children }: { title: string; empty: string; 
     <section className="print-section">
       <h2>{title}</h2>
       {hasRows ? (
-        <table className="print-table">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Mileage</th>
-              <th>Category/vendor</th>
-              <th>Details</th>
-              <th>Cost</th>
-            </tr>
-          </thead>
-          <tbody>{rows}</tbody>
-        </table>
+        <div className="print-table-wrap">
+          <table className="print-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Mileage</th>
+                <th>Category/vendor</th>
+                <th>Details</th>
+                <th>Cost</th>
+              </tr>
+            </thead>
+            <tbody>{rows}</tbody>
+          </table>
+        </div>
       ) : <p className="print-empty">{empty}</p>}
     </section>
   );
