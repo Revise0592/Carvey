@@ -8,6 +8,7 @@ All notable changes to Carvey will be documented here.
 
 - Garage/Workshop field on maintenance records
 - Ticking the MOT reminder opens a form to log the MOT
+- Ticking a Service Plan reminder opens a form to record the service
 - Completed reminders can be removed directly from the list
 
 ### Fixed
@@ -17,7 +18,7 @@ All notable changes to Carvey will be documented here.
 - Record titles truncated on mobile
 - Printable history tables overflowing on mobile
 - Long data directory path overflowing in Settings → Backup
-- Logging an MOT left the old completed MOT reminder behind instead of resetting it
+- Logging an MOT or recording a Service Plan service left the old completed reminder behind instead of resetting it
 - Repeating reminders (e.g. every 12 months / 5,000 miles) not resetting when ticked
 - Editing an older MOT moving the MOT reminder to that test's expiry date
 - Reminders sorted with completed ones first

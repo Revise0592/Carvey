@@ -1105,7 +1105,8 @@ export function recordServiceDone(
       notes: null
     });
 
-    if (row.reminderId) completeReminder(row.reminderId, vehicleId);
+    // The service is now in the maintenance history, so replace the reminder rather than leaving a "done" copy behind.
+    if (row.reminderId) deleteReminder(row.reminderId, vehicleId);
 
     getDb()
       .prepare(`

@@ -345,6 +345,7 @@ export default async function VehiclePage({
         const statusOrder: Record<string, number> = { overdue: 0, upcoming: 1, open: 2, done: 3 };
         const sort = query.sort || "status";
         const dir: "asc" | "desc" = query.dir === "asc" ? "asc" : "desc";
+        const servicePlanByReminderId = new Map(vehicleServiceIntervals.filter((v) => v.reminderId !== null).map((v) => [v.reminderId!, v]));
         const isMotReminder = (reminder: { title: string }) => reminder.title.toLowerCase() === `${motLabel} due`.toLowerCase();
         // A test taken before expiry keeps the anniversary date; one taken late runs a year from today.
         const nextMotExpiry = (dueDate: string | null) => addYear(dueDate && dueDate >= todayIso() ? dueDate : todayIso());
@@ -387,9 +388,11 @@ export default async function VehiclePage({
                           </div>
                           <div className="record-row-actions">
                             {!record.completedAt ? (
-                              isMotReminder(record) && settings.motFeature !== "disabled"
-                                ? <CompleteMotReminderButton vehicleId={vehicle.id} motLabel={motLabel} defaultExpiryDate={nextMotExpiry(record.dueDate)} />
-                                : <CompleteReminderButton vehicleId={vehicle.id} id={record.id} />
+                              servicePlanByReminderId.has(record.id)
+                                ? <RecordServiceButton record={servicePlanByReminderId.get(record.id)!} vehicle={vehicle} compact />
+                                : isMotReminder(record) && settings.motFeature !== "disabled"
+                                  ? <CompleteMotReminderButton vehicleId={vehicle.id} motLabel={motLabel} defaultExpiryDate={nextMotExpiry(record.dueDate)} />
+                                  : <CompleteReminderButton vehicleId={vehicle.id} id={record.id} />
                             ) : !linkedReminderIds.has(record.id) ? <ClearReminderButton record={record} /> : null}
                             <EditReminderForm record={record} isLinked={linkedReminderIds.has(record.id)} motLabel={motLabel} />
                           </div>
@@ -718,7 +721,6 @@ function AssignServiceIntervalForm({ vehicleId, intervals }: { vehicleId: number
 }
 
 function ServicePlanCard({ record, vehicle, settings }: { record: VehicleServiceInterval; vehicle: Vehicle; settings: RegionalSettings }) {
-  const recordAction = recordServiceDoneAction.bind(null, vehicle.id, record.id);
   const removeAction = removeVehicleServiceIntervalAction.bind(null, vehicle.id, record.id);
 
   const intervalDesc = [
@@ -738,26 +740,39 @@ function ServicePlanCard({ record, vehicle, settings }: { record: VehicleService
         <p className="muted">Not yet recorded for this vehicle.</p>
       )}
       <div className="record-actions">
-        <ModalPanel trigger={<><Check size={17} /> Record service</>} title={`Record ${record.name}`}>
-          <form action={recordAction} className="record-form">
-            <label>
-              Date
-              <input name="serviceDate" type="date" defaultValue={todayIso()} required />
-            </label>
-            <label>
-              Odometer
-              <input name="serviceOdometer" type="number" min="0" defaultValue={vehicle.effectiveOdometer ?? ""} />
-            </label>
-            <label>
-              Cost
-              <input name="cost" type="number" min="0" step="0.01" defaultValue="0" />
-            </label>
-            <button className="primary-button" type="submit">Save service record</button>
-          </form>
-        </ModalPanel>
+        <RecordServiceButton record={record} vehicle={vehicle} />
         <ConfirmDelete action={removeAction} label="Remove" />
       </div>
     </article>
+  );
+}
+
+function RecordServiceButton({ record, vehicle, compact = false }: { record: VehicleServiceInterval; vehicle: Vehicle; compact?: boolean }) {
+  const recordAction = recordServiceDoneAction.bind(null, vehicle.id, record.id);
+  return (
+    <ModalPanel
+      trigger={compact ? <Check size={17} /> : <><Check size={17} /> Record service</>}
+      triggerClassName={compact ? "icon-button" : undefined}
+      triggerLabel={compact ? `Record ${record.name}` : undefined}
+      title={`Record ${record.name}`}
+    >
+      {compact ? <p className="muted" style={{ marginTop: 0, marginRight: 44 }}>Logs this service in Maintenance and sets the next reminder.</p> : null}
+      <form action={recordAction} className="record-form">
+        <label>
+          Date
+          <input name="serviceDate" type="date" defaultValue={todayIso()} required />
+        </label>
+        <label>
+          Odometer
+          <input name="serviceOdometer" type="number" min="0" defaultValue={vehicle.effectiveOdometer ?? ""} />
+        </label>
+        <label>
+          Cost
+          <input name="cost" type="number" min="0" step="0.01" defaultValue="0" />
+        </label>
+        <button className="primary-button" type="submit">Save service record</button>
+      </form>
+    </ModalPanel>
   );
 }
 

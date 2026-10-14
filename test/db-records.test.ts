@@ -548,4 +548,22 @@ describe("record mutation helpers", () => {
     expect(byTitle["Fit dashcam"].completedAt).not.toBeNull();
     db.closeDbForTests();
   });
+
+  it("replaces the Service Plan reminder when a service is recorded instead of leaving a done copy", async () => {
+    const db = await freshDb();
+    const vehicleId = Number(db.createVehicle({ make: "Honda", model: "Civic", year: 2019, registration: "XY19 ZZZ", vin: null, currentOdometer: 41000, purchasePrice: null, purchaseDate: null, notes: null }).lastInsertRowid);
+    const intervalId = Number(db.createServiceInterval({ name: "Oil service", intervalMonths: 12, intervalMileage: null }).lastInsertRowid);
+    db.assignServiceInterval(vehicleId, intervalId);
+    const planId = db.listVehicleServiceIntervals(vehicleId)[0].id;
+
+    db.recordServiceDone(planId, vehicleId, { serviceDate: "2026-01-10", serviceOdometer: 40000, cost: 90 });
+    db.recordServiceDone(planId, vehicleId, { serviceDate: "2026-10-14", serviceOdometer: 41000, cost: 95 });
+
+    const reminders = db.listReminders(vehicleId);
+    expect(reminders).toHaveLength(1);
+    expect(reminders[0]).toMatchObject({ title: "Oil service", dueDate: "2027-10-14", completedAt: null });
+    expect(db.listVehicleServiceIntervals(vehicleId)[0].reminderId).toBe(reminders[0].id);
+    expect(db.listMaintenance(vehicleId)).toHaveLength(2);
+    db.closeDbForTests();
+  });
 });
