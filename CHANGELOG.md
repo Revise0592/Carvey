@@ -7,6 +7,8 @@ All notable changes to Carvey will be documented here.
 ### Added
 
 - Garage/Workshop field on maintenance records
+- Ticking the MOT reminder opens a form to log the MOT
+- Completed reminders can be removed directly from the list
 
 ### Fixed
 
@@ -15,6 +17,10 @@ All notable changes to Carvey will be documented here.
 - Record titles truncated on mobile
 - Printable history tables overflowing on mobile
 - Long data directory path overflowing in Settings → Backup
+- Logging an MOT left the old completed MOT reminder behind instead of resetting it
+- Repeating reminders (e.g. every 12 months / 5,000 miles) not resetting when ticked
+- Editing an older MOT moving the MOT reminder to that test's expiry date
+- Reminders sorted with completed ones first
 
 ## [1.0.8] - 2026-07-14
 
