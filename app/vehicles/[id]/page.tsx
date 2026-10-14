@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { BadgeCheck, CalendarDays, Check, ExternalLink, Fuel, Hammer, Images, PackagePlus, Plus, Printer, RefreshCw, ShieldCheck, Trash2, Wrench } from "lucide-react";
 import { AppFrame } from "@/components/AppFrame";
 import {
+  CompleteMotReminderButton,
+  ClearReminderButton,
   CompleteReminderButton,
   CreateMaintenanceFromPurchaseForm,
   CreateRepairFromPurchaseForm,
@@ -343,6 +345,9 @@ export default async function VehiclePage({
         const statusOrder: Record<string, number> = { overdue: 0, upcoming: 1, open: 2, done: 3 };
         const sort = query.sort || "status";
         const dir: "asc" | "desc" = query.dir === "asc" ? "asc" : "desc";
+        const isMotReminder = (reminder: { title: string }) => reminder.title.toLowerCase() === `${motLabel} due`.toLowerCase();
+        // A test taken before expiry keeps the anniversary date; one taken late runs a year from today.
+        const nextMotExpiry = (dueDate: string | null) => addYear(dueDate && dueDate >= todayIso() ? dueDate : todayIso());
         const withStatus = reminders.map((r) => ({ record: r, status: getReminderStatus(r, vehicle) }));
         const sorted = [...withStatus].sort((a, b) => {
           const m = dir === "asc" ? 1 : -1;
@@ -351,7 +356,7 @@ export default async function VehiclePage({
             const bd = b.record.dueDate ?? "9999";
             return m * ad.localeCompare(bd);
           }
-          return m * ((statusOrder[a.status] ?? 4) - (statusOrder[b.status] ?? 4));
+          return m * ((statusOrder[b.status] ?? 4) - (statusOrder[a.status] ?? 4));
         });
         return (
           <section className="records-shell">
@@ -369,7 +374,7 @@ export default async function VehiclePage({
                   {sorted.map(({ record, status }) => {
                     const reminderMeta = [
                       record.dueDate ? `Due ${formatDate(record.dueDate, settings)}` : "No date set",
-                      record.title.toLowerCase() === "mot due" ? null : formatMiles(record.dueOdometer, settings),
+                      isMotReminder(record) ? null : formatMiles(record.dueOdometer, settings),
                       record.recurrence ? `Repeats ${record.recurrence}` : null,
                     ].filter(Boolean).join(" · ");
                     return (
@@ -381,7 +386,11 @@ export default async function VehiclePage({
                             <p className="record-row-meta">{reminderMeta}</p>
                           </div>
                           <div className="record-row-actions">
-                            {!record.completedAt ? <CompleteReminderButton vehicleId={vehicle.id} id={record.id} /> : null}
+                            {!record.completedAt ? (
+                              isMotReminder(record) && settings.motFeature !== "disabled"
+                                ? <CompleteMotReminderButton vehicleId={vehicle.id} motLabel={motLabel} defaultExpiryDate={nextMotExpiry(record.dueDate)} />
+                                : <CompleteReminderButton vehicleId={vehicle.id} id={record.id} />
+                            ) : !linkedReminderIds.has(record.id) ? <ClearReminderButton record={record} /> : null}
                             <EditReminderForm record={record} isLinked={linkedReminderIds.has(record.id)} motLabel={motLabel} />
                           </div>
                         </div>
@@ -798,4 +807,9 @@ function SortBar({ vehicleId, tab, options, activeSort, activeDir }: {
       })}
     </div>
   );
+}
+
+function addYear(isoDate: string) {
+  const [year, month, day] = isoDate.split("-");
+  return `${Number(year) + 1}-${month}-${month === "02" && day === "29" ? "28" : day}`;
 }

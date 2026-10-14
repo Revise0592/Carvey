@@ -911,23 +911,30 @@ export function createReminder(input: Omit<Reminder, "id" | "createdAt" | "compl
 
 export function upsertMotReminder(vehicleId: number, dueDate: string, motLabel = "MOT") {
   const title = `${motLabel} due`;
-  const existing = getDb()
-    .prepare("SELECT id FROM reminders WHERE vehicle_id = ? AND title = ? AND completed_at IS NULL ORDER BY id DESC LIMIT 1")
-    .get(vehicleId, title) as { id: number } | undefined;
+  const db = getDb();
+  return db.transaction(() => {
+    // Reuse the open reminder if there is one, otherwise reopen the most recent completed one,
+    // so logging a new test resets the reminder instead of leaving a stale "done" entry behind.
+    const existing = db
+      .prepare("SELECT id FROM reminders WHERE vehicle_id = ? AND lower(title) = lower(?) ORDER BY completed_at IS NOT NULL, id DESC LIMIT 1")
+      .get(vehicleId, title) as { id: number } | undefined;
 
-  if (existing) {
-    return getDb()
-      .prepare("UPDATE reminders SET due_date = ?, due_odometer = NULL, recurrence = ? WHERE id = ? AND vehicle_id = ?")
-      .run(dueDate, "12 months", existing.id, vehicleId);
-  }
+    if (existing) {
+      db.prepare("DELETE FROM reminders WHERE vehicle_id = ? AND lower(title) = lower(?) AND completed_at IS NOT NULL AND id != ?")
+        .run(vehicleId, title, existing.id);
+      return db
+        .prepare("UPDATE reminders SET due_date = ?, due_odometer = NULL, recurrence = ?, completed_at = NULL WHERE id = ? AND vehicle_id = ?")
+        .run(dueDate, "12 months", existing.id, vehicleId);
+    }
 
-  return createReminder({
-    vehicleId,
-    title,
-    dueDate,
-    dueOdometer: null,
-    recurrence: "12 months"
-  });
+    return createReminder({
+      vehicleId,
+      title,
+      dueDate,
+      dueOdometer: null,
+      recurrence: "12 months"
+    });
+  })();
 }
 
 export function updateReminder(id: number, vehicleId: number, input: Omit<Reminder, "id" | "vehicleId" | "createdAt">) {
@@ -946,6 +953,35 @@ export function completeReminder(id: number, vehicleId: number) {
   return getDb()
     .prepare("UPDATE reminders SET completed_at = CURRENT_TIMESTAMP WHERE id = ? AND vehicle_id = ?")
     .run(id, vehicleId);
+}
+
+// Completes a reminder from the reminders list. Recurring reminders are rolled forward to their
+// next due date/mileage instead of being marked done; reminders owned by the Service Plan are
+// left to the Service Plan, which creates the next one itself.
+export function completeOrRepeatReminder(id: number, vehicleId: number, today = new Date().toISOString().slice(0, 10)) {
+  const db = getDb();
+  const reminder = db
+    .prepare("SELECT recurrence, due_odometer as dueOdometer FROM reminders WHERE id = ? AND vehicle_id = ?")
+    .get(id, vehicleId) as { recurrence: string | null; dueOdometer: number | null } | undefined;
+  if (!reminder) return { changes: 0 };
+
+  const linkedToServicePlan = db.prepare("SELECT 1 FROM vehicle_service_intervals WHERE reminder_id = ? AND vehicle_id = ?").get(id, vehicleId);
+  const match = reminder.recurrence?.trim().match(/^(\d+)\s*(months?|miles?)$/i);
+  if (linkedToServicePlan || !match) return completeReminder(id, vehicleId);
+
+  const amount = Number(match[1]);
+  if (match[2].toLowerCase().startsWith("month")) {
+    return db
+      .prepare("UPDATE reminders SET due_date = ?, due_odometer = NULL, completed_at = NULL WHERE id = ? AND vehicle_id = ?")
+      .run(addMonths(today, amount), id, vehicleId);
+  }
+
+  const vehicle = getVehicle(vehicleId);
+  const baseOdometer = vehicle?.effectiveOdometer ?? vehicle?.currentOdometer ?? reminder.dueOdometer;
+  if (baseOdometer === null || baseOdometer === undefined) return completeReminder(id, vehicleId);
+  return db
+    .prepare("UPDATE reminders SET due_odometer = ?, due_date = NULL, completed_at = NULL WHERE id = ? AND vehicle_id = ?")
+    .run(baseOdometer + amount, id, vehicleId);
 }
 
 function addMonths(isoDate: string, months: number): string {

@@ -8,7 +8,7 @@ import { z } from "zod";
 import { activateShowcaseDemoData, restorePreviousDebugDemoData, saveCurrentDataAsShowcaseDemo, syncShowcaseDemoBackupIfActive } from "@/lib/backup";
 import {
   assignServiceInterval,
-  completeReminder,
+  completeOrRepeatReminder,
   convertPlannedPurchaseToMaintenance,
   convertPlannedPurchaseToRepair,
   createAttachment,
@@ -40,6 +40,7 @@ import {
   markPlannedPurchaseBought,
   getOrCreateWorkshopByName,
   getVehicle,
+  listMots,
   recordServiceDone,
   removeVehicleServiceInterval,
   setVehicleDebugDestroyed,
@@ -346,7 +347,8 @@ export async function updateMotAction(vehicleId: number, id: number, formData: F
     cost: money(formData, "cost"),
     certificateRef: nullableStr(formData, "certificateRef")
   });
-  upsertMotReminder(vehicleId, expiryDate, getMotLabel(getRegionalSettings()));
+  const latestExpiry = listMots(vehicleId)[0]?.expiryDate ?? expiryDate;
+  upsertMotReminder(vehicleId, latestExpiry, getMotLabel(getRegionalSettings()));
   await syncCurrentDemoAfterMutation();
   revalidateVehicle(vehicleId);
 }
@@ -397,7 +399,7 @@ export async function deleteReminderAction(vehicleId: number, id: number) {
 export async function completeReminderAction(vehicleId: number, formData: FormData) {
   await requireUser();
   const id = Number.parseInt(str(formData, "id"), 10);
-  completeReminder(id, vehicleId);
+  completeOrRepeatReminder(id, vehicleId);
   await syncCurrentDemoAfterMutation();
   revalidatePath("/garage");
   revalidatePath(`/vehicles/${vehicleId}`);

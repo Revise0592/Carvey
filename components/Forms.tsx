@@ -275,24 +275,41 @@ export function RepairForm({ vehicleId, workshops }: { vehicleId: number; worksh
 }
 
 export function MotForm({ vehicleId, motLabel = "MOT" }: { vehicleId: number; motLabel?: string }) {
-  const action = createMotAction.bind(null, vehicleId);
   return (
     <ModalPanel trigger={<><ShieldCheck size={17} /> Add {motLabel}</>} title={`Add ${motLabel}`}>
-      <form action={action} className="record-form">
-        <Field label="Test date"><input name="testDate" type="date" defaultValue={todayIso()} required /></Field>
-        <Field label="Expiry date"><input name="expiryDate" type="date" required /></Field>
-        <Field label="Odometer"><input name="odometer" type="number" min="0" /></Field>
-        <Field label="Result"><select name="result" defaultValue="pass" required>
-            <option value="pass">Pass</option>
-            <option value="advisory">Pass with advisories</option>
-            <option value="fail">Fail</option>
-          </select></Field>
-        <Field label="Cost"><input name="cost" type="number" min="0" step="0.01" /></Field>
-        <Field label="Certificate/reference"><input name="certificateRef" /></Field>
-        <Field label="Advisories"><textarea name="advisories" /></Field>
-        <button className="primary-button" type="submit">Save MOT</button>
-      </form>
+      <MotFields vehicleId={vehicleId} motLabel={motLabel} />
     </ModalPanel>
+  );
+}
+
+// Shown in place of the plain "Mark complete" tick on the MOT reminder: completing it means
+// logging the test, which then resets the reminder to the new expiry date.
+export function CompleteMotReminderButton({ vehicleId, motLabel = "MOT", defaultExpiryDate }: { vehicleId: number; motLabel?: string; defaultExpiryDate?: string }) {
+  return (
+    <ModalPanel trigger={<Check size={17} />} triggerClassName="icon-button" triggerLabel={`Log ${motLabel}`} title={`Log ${motLabel}`}>
+      <p className="muted" style={{ marginTop: 0, marginRight: 44 }}>Record the test result and the reminder will reset to the new expiry date.</p>
+      <MotFields vehicleId={vehicleId} motLabel={motLabel} defaultExpiryDate={defaultExpiryDate} />
+    </ModalPanel>
+  );
+}
+
+function MotFields({ vehicleId, motLabel, defaultExpiryDate }: { vehicleId: number; motLabel: string; defaultExpiryDate?: string }) {
+  const action = createMotAction.bind(null, vehicleId);
+  return (
+    <form action={action} className="record-form">
+      <Field label="Test date"><input name="testDate" type="date" defaultValue={todayIso()} required /></Field>
+      <Field label="Expiry date"><input name="expiryDate" type="date" defaultValue={defaultExpiryDate} required /></Field>
+      <Field label="Odometer"><input name="odometer" type="number" min="0" /></Field>
+      <Field label="Result"><select name="result" defaultValue="pass" required>
+          <option value="pass">Pass</option>
+          <option value="advisory">Pass with advisories</option>
+          <option value="fail">Fail</option>
+        </select></Field>
+      <Field label="Cost"><input name="cost" type="number" min="0" step="0.01" /></Field>
+      <Field label="Certificate/reference"><input name="certificateRef" /></Field>
+      <Field label="Advisories"><textarea name="advisories" /></Field>
+      <button className="primary-button" type="submit">Save {motLabel}</button>
+    </form>
   );
 }
 
@@ -493,6 +510,18 @@ export function CompleteReminderButton({ vehicleId, id }: { vehicleId: number; i
         <Check size={17} />
       </button>
     </form>
+  );
+}
+
+export function ClearReminderButton({ record }: { record: Reminder }) {
+  const deleteAction = deleteReminderAction.bind(null, record.vehicleId, record.id);
+  return (
+    <ModalPanel trigger={<Trash2 size={17} />} triggerClassName="icon-button" triggerLabel="Remove reminder" title="Remove completed reminder">
+      <div className="edit-menu">
+        <p className="muted">Remove &ldquo;{record.title}&rdquo; from the reminders list.</p>
+        <ConfirmDelete action={deleteAction} label="Remove" />
+      </div>
+    </ModalPanel>
   );
 }
 
