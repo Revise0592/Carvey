@@ -2,6 +2,15 @@
 
 All notable changes to Carvey will be documented here.
 
+## [Unreleased]
+
+### Security
+
+- Upgraded Next.js to 16.4.3 (fixes critical unauthenticated RCE and SSRF advisories in Image Optimization, plus cache poisoning and Server Actions DoS)
+- Upgraded sharp to 0.35.5 (bundled libvips, libheif and librsvg fixes for crafted image uploads)
+- Upgraded adm-zip to 0.6.1 (fixes symlink overwrite, zip bomb and SUID issues when restoring backups)
+- Updated dev/build tooling (vitest, postcss and transitive packages); `npm audit` now reports 0 vulnerabilities
+
 ## [1.0.9] - 2026-10-14
 
 ### Added

@@ -16,14 +16,14 @@
   },
   "dependencies": {
     "@types/better-sqlite3": "^7.6.13",
-    "adm-zip": "^0.5.17",
+    "adm-zip": "^0.6.1",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.9.0",
     "lucide-react": "^0.554.0",
-    "next": "^16.2.4",
+    "next": "^16.4.3",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
-    "sharp": "^0.34.5",
+    "sharp": "^0.35.5",
     "zod": "^4.1.13"
   },
   "devDependencies": {
@@ -32,11 +32,11 @@
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "eslint": "^9.39.1",
-    "eslint-config-next": "^16.2.4",
+    "eslint-config-next": "^16.4.3",
     "typescript": "^5.9.3",
-    "vitest": "^4.0.14"
+    "vitest": "^4.1.12"
   },
   "overrides": {
-    "postcss": "^8.5.10"
+    "postcss": "^8.5.31"
   }
 }
