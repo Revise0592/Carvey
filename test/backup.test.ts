@@ -69,7 +69,7 @@ describe("backup and restore", () => {
     const { backup, db } = await freshModules();
     const missingManifest = new AdmZip();
     missingManifest.addFile("carvey.sqlite", Buffer.from("not a db"));
-    const missingResult = await backup.stageRestorePreview(new File([missingManifest.toBuffer()], "backup.zip", { type: "application/zip" }));
+    const missingResult = await backup.stageRestorePreview(new File([new Uint8Array(missingManifest.toBuffer())], "backup.zip", { type: "application/zip" }));
     expect(missingResult).toMatchObject({ ok: false });
 
     const traversalResult = await backup.stageRestorePreview(new File([zipWithUnsafeEntry("../evil.txt")], "backup.zip", { type: "application/zip" }));
@@ -132,7 +132,7 @@ describe("backup and restore", () => {
     await fs.mkdir(target.paths.vehiclePhotoDir, { recursive: true });
     await fs.writeFile(path.join(target.paths.vehiclePhotoDir, "target.webp"), "target image");
 
-    const preview = await target.backup.stageRestorePreview(new File([sourceBackup.buffer], "backup.zip", { type: "application/zip" }));
+    const preview = await target.backup.stageRestorePreview(new File([new Uint8Array(sourceBackup.buffer)], "backup.zip", { type: "application/zip" }));
     expect(preview.ok).toBe(true);
     if (!preview.ok) throw new Error("preview failed");
     expect(preview.summary.counts.vehicles).toBe(1);
@@ -179,7 +179,7 @@ describe("backup and restore", () => {
     source.db.closeDbForTests();
 
     const target = await freshModules("carvey-legacy-target-");
-    const preview = await target.backup.stageRestorePreview(new File([legacyZip.toBuffer()], "legacy.zip", { type: "application/zip" }));
+    const preview = await target.backup.stageRestorePreview(new File([new Uint8Array(legacyZip.toBuffer())], "legacy.zip", { type: "application/zip" }));
     expect(preview.ok).toBe(true);
     if (!preview.ok) throw new Error("preview failed");
     expect(preview.summary.counts.plannedPurchases).toBe(0);
@@ -222,7 +222,7 @@ describe("backup and restore", () => {
     source.db.closeDbForTests();
 
     const target = await freshModules("carvey-legacy-purchases-target-");
-    const preview = await target.backup.stageRestorePreview(new File([legacyZip.toBuffer()], "legacy.zip", { type: "application/zip" }));
+    const preview = await target.backup.stageRestorePreview(new File([new Uint8Array(legacyZip.toBuffer())], "legacy.zip", { type: "application/zip" }));
     expect(preview.ok).toBe(true);
     if (!preview.ok) throw new Error("preview failed");
     expect(await target.backup.confirmRestore(preview.summary.token)).toMatchObject({ ok: true });
