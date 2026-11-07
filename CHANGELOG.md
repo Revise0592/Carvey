@@ -4,6 +4,31 @@ All notable changes to Carvey will be documented here.
 
 ## [Unreleased]
 
+### Added
+
+- App-style navigation: on phones and tablets, a compact top bar (back button and page title on sub-pages) and a bottom tab bar for Garage, Reminders, Costs and Settings
+- Quick-add button (centre of the bottom bar, or **Add** on desktop) to log maintenance, repairs, MOTs, fuel, reminders, To Buy items or photos for any vehicle, or add a new vehicle
+- **Reminders** page listing open reminders and MOT expiry across all vehicles, grouped by overdue / upcoming
+- **Costs** page with spend by month, by type and by vehicle, per year or all time, plus recent spending
+- Settings is now a menu on mobile that drills into each section, and a sidebar on desktop
+
+### Changed
+
+- Refreshed design: flatter cards, a native system font, a sticky translucent top bar and sticky vehicle section tabs that keep the active tab in view
+- Forms open as bottom sheets on mobile with a fixed header and a scrolling body
+- Vehicle page header is more compact on mobile, with Photo / Print / Edit side by side
+- Garage vehicles show as a compact list on mobile
+
+### Fixed
+
+- Long forms in pop-ups could be cut off on mobile, hiding the save button
+- Record rows on mobile stranded the Edit button on its own line and squeezed titles beside the badge
+- Badges of different widths misaligned record titles on desktop
+- Edit and Delete buttons on Garages, Categories and Service Intervals cards stacked awkwardly
+- "Spent this year" on the garage left out fuel, so it didn't match the per-vehicle totals
+- Dashboard reminders with only a mileage due were listed before dated ones
+- Assigning a service interval always said "miles", even with kilometres selected
+
 ### Security
 
 - Upgraded Next.js to 16.4.3 (fixes critical unauthenticated RCE and SSRF advisories in Image Optimization, plus cache poisoning and Server Actions DoS)
