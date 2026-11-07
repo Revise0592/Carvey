@@ -1332,6 +1332,88 @@ function syncPlannedPurchaseReminder(id: number, vehicleId: number) {
     .run(result.lastInsertRowid, id, vehicleId);
 }
 
+export type SpendType = "maintenance" | "repair" | "mot" | "fuel" | "parts";
+
+export type SpendEntry = {
+  type: SpendType;
+  id: number;
+  vehicleId: number;
+  vehicleName: string;
+  label: string;
+  date: string;
+  cost: number;
+};
+
+/** Every costed record across active vehicles, newest first. Mirrors getVehicleLoggedSpend. */
+export function listSpendEntries() {
+  return getDb()
+    .prepare(`
+      SELECT entries.*, vehicles.make || ' ' || vehicles.model as vehicleName
+      FROM (
+        SELECT 'maintenance' as type, id, vehicle_id as vehicleId, description as label, date, cost FROM maintenance_records
+        UNION ALL
+        SELECT 'repair', id, vehicle_id, fault, date, cost FROM repair_records
+        UNION ALL
+        SELECT 'mot', id, vehicle_id, 'Test (' || result || ')', test_date, cost FROM mot_records
+        UNION ALL
+        SELECT 'fuel', id, vehicle_id, 'Fuel' || COALESCE(' · ' || station, ''), date, total_cost FROM fuel_records WHERE total_cost IS NOT NULL
+        UNION ALL
+        SELECT 'parts', id, vehicle_id, item_name, purchased_date, COALESCE(actual_cost, estimated_cost) FROM planned_purchases
+          WHERE purchased_date IS NOT NULL AND converted_at IS NULL
+      ) entries
+      JOIN vehicles ON vehicles.id = entries.vehicleId
+      WHERE vehicles.archived = 0
+      ORDER BY entries.date DESC, entries.id DESC
+    `)
+    .all() as SpendEntry[];
+}
+
+export type OpenReminder = Reminder & {
+  make: string;
+  model: string;
+  registration: string;
+  currentOdometer: number | null;
+};
+
+export function listOpenReminders() {
+  return getDb()
+    .prepare(`
+      SELECT reminders.id,
+             reminders.vehicle_id as vehicleId,
+             title,
+             due_date as dueDate,
+             due_odometer as dueOdometer,
+             recurrence,
+             completed_at as completedAt,
+             reminders.created_at as createdAt,
+             make,
+             model,
+             registration,
+             COALESCE((${latestRecordedOdometerSelect}), vehicles.current_odometer) as currentOdometer
+      FROM reminders
+      JOIN vehicles ON vehicles.id = reminders.vehicle_id
+      WHERE completed_at IS NULL AND vehicles.archived = 0 AND vehicles.sold = 0
+      ORDER BY due_date IS NULL, due_date ASC, due_odometer ASC
+    `)
+    .all() as OpenReminder[];
+}
+
+export function listLatestMotExpiries() {
+  return getDb()
+    .prepare(`
+      SELECT vehicles.id as vehicleId, make, model, registration, latest.expiryDate
+      FROM (
+        SELECT vehicle_id, MAX(expiry_date) as expiryDate
+        FROM mot_records
+        GROUP BY vehicle_id
+      ) latest
+      JOIN vehicles ON vehicles.id = latest.vehicle_id
+      WHERE vehicles.archived = 0 AND vehicles.sold = 0
+      ORDER BY latest.expiryDate ASC
+    `)
+    .all() as Array<{ vehicleId: number; make: string; model: string; registration: string; expiryDate: string }>;
+}
+
 export function getDashboardStats() {
   const vehicles = listVehicles();
   const yearlySpend = getDb()
@@ -1344,6 +1426,8 @@ export function getDashboardStats() {
         SELECT cost, test_date as date FROM mot_records
         UNION ALL
         SELECT COALESCE(actual_cost, estimated_cost) as cost, purchased_date as date FROM planned_purchases WHERE purchased_date IS NOT NULL AND converted_at IS NULL
+        UNION ALL
+        SELECT total_cost as cost, date FROM fuel_records WHERE total_cost IS NOT NULL
       )
       WHERE date >= date('now', 'start of year')
     `)
@@ -1375,7 +1459,7 @@ export function getDashboardStats() {
       FROM reminders
       JOIN vehicles ON vehicles.id = reminders.vehicle_id
       WHERE completed_at IS NULL AND vehicles.archived = 0
-      ORDER BY due_date ASC, due_odometer ASC
+      ORDER BY due_date IS NULL, due_date ASC, due_odometer ASC
       LIMIT 8
     `)
     .all() as Array<{ id: number; vehicleId: number; title: string; dueDate: string | null; dueOdometer: number | null; currentOdometer: number | null; make: string; model: string }>;

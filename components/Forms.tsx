@@ -1,4 +1,4 @@
-import { CalendarDays, Check, Fuel, Gauge, Hammer, PackagePlus, Plus, ShieldCheck, ShoppingCart, Trash2, Wrench } from "lucide-react";
+import { CalendarDays, Check, Fuel, Gauge, Hammer, PackagePlus, Pencil, Plus, ShieldCheck, ShoppingCart, Trash2, Wrench } from "lucide-react";
 import {
   completeReminderAction,
   createFuelRecordAction,
@@ -35,9 +35,9 @@ import { ConfirmDelete } from "./ConfirmDelete";
 import { EditPanel } from "./EditPanel";
 import { ModalPanel } from "./ModalPanel";
 
-export function CreateVehicleForm({ registrationLabel = "Registration" }: { registrationLabel?: string }) {
+export function CreateVehicleForm({ registrationLabel = "Registration", autoOpenKey }: { registrationLabel?: string; autoOpenKey?: string }) {
   return (
-    <ModalPanel trigger={<><Plus size={17} /> Add vehicle</>} title="Add vehicle">
+    <ModalPanel trigger={<><Plus size={17} /> Add vehicle</>} title="Add vehicle" autoOpenKey={autoOpenKey}>
       <form action={createVehicleAction} className="record-form">
         <Field label="Make"><input name="make" required /></Field>
         <Field label="Model"><input name="model" required /></Field>
@@ -58,7 +58,7 @@ export function EditVehicleForm({ vehicle, registrationLabel = "Registration" }:
   const updateAction = updateVehicleAction.bind(null, vehicle.id);
   const deleteAction = deleteVehicleAction.bind(null, vehicle.id);
   return (
-    <ModalPanel trigger="Edit car" title="Edit car">
+    <ModalPanel trigger={<><Pencil size={17} /> Edit</>} title="Edit car">
       <form action={updateAction} className="record-form">
         <Field label="Make"><input name="make" defaultValue={vehicle.make} required /></Field>
         <Field label="Model"><input name="model" defaultValue={vehicle.model} required /></Field>
@@ -224,10 +224,10 @@ export function EditPlannedPurchaseForm({ record }: { record: PlannedPurchase })
   );
 }
 
-export function MaintenanceForm({ vehicleId, categories, workshops }: { vehicleId: number; categories: MaintenanceCategory[]; workshops: Workshop[] }) {
+export function MaintenanceForm({ vehicleId, categories, workshops, autoOpenKey }: { vehicleId: number; categories: MaintenanceCategory[]; workshops: Workshop[]; autoOpenKey?: string }) {
   const action = createMaintenanceAction.bind(null, vehicleId);
   return (
-    <ModalPanel trigger={<><Wrench size={17} /> Add maintenance</>} title="Add maintenance">
+    <ModalPanel trigger={<><Wrench size={17} /> Add maintenance</>} title="Add maintenance" autoOpenKey={autoOpenKey}>
       <form action={action} className="record-form">
         <Field label="Date"><input name="date" type="date" defaultValue={todayIso()} required /></Field>
         <Field label="Odometer"><input name="odometer" type="number" min="0" /></Field>
@@ -252,10 +252,10 @@ export function MaintenanceForm({ vehicleId, categories, workshops }: { vehicleI
   );
 }
 
-export function RepairForm({ vehicleId, workshops }: { vehicleId: number; workshops: Workshop[] }) {
+export function RepairForm({ vehicleId, workshops, autoOpenKey }: { vehicleId: number; workshops: Workshop[]; autoOpenKey?: string }) {
   const action = createRepairAction.bind(null, vehicleId);
   return (
-    <ModalPanel trigger={<><Hammer size={17} /> Add repair</>} title="Add repair">
+    <ModalPanel trigger={<><Hammer size={17} /> Add repair</>} title="Add repair" autoOpenKey={autoOpenKey}>
       <form action={action} className="record-form">
         <Field label="Date"><input name="date" type="date" defaultValue={todayIso()} required /></Field>
         <Field label="Odometer"><input name="odometer" type="number" min="0" /></Field>
@@ -274,9 +274,9 @@ export function RepairForm({ vehicleId, workshops }: { vehicleId: number; worksh
   );
 }
 
-export function MotForm({ vehicleId, motLabel = "MOT" }: { vehicleId: number; motLabel?: string }) {
+export function MotForm({ vehicleId, motLabel = "MOT", autoOpenKey }: { vehicleId: number; motLabel?: string; autoOpenKey?: string }) {
   return (
-    <ModalPanel trigger={<><ShieldCheck size={17} /> Add {motLabel}</>} title={`Add ${motLabel}`}>
+    <ModalPanel trigger={<><ShieldCheck size={17} /> Add {motLabel}</>} title={`Add ${motLabel}`} autoOpenKey={autoOpenKey}>
       <MotFields vehicleId={vehicleId} motLabel={motLabel} />
     </ModalPanel>
   );
@@ -287,7 +287,7 @@ export function MotForm({ vehicleId, motLabel = "MOT" }: { vehicleId: number; mo
 export function CompleteMotReminderButton({ vehicleId, motLabel = "MOT", defaultExpiryDate }: { vehicleId: number; motLabel?: string; defaultExpiryDate?: string }) {
   return (
     <ModalPanel trigger={<Check size={17} />} triggerClassName="icon-button" triggerLabel={`Log ${motLabel}`} title={`Log ${motLabel}`}>
-      <p className="muted" style={{ marginTop: 0, marginRight: 44 }}>Record the test result and the reminder will reset to the new expiry date.</p>
+      <p className="muted sheet-intro">Record the test result and the reminder will reset to the new expiry date.</p>
       <MotFields vehicleId={vehicleId} motLabel={motLabel} defaultExpiryDate={defaultExpiryDate} />
     </ModalPanel>
   );
@@ -313,10 +313,10 @@ function MotFields({ vehicleId, motLabel, defaultExpiryDate }: { vehicleId: numb
   );
 }
 
-export function ReminderForm({ vehicleId }: { vehicleId: number }) {
+export function ReminderForm({ vehicleId, autoOpenKey }: { vehicleId: number; autoOpenKey?: string }) {
   const action = createReminderAction.bind(null, vehicleId);
   return (
-    <ModalPanel trigger={<><CalendarDays size={17} /> Add reminder</>} title="Add reminder">
+    <ModalPanel trigger={<><CalendarDays size={17} /> Add reminder</>} title="Add reminder" autoOpenKey={autoOpenKey}>
       <form action={action} className="record-form">
         <Field label="Title"><input name="title" required /></Field>
         <Field label="Due date"><input name="dueDate" type="date" /></Field>
@@ -334,10 +334,10 @@ export function ReminderForm({ vehicleId }: { vehicleId: number }) {
   );
 }
 
-export function PlannedPurchaseForm({ vehicleId }: { vehicleId: number }) {
+export function PlannedPurchaseForm({ vehicleId, autoOpenKey }: { vehicleId: number; autoOpenKey?: string }) {
   const action = createPlannedPurchaseAction.bind(null, vehicleId);
   return (
-    <ModalPanel trigger={<><PackagePlus size={17} /> Add item</>} title="Add To Buy Item">
+    <ModalPanel trigger={<><PackagePlus size={17} /> Add item</>} title="Add To Buy Item" autoOpenKey={autoOpenKey}>
       <form action={action} className="record-form">
         <PlannedPurchaseFields />
         <button className="primary-button" type="submit">Save item</button>
@@ -431,14 +431,14 @@ function purchaseRecordNotes(record: PlannedPurchase) {
   ].filter(Boolean).join("\n");
 }
 
-export function FuelRecordForm({ vehicleId, settings }: { vehicleId: number; settings: RegionalSettings }) {
+export function FuelRecordForm({ vehicleId, settings, autoOpenKey }: { vehicleId: number; settings: RegionalSettings; autoOpenKey?: string }) {
   const action = createFuelRecordAction.bind(null, vehicleId);
   const isKm = settings.distanceUnit === "km";
   const isGallons = settings.fuelVolumeUnit === "gallons";
   const petrolLabel = isGallons ? "Gasoline" : "Petrol";
   const volumeLabel = isGallons ? "Gallons" : "Litres";
   return (
-    <ModalPanel trigger={<><Fuel size={17} /> Add fill-up</>} title="Log fuel">
+    <ModalPanel trigger={<><Fuel size={17} /> Add fill-up</>} title="Log fuel" autoOpenKey={autoOpenKey}>
       <form action={action} className="record-form">
         <Field label="Date"><input name="date" type="date" defaultValue={todayIso()} required /></Field>
         <Field label={isKm ? "Odometer (km)" : "Mileage"}><input name="odometer" type="number" min="0" required /></Field>
@@ -547,13 +547,15 @@ export function GalleryUploadForm({
   vehicleId,
   maintenance,
   repairs,
+  autoOpenKey,
 }: {
   vehicleId: number;
   maintenance: MaintenanceRecord[];
   repairs: RepairRecord[];
+  autoOpenKey?: string;
 }) {
   return (
-    <ModalPanel trigger={<><Plus size={17} /> Add photo</>} title="Add photo to gallery">
+    <ModalPanel trigger={<><Plus size={17} /> Add photo</>} title="Add photo to gallery" autoOpenKey={autoOpenKey}>
       <form action="/api/gallery-photos" method="post" encType="multipart/form-data" className="record-form">
         <input type="hidden" name="vehicleId" value={vehicleId} />
         <Field label="Photo">

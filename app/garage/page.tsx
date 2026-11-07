@@ -9,8 +9,9 @@ import { requireUser } from "@/lib/auth";
 import { formatCurrency, formatDate, formatMiles } from "@/lib/format";
 import { getMotLabel, getRegionalSettings } from "@/lib/regional-settings";
 
-export default async function GaragePage() {
+export default async function GaragePage({ searchParams }: { searchParams: Promise<{ new?: string }> }) {
   await requireUser();
+  const query = await searchParams;
   const stats = getDashboardStats();
   const collectionName = getCollectionName();
   const settings = getRegionalSettings();
@@ -21,10 +22,10 @@ export default async function GaragePage() {
     <AppFrame>
       <section className="page-heading">
         <div>
-          <p className="eyebrow">Overview</p>
+          <p className="eyebrow">Your garage</p>
           <h1>{collectionName}</h1>
         </div>
-        <CreateVehicleForm registrationLabel="Registration" />
+        <CreateVehicleForm registrationLabel="Registration" autoOpenKey={query.new} />
       </section>
 
       <section className="stats-grid">
@@ -81,20 +82,20 @@ export default async function GaragePage() {
       <section className="dashboard-panels">
         {settings.motFeature !== "disabled" ? (
           <div className="list-panel">
-            <h2>{motLabel}s due soon</h2>
+            <div className="panel-heading"><h2>{motLabel}s due soon</h2><Link href="/reminders" className="panel-link">See all</Link></div>
             {stats.upcomingMots.length ? stats.upcomingMots.map((mot) => (
               <Link href={`/vehicles/${mot.vehicleId}?tab=mots`} className="list-row" key={`${mot.vehicleId}-${mot.expiryDate}`}>
-                <span>{mot.make} {mot.model}</span>
+                <span className="list-row-text"><span>{mot.make} {mot.model}</span><small>{mot.registration.toUpperCase()}</small></span>
                 <strong>{formatDate(mot.expiryDate, settings)}</strong>
               </Link>
             )) : <p className="muted">No {motLabel.toLowerCase()}s due in the next 45 days.</p>}
           </div>
         ) : null}
         <div className="list-panel">
-          <h2>Reminders</h2>
+          <div className="panel-heading"><h2>Reminders</h2><Link href="/reminders" className="panel-link">See all</Link></div>
           {stats.reminders.length ? stats.reminders.map((reminder) => (
             <Link href={`/vehicles/${reminder.vehicleId}?tab=reminders`} className="list-row" key={reminder.id}>
-              <span>{reminder.title} · {reminder.make} {reminder.model}</span>
+              <span className="list-row-text"><span>{reminder.title}</span><small>{reminder.make} {reminder.model}</small></span>
               <strong>{reminder.dueDate ? formatDate(reminder.dueDate, settings) : formatMiles(reminder.dueOdometer, settings)}</strong>
             </Link>
           )) : <p className="muted">No open reminders.</p>}
@@ -104,7 +105,7 @@ export default async function GaragePage() {
           <h2>To Buy</h2>
           {stats.plannedPurchases.length ? stats.plannedPurchases.map((item) => (
             <Link href={`/vehicles/${item.vehicleId}?tab=to-buy`} className="list-row" key={item.id}>
-              <span>{item.itemName} · {item.make} {item.model}</span>
+              <span className="list-row-text"><span>{item.itemName}</span><small>{item.make} {item.model}</small></span>
               <strong>{formatCurrency(item.estimatedCost, settings)}</strong>
             </Link>
           )) : <p className="muted">No planned purchases.</p>}
