@@ -11,7 +11,7 @@ export function VehiclePhotoUploadForm({ vehicleId }: { vehicleId: number }) {
     <form ref={formRef} action={`/vehicles/${vehicleId}/photo`} method="post" encType="multipart/form-data">
       <label className="file-button">
         <Camera size={17} />
-        <span>{uploading ? "Uploading..." : "Update photo"}</span>
+        <span>{uploading ? "Uploading…" : "Photo"}</span>
         <input
           name="photo"
           type="file"

@@ -1,7 +1,7 @@
 "use client";
 
-import { X } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { Sheet } from "./Sheet";
 
 export function ModalPanel({
   trigger,
@@ -9,7 +9,8 @@ export function ModalPanel({
   title,
   tone = "normal",
   triggerClassName,
-  triggerLabel
+  triggerLabel,
+  autoOpenKey
 }: {
   trigger: React.ReactNode;
   children: React.ReactNode;
@@ -17,9 +18,27 @@ export function ModalPanel({
   tone?: "normal" | "danger";
   triggerClassName?: string;
   triggerLabel?: string;
+  /** When this changes to a non-empty value (e.g. from a `?new=` URL param), the panel opens. */
+  autoOpenKey?: string;
 }) {
   const [open, setOpen] = useState(false);
-  const titleId = title ? `modal-title-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}` : undefined;
+  const [handledKey, setHandledKey] = useState<string | undefined>(undefined);
+  const close = useCallback(() => setOpen(false), []);
+
+  if (autoOpenKey && autoOpenKey !== handledKey) {
+    setHandledKey(autoOpenKey);
+    setOpen(true);
+  }
+
+  useEffect(() => {
+    if (!autoOpenKey) return;
+    // Drop the one-shot param so a refresh or back navigation doesn't reopen the form.
+    const url = new URL(window.location.href);
+    if (url.searchParams.has("new")) {
+      url.searchParams.delete("new");
+      window.history.replaceState(window.history.state, "", url);
+    }
+  }, [autoOpenKey]);
 
   return (
     <>
@@ -32,28 +51,9 @@ export function ModalPanel({
       >
         {trigger}
       </button>
-      {open ? (
-        <div className="modal-backdrop" role="presentation" onMouseDown={() => setOpen(false)}>
-          <section
-            className="modal-card"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby={titleId}
-            onMouseDown={(event) => event.stopPropagation()}
-            onSubmitCapture={() => window.setTimeout(() => setOpen(false), 0)}
-          >
-            <div className="modal-chrome">
-              <button className="modal-close" type="button" aria-label="Close" onClick={() => setOpen(false)}>
-                <X size={18} />
-              </button>
-            </div>
-            <div className="modal-body">
-              {title ? <h2 id={titleId} className="modal-title">{title}</h2> : null}
-              {children}
-            </div>
-          </section>
-        </div>
-      ) : null}
+      <Sheet open={open} onClose={close} title={title}>
+        <div onSubmitCapture={() => window.setTimeout(close, 0)}>{children}</div>
+      </Sheet>
     </>
   );
 }

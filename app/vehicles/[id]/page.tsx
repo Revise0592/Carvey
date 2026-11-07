@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { BadgeCheck, CalendarDays, Check, ExternalLink, Fuel, Hammer, Images, PackagePlus, Plus, Printer, RefreshCw, ShieldCheck, Trash2, Wrench } from "lucide-react";
+import { BadgeCheck, CalendarDays, Check, ChevronLeft, ExternalLink, Fuel, Hammer, Images, PackagePlus, Plus, Printer, RefreshCw, ShieldCheck, Trash2, Wrench } from "lucide-react";
 import { AppFrame } from "@/components/AppFrame";
 import {
   CompleteMotReminderButton,
@@ -28,7 +28,9 @@ import {
   RepairForm
 } from "@/components/Forms";
 import { ExplosionEffect } from "@/components/ExplosionEffect";
+import { RecordItem } from "@/components/RecordItem";
 import { RegistrationPlate } from "@/components/RegistrationPlate";
+import { VehicleTabs } from "@/components/VehicleTabs";
 import { VehiclePhotoUploadForm } from "@/components/VehiclePhotoUploadForm";
 import { VehiclePhoto } from "@/components/VehiclePhoto";
 import { getCollectionName, getVehicle, getVehicleActivePlannedPurchaseSummary, getVehicleLoggedSpend, listAllAttachmentsForVehicle, listAttachments, listFuelRecords, listMaintenance, listMaintenanceCategories, listMots, listPlannedPurchases, listReminders, listRepairs, listServiceIntervals, listVehicleServiceIntervals, listVehicleGalleryPhotos, listWorkshops, type FuelRecord, type GalleryPhoto, type ServiceInterval, type Vehicle, type VehicleServiceInterval } from "@/lib/db";
@@ -51,7 +53,7 @@ export default async function VehiclePage({
   searchParams
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ tab?: string; sort?: string; dir?: string }>;
+  searchParams: Promise<{ tab?: string; sort?: string; dir?: string; new?: string }>;
 }) {
   await requireUser();
   const { id } = await params;
@@ -97,7 +99,7 @@ export default async function VehiclePage({
   const boundDeleteAttachment = deleteAttachmentAction.bind(null, vehicle.id);
 
   return (
-    <AppFrame>
+    <AppFrame title={`${vehicle.make} ${vehicle.model}`} backHref="/garage" backLabel="Garage">
       {debugEnabled ? <ExplosionEffect active={Boolean(vehicle.debugDestroyed)} /> : null}
       <section className="vehicle-hero">
         <div className="photo-frame hero-photo-frame">
@@ -110,7 +112,7 @@ export default async function VehiclePage({
           ) : null}
         </div>
         <div className="vehicle-hero-copy">
-          <Link href="/garage" className="back-link">{collectionName}</Link>
+          <Link href="/garage" className="back-link"><ChevronLeft size={16} /> {collectionName}</Link>
           <RegistrationPlate value={vehicle.registration} mode={regMode} />
           <h1>{vehicle.make} {vehicle.model}</h1>
           <div className="hero-meta">
@@ -119,8 +121,8 @@ export default async function VehiclePage({
             <span className="pill">{formatCurrency(spent, settings)} logged</span>
             {vehicle.purchasePrice ? <span className="pill">{formatCurrency(vehicle.purchasePrice, settings)} paid</span> : null}
           </div>
-          {vehicle.notes ? <p>{vehicle.notes}</p> : null}
-          <div className="inline-form">
+          {vehicle.notes ? <p className="vehicle-notes">{vehicle.notes}</p> : null}
+          <div className="hero-actions">
             <VehiclePhotoUploadForm vehicleId={vehicle.id} />
             <Link className="secondary-button" href={`/vehicles/${vehicle.id}/print`}>
               <Printer size={17} />
@@ -132,13 +134,15 @@ export default async function VehiclePage({
         </div>
       </section>
 
-      <nav className="tabs" aria-label="Vehicle sections">
-        {tabs.map((tab) => (
-          <Link className={activeTab === tab ? "active" : ""} href={`/vehicles/${vehicle.id}?tab=${tab}`} key={tab} scroll={false}>
-            {tab === "mots" ? `${motLabel}s` : tab === "to-buy" ? "To Buy" : tab === "service-plan" ? "Service Plan" : tab === "fuel" ? "Fuel" : tab === "gallery" ? "Gallery" : tab[0].toUpperCase() + tab.slice(1)}
-          </Link>
-        ))}
-      </nav>
+      <VehicleTabs
+        label="Vehicle sections"
+        activeTab={activeTab}
+        tabs={tabs.map((tab) => ({
+          key: tab,
+          href: `/vehicles/${vehicle.id}?tab=${tab}`,
+          label: tab === "mots" ? `${motLabel}s` : tab === "to-buy" ? "To Buy" : tab === "service-plan" ? "Service Plan" : tab[0].toUpperCase() + tab.slice(1)
+        }))}
+      />
 
       {activeTab === "overview" ? (
         <section className="split-grid">
@@ -203,7 +207,7 @@ export default async function VehiclePage({
           <section className="records-shell">
             <div className="section-heading">
               <h2><Wrench size={19} /> Maintenance</h2>
-              <MaintenanceForm vehicleId={vehicle.id} categories={categories} workshops={workshops} />
+              <MaintenanceForm vehicleId={vehicle.id} categories={categories} workshops={workshops} autoOpenKey={query.new} />
             </div>
             {maintenance.length > 0 ? (
               <>
@@ -214,20 +218,15 @@ export default async function VehiclePage({
                 ]} />
                 <div className="record-list">
                   {sorted.map((record) => (
-                    <div className="record-entry" key={record.id}>
-                      <div className="record-row">
-                        <span className="tag">{record.category}</span>
-                        <div className="record-row-content">
-                          <strong>{record.description}</strong>
-                          <p className="record-row-meta">{formatDate(record.date, settings)} · {formatMiles(record.odometer, settings)}{record.garage ? ` · ${record.garage}` : ""}</p>
-                        </div>
-                        <strong className="record-row-value">{formatCurrency(record.cost, settings)}</strong>
-                        <div className="record-row-actions">
-                          <EditMaintenanceForm record={record} categories={categories} workshops={workshops} />
-                        </div>
-                      </div>
-                      <AttachmentSection attachments={listAttachments("maintenance", record.id)} deleteAction={boundDeleteAttachment} recordType="maintenance" recordId={record.id} vehicleId={vehicle.id} />
-                    </div>
+                    <RecordItem
+                      key={record.id}
+                      tag={<span className="tag">{record.category}</span>}
+                      title={record.description}
+                      meta={`${formatDate(record.date, settings)} · ${formatMiles(record.odometer, settings)}${record.garage ? ` · ${record.garage}` : ""}`}
+                      value={formatCurrency(record.cost, settings)}
+                      actions={<EditMaintenanceForm record={record} categories={categories} workshops={workshops} />}
+                      attachments={<AttachmentSection attachments={listAttachments("maintenance", record.id)} deleteAction={boundDeleteAttachment} recordType="maintenance" recordId={record.id} vehicleId={vehicle.id} />}
+                    />
                   ))}
                 </div>
               </>
@@ -253,7 +252,7 @@ export default async function VehiclePage({
           <section className="records-shell">
             <div className="section-heading">
               <h2><Hammer size={19} /> Repairs</h2>
-              <RepairForm vehicleId={vehicle.id} workshops={workshops} />
+              <RepairForm vehicleId={vehicle.id} workshops={workshops} autoOpenKey={query.new} />
             </div>
             {repairs.length > 0 ? (
               <>
@@ -263,20 +262,15 @@ export default async function VehiclePage({
                 ]} />
                 <div className="record-list">
                   {sorted.map((record) => (
-                    <div className="record-entry" key={record.id}>
-                      <div className="record-row">
-                        <span className="tag">{record.garage ?? "Repair"}</span>
-                        <div className="record-row-content">
-                          <strong>{record.fault}</strong>
-                          <p className="record-row-meta">{formatDate(record.date, settings)} · {formatMiles(record.odometer, settings)}</p>
-                        </div>
-                        <strong className="record-row-value">{formatCurrency(record.cost, settings)}</strong>
-                        <div className="record-row-actions">
-                          <EditRepairForm record={record} workshops={workshops} />
-                        </div>
-                      </div>
-                      <AttachmentSection attachments={listAttachments("repair", record.id)} deleteAction={boundDeleteAttachment} recordType="repair" recordId={record.id} vehicleId={vehicle.id} />
-                    </div>
+                    <RecordItem
+                      key={record.id}
+                      tag={<span className="tag">{record.garage ?? "Repair"}</span>}
+                      title={record.fault}
+                      meta={`${formatDate(record.date, settings)} · ${formatMiles(record.odometer, settings)}`}
+                      value={formatCurrency(record.cost, settings)}
+                      actions={<EditRepairForm record={record} workshops={workshops} />}
+                      attachments={<AttachmentSection attachments={listAttachments("repair", record.id)} deleteAction={boundDeleteAttachment} recordType="repair" recordId={record.id} vehicleId={vehicle.id} />}
+                    />
                   ))}
                 </div>
               </>
@@ -303,7 +297,7 @@ export default async function VehiclePage({
           <section className="records-shell">
             <div className="section-heading">
               <h2><ShieldCheck size={19} /> {motLabel}s</h2>
-              <MotForm vehicleId={vehicle.id} motLabel={motLabel} />
+              <MotForm vehicleId={vehicle.id} motLabel={motLabel} autoOpenKey={query.new} />
             </div>
             {mots.length > 0 ? (
               <>
@@ -314,20 +308,15 @@ export default async function VehiclePage({
                 ]} />
                 <div className="record-list">
                   {sorted.map((record) => (
-                    <div className="record-entry" key={record.id}>
-                      <div className="record-row">
-                        <span className={`tag ${motResultTone(record.result)}`}>{formatMotResult(record.result)}</span>
-                        <div className="record-row-content">
-                          <strong>Expires {formatDate(record.expiryDate, settings)}</strong>
-                          <p className="record-row-meta">Tested {formatDate(record.testDate, settings)} · {formatMiles(record.odometer, settings)}</p>
-                        </div>
-                        <strong className="record-row-value">{formatCurrency(record.cost, settings)}</strong>
-                        <div className="record-row-actions">
-                          <EditMotForm record={record} motLabel={motLabel} />
-                        </div>
-                      </div>
-                      <AttachmentSection attachments={listAttachments("mot", record.id)} deleteAction={boundDeleteAttachment} recordType="mot" recordId={record.id} vehicleId={vehicle.id} />
-                    </div>
+                    <RecordItem
+                      key={record.id}
+                      tag={<span className={`tag ${motResultTone(record.result)}`}>{formatMotResult(record.result)}</span>}
+                      title={`Expires ${formatDate(record.expiryDate, settings)}`}
+                      meta={`Tested ${formatDate(record.testDate, settings)} · ${formatMiles(record.odometer, settings)}`}
+                      value={formatCurrency(record.cost, settings)}
+                      actions={<EditMotForm record={record} motLabel={motLabel} />}
+                      attachments={<AttachmentSection attachments={listAttachments("mot", record.id)} deleteAction={boundDeleteAttachment} recordType="mot" recordId={record.id} vehicleId={vehicle.id} />}
+                    />
                   ))}
                 </div>
               </>
@@ -363,7 +352,7 @@ export default async function VehiclePage({
           <section className="records-shell">
             <div className="section-heading">
               <h2><CalendarDays size={19} /> Reminders</h2>
-              <ReminderForm vehicleId={vehicle.id} />
+              <ReminderForm vehicleId={vehicle.id} autoOpenKey={query.new} />
             </div>
             {reminders.length > 0 ? (
               <>
@@ -379,14 +368,12 @@ export default async function VehiclePage({
                       record.recurrence ? `Repeats ${record.recurrence}` : null,
                     ].filter(Boolean).join(" · ");
                     return (
-                      <div className="record-entry" key={record.id}>
-                        <div className="record-row">
-                          <span className={`tag ${reminderStatusTone(status)}`}>{formatReminderStatus(status)}</span>
-                          <div className="record-row-content">
-                            <strong>{record.title}</strong>
-                            <p className="record-row-meta">{reminderMeta}</p>
-                          </div>
-                          <div className="record-row-actions">
+                      <RecordItem
+                        key={record.id}
+                        tag={<span className={`tag ${reminderStatusTone(status)}`}>{formatReminderStatus(status)}</span>}
+                        title={record.title}
+                        meta={reminderMeta}
+                        actions={<>
                             {!record.completedAt ? (
                               servicePlanByReminderId.has(record.id)
                                 ? <RecordServiceButton record={servicePlanByReminderId.get(record.id)!} vehicle={vehicle} compact />
@@ -395,9 +382,8 @@ export default async function VehiclePage({
                                   : <CompleteReminderButton vehicleId={vehicle.id} id={record.id} />
                             ) : !linkedReminderIds.has(record.id) ? <ClearReminderButton record={record} /> : null}
                             <EditReminderForm record={record} isLinked={linkedReminderIds.has(record.id)} motLabel={motLabel} />
-                          </div>
-                        </div>
-                      </div>
+                        </>}
+                      />
                     );
                   })}
                 </div>
@@ -417,7 +403,7 @@ export default async function VehiclePage({
           <div className="section-heading">
             <h2><RefreshCw size={19} />Service Plan</h2>
             {unassignedIntervals.length > 0 ? (
-              <AssignServiceIntervalForm vehicleId={vehicle.id} intervals={unassignedIntervals} />
+              <AssignServiceIntervalForm vehicleId={vehicle.id} intervals={unassignedIntervals} distanceUnit={settings.distanceUnit} />
             ) : null}
           </div>
           <div className="records-grid">
@@ -464,7 +450,7 @@ export default async function VehiclePage({
           <section className="records-shell">
             <div className="section-heading">
               <h2><PackagePlus size={19} /> To Buy</h2>
-              <PlannedPurchaseForm vehicleId={vehicle.id} />
+              <PlannedPurchaseForm vehicleId={vehicle.id} autoOpenKey={query.new} />
             </div>
             {plannedPurchases.length > 0 ? (
               <>
@@ -476,60 +462,50 @@ export default async function VehiclePage({
                 <div className="record-list">
                   <p className="record-list-subheading">To Buy</p>
                   {sortedToBuy.length ? sortedToBuy.map((record) => (
-                    <div className="record-entry" key={record.id}>
-                      <div className="record-row">
-                        <span className="tag tag-neutral">{formatPlannedPurchaseStatus("to-buy")}</span>
-                        <div className="record-row-content">
-                          <strong>{record.itemName}</strong>
-                          <p className="record-row-meta">
-                            {[
-                              `Qty ${record.quantity}`,
-                              record.supplier,
-                              record.dueDate ? `Due ${formatDate(record.dueDate, settings)}` : null,
-                            ].filter(Boolean).join(" · ")}
-                          </p>
-                        </div>
-                        <strong className="record-row-value">{formatCurrency(record.estimatedCost, settings)}</strong>
-                        <div className="record-row-actions">
-                          {record.url ? <a className="secondary-button" href={record.url} target="_blank" rel="noreferrer"><ExternalLink size={15} /></a> : null}
-                          <MarkPlannedPurchaseBoughtForm record={record} />
-                          <EditPlannedPurchaseForm record={record} />
-                        </div>
-                      </div>
-                    </div>
-                  )) : <p className="record-row-meta" style={{ padding: "0.85rem 0" }}>Nothing left to buy.</p>}
+                    <RecordItem
+                      key={record.id}
+                      tag={<span className="tag tag-neutral">{formatPlannedPurchaseStatus("to-buy")}</span>}
+                      title={record.itemName}
+                      meta={[
+                        `Qty ${record.quantity}`,
+                        record.supplier,
+                        record.dueDate ? `Due ${formatDate(record.dueDate, settings)}` : null,
+                      ].filter(Boolean).join(" · ")}
+                      value={formatCurrency(record.estimatedCost, settings)}
+                      actions={<>
+                        {record.url ? <a className="icon-button" href={record.url} target="_blank" rel="noreferrer" aria-label="Open product link" title="Open product link"><ExternalLink size={16} /></a> : null}
+                        <MarkPlannedPurchaseBoughtForm record={record} />
+                        <EditPlannedPurchaseForm record={record} />
+                      </>}
+                    />
+                  )) : <p className="record-list-empty">Nothing left to buy.</p>}
 
                   <p className="record-list-subheading">Purchased</p>
                   {sortedPurchased.length ? sortedPurchased.map((record) => (
-                    <div className="record-entry" key={record.id}>
-                      <div className="record-row">
-                        <span className={`tag ${record.convertedAt ? "tag-success" : "tag-neutral"}`}>
-                          {formatPlannedPurchaseStatus(plannedPurchaseStatus(record.convertedAt, record.convertedToType))}
-                        </span>
-                        <div className="record-row-content">
-                          <strong>{record.itemName}</strong>
-                          <p className="record-row-meta">
-                            {[
-                              `Qty ${record.quantity}`,
-                              record.purchasedDate ? `Bought ${formatDate(record.purchasedDate, settings)}` : null,
-                              record.supplier,
-                            ].filter(Boolean).join(" · ")}
-                          </p>
-                        </div>
-                        <strong className="record-row-value">{formatCurrency(record.actualCost ?? record.estimatedCost, settings)}</strong>
-                        <div className="record-row-actions">
-                          {record.url ? <a className="secondary-button" href={record.url} target="_blank" rel="noreferrer"><ExternalLink size={15} /></a> : null}
-                          {!record.convertedAt ? (
-                            <>
-                              <CreateMaintenanceFromPurchaseForm record={record} categories={categories} workshops={workshops} />
-                              <CreateRepairFromPurchaseForm record={record} workshops={workshops} />
-                            </>
-                          ) : null}
-                          <EditPlannedPurchaseBoughtDateForm record={record} />
-                        </div>
-                      </div>
-                    </div>
-                  )) : <p className="record-row-meta" style={{ padding: "0.85rem 0" }}>Purchased items will appear here once bought.</p>}
+                    <RecordItem
+                      key={record.id}
+                      tag={<span className={`tag ${record.convertedAt ? "tag-success" : "tag-neutral"}`}>
+                        {formatPlannedPurchaseStatus(plannedPurchaseStatus(record.convertedAt, record.convertedToType))}
+                      </span>}
+                      title={record.itemName}
+                      meta={[
+                        `Qty ${record.quantity}`,
+                        record.purchasedDate ? `Bought ${formatDate(record.purchasedDate, settings)}` : null,
+                        record.supplier,
+                      ].filter(Boolean).join(" · ")}
+                      value={formatCurrency(record.actualCost ?? record.estimatedCost, settings)}
+                      actions={<>
+                        {record.url ? <a className="icon-button" href={record.url} target="_blank" rel="noreferrer" aria-label="Open product link" title="Open product link"><ExternalLink size={16} /></a> : null}
+                        {!record.convertedAt ? (
+                          <>
+                            <CreateMaintenanceFromPurchaseForm record={record} categories={categories} workshops={workshops} />
+                            <CreateRepairFromPurchaseForm record={record} workshops={workshops} />
+                          </>
+                        ) : null}
+                        <EditPlannedPurchaseBoughtDateForm record={record} />
+                      </>}
+                    />
+                  )) : <p className="record-list-empty">Purchased items will appear here once bought.</p>}
                 </div>
               </>
             ) : (
@@ -557,11 +533,11 @@ export default async function VehiclePage({
           <section className="records-shell">
             <div className="section-heading">
               <h2><Fuel size={19} /> Fuel</h2>
-              <FuelRecordForm vehicleId={vehicle.id} settings={settings} />
+              <FuelRecordForm vehicleId={vehicle.id} settings={settings} autoOpenKey={query.new} />
             </div>
             {fuelRecords.length > 0 ? (
               <>
-                <div className="metric-list" style={{ marginBottom: "1rem" }}>
+                <div className="metric-list metric-panel">
                   <span>Fill-ups logged</span>
                   <strong>{fuelRecords.length}</strong>
                   <span>Total fuel spend</span>
@@ -578,28 +554,14 @@ export default async function VehiclePage({
                   {sorted.map((record) => {
                     const economy = economies.get(record.id);
                     return (
-                      <div className="record-entry" key={record.id}>
-                        <div className="record-row">
-                          <span className="tag tag-neutral">{record.fuelType}</span>
-                          <div className="record-row-content">
-                            <strong>
-                              {formatVolume(record.volumeLitres, settings)}
-                              {record.station ? ` · ${record.station}` : ""}
-                            </strong>
-                            <p className="record-row-meta">
-                              {formatDate(record.date, settings)} · {formatMiles(record.odometer, settings)}
-                              {!record.fullTank ? " · Partial" : ""}
-                              {economy ? ` · ${economy}` : ""}
-                            </p>
-                          </div>
-                          {record.totalCost != null ? (
-                            <strong className="record-row-value">{formatCurrency(record.totalCost, settings)}</strong>
-                          ) : null}
-                          <div className="record-row-actions">
-                            <EditFuelRecordForm record={record} settings={settings} />
-                          </div>
-                        </div>
-                      </div>
+                      <RecordItem
+                        key={record.id}
+                        tag={<span className="tag tag-neutral">{record.fuelType}</span>}
+                        title={`${formatVolume(record.volumeLitres, settings)}${record.station ? ` · ${record.station}` : ""}`}
+                        meta={`${formatDate(record.date, settings)} · ${formatMiles(record.odometer, settings)}${!record.fullTank ? " · Partial" : ""}${economy ? ` · ${economy}` : ""}`}
+                        value={record.totalCost != null ? formatCurrency(record.totalCost, settings) : null}
+                        actions={<EditFuelRecordForm record={record} settings={settings} />}
+                      />
                     );
                   })}
                 </div>
@@ -672,7 +634,7 @@ export default async function VehiclePage({
           <section className="records-shell">
             <div className="section-heading">
               <h2><Images size={19} /> Gallery</h2>
-              <GalleryUploadForm vehicleId={vehicle.id} maintenance={maintenance} repairs={repairs} />
+              <GalleryUploadForm vehicleId={vehicle.id} maintenance={maintenance} repairs={repairs} autoOpenKey={query.new} />
             </div>
             {galleryItems.length > 0 ? (
               <GalleryGrid
@@ -696,7 +658,7 @@ export default async function VehiclePage({
   );
 }
 
-function AssignServiceIntervalForm({ vehicleId, intervals }: { vehicleId: number; intervals: ServiceInterval[] }) {
+function AssignServiceIntervalForm({ vehicleId, intervals, distanceUnit }: { vehicleId: number; intervals: ServiceInterval[]; distanceUnit: string }) {
   const action = assignServiceIntervalAction.bind(null, vehicleId);
   return (
     <ModalPanel trigger={<><Plus size={17} /> Assign interval</>} title="Assign service interval">
@@ -709,7 +671,7 @@ function AssignServiceIntervalForm({ vehicleId, intervals }: { vehicleId: number
               <option value={si.id} key={si.id}>
                 {si.name}
                 {si.intervalMonths ? ` — every ${si.intervalMonths} months` : ""}
-                {si.intervalMileage ? ` / ${si.intervalMileage.toLocaleString()} miles` : ""}
+                {si.intervalMileage ? ` / ${si.intervalMileage.toLocaleString()} ${distanceUnit}` : ""}
               </option>
             ))}
           </select>
@@ -756,7 +718,7 @@ function RecordServiceButton({ record, vehicle, compact = false }: { record: Veh
       triggerLabel={compact ? `Record ${record.name}` : undefined}
       title={`Record ${record.name}`}
     >
-      {compact ? <p className="muted" style={{ marginTop: 0, marginRight: 44 }}>Logs this service in Maintenance and sets the next reminder.</p> : null}
+      {compact ? <p className="muted sheet-intro">Logs this service in Maintenance and sets the next reminder.</p> : null}
       <form action={recordAction} className="record-form">
         <label>
           Date

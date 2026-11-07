@@ -26,7 +26,8 @@ export function WorkshopCard({ workshop }: { workshop: Workshop }) {
         <p className="muted">{[workshop.phone, workshop.email, workshop.website].filter(Boolean).join(" · ")}</p>
       ) : null}
       {workshop.notes ? <p>{workshop.notes}</p> : null}
-      <details>
+      <div className="card-actions">
+      <details className="card-edit">
         <summary className="secondary-button">Edit</summary>
         <form action={updateAction} className="record-form">
           <label>Name<input name="name" defaultValue={workshop.name} required maxLength={100} /></label>
@@ -43,6 +44,7 @@ export function WorkshopCard({ workshop }: { workshop: Workshop }) {
         </form>
       </details>
       <ConfirmDelete action={deleteAction} />
+      </div>
     </article>
   );
 }
@@ -55,7 +57,8 @@ export function ServiceIntervalCard({ interval, distanceUnit }: { interval: Serv
     <article className="workshop-card">
       <h3>{interval.name}</h3>
       {desc ? <p className="muted">{desc}</p> : null}
-      <details>
+      <div className="card-actions">
+      <details className="card-edit">
         <summary className="secondary-button">Edit</summary>
         <form action={updateAction} className="record-form">
           <label>Name<input name="name" defaultValue={interval.name} required maxLength={100} /></label>
@@ -65,6 +68,7 @@ export function ServiceIntervalCard({ interval, distanceUnit }: { interval: Serv
         </form>
       </details>
       <ConfirmDelete action={deleteAction} />
+      </div>
     </article>
   );
 }
@@ -75,7 +79,8 @@ export function CategoryCard({ category }: { category: MaintenanceCategory }) {
   return (
     <article className="workshop-card">
       <h3>{category.name}</h3>
-      <details>
+      <div className="card-actions">
+      <details className="card-edit">
         <summary className="secondary-button">Edit</summary>
         <form action={updateAction} className="record-form">
           <label>Name<input name="name" defaultValue={category.name} required maxLength={100} /></label>
@@ -83,6 +88,7 @@ export function CategoryCard({ category }: { category: MaintenanceCategory }) {
         </form>
       </details>
       <ConfirmDelete action={deleteAction} />
+      </div>
     </article>
   );
 }

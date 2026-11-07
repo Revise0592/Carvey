@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bug, Building2, Download, Globe, HardDrive, KeyRound, Monitor, Palette, RefreshCw, RotateCcw, Server, Settings2, ShieldCheck, Tag, Upload, UserRound } from "lucide-react";
+import { Bug, Building2, ChevronRight, Download, Globe, HardDrive, KeyRound, Monitor, Palette, RefreshCw, RotateCcw, Server, Settings2, ShieldCheck, Tag, Upload, UserRound } from "lucide-react";
 import { AppFrame } from "@/components/AppFrame";
 import { ThemeControls } from "@/components/ThemeControls";
 import { MotFeatureField } from "@/components/MotFeatureField";
@@ -19,6 +19,16 @@ export const dynamic = "force-dynamic";
 const settingsTabs = ["personalisation", "admin", "regional", "workshops", "categories", "service-intervals", "backup"] as const;
 type SettingsTab = (typeof settingsTabs)[number];
 
+const settingsSections: { key: SettingsTab; label: string; description: string; icon: typeof Palette }[] = [
+  { key: "personalisation", label: "Personalisation", description: "Theme, colours and app install", icon: Palette },
+  { key: "admin", label: "Admin", description: "Account, password and sign-in", icon: UserRound },
+  { key: "regional", label: "Regional", description: "Currency, units and dates", icon: Globe },
+  { key: "workshops", label: "Garages & Workshops", description: "Places that work on your cars", icon: Building2 },
+  { key: "categories", label: "Maintenance Categories", description: "Labels for maintenance entries", icon: Tag },
+  { key: "service-intervals", label: "Service Intervals", description: "Reusable service schedules", icon: RefreshCw },
+  { key: "backup", label: "Backup & Restore", description: "Export or restore your data", icon: HardDrive }
+];
+
 const COMMON_CURRENCIES = ["GBP", "USD", "EUR"];
 const currencyDisplayNames = new Intl.DisplayNames("en", { type: "currency" });
 const otherCurrencies = CURRENCY_CODES
@@ -32,7 +42,8 @@ function currencyOptionLabel(code: string) {
 export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ tab?: string; account?: string; app?: string; workshop?: string; category?: string; interval?: string; restore?: string; token?: string; debug?: string; message?: string }> }) {
   const user = await requireUser();
   const params = await searchParams;
-  const activeTab = settingsTabs.includes(params.tab as SettingsTab) ? (params.tab as SettingsTab) : "personalisation";
+  const hasExplicitTab = settingsTabs.includes(params.tab as SettingsTab);
+  const activeTab = hasExplicitTab ? (params.tab as SettingsTab) : "personalisation";
   const restoreSummary = await readRestoreSummary(params.token);
   const debugEnabled = debugEasterEggsEnabled();
   const debugDemoStatus = debugEnabled ? await getShowcaseDemoStatus() : null;
@@ -41,25 +52,28 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const categories = listMaintenanceCategories();
   const serviceIntervals = listServiceIntervals();
   const regionalSettings = getRegionalSettings();
+  const activeSection = settingsSections.find((section) => section.key === activeTab)!;
 
   return (
-    <AppFrame>
-      <section className="page-heading">
+    <AppFrame title={activeSection.label} backHref={hasExplicitTab ? "/settings" : undefined} backLabel="Settings">
+      <section className="page-heading settings-heading">
         <div>
           <p className="eyebrow">Preferences</p>
           <h1>Settings</h1>
         </div>
       </section>
 
-      <nav className="tabs settings-tabs" aria-label="Settings sections">
-        <Link className={activeTab === "personalisation" ? "active" : ""} href="/settings?tab=personalisation"><Palette size={15} /> Personalisation</Link>
-        <Link className={activeTab === "admin" ? "active" : ""} href="/settings?tab=admin"><UserRound size={15} /> Admin</Link>
-        <Link className={activeTab === "regional" ? "active" : ""} href="/settings?tab=regional"><Globe size={15} /> Regional</Link>
-        <Link className={activeTab === "workshops" ? "active" : ""} href="/settings?tab=workshops"><Building2 size={15} /> Garages & Workshops</Link>
-        <Link className={activeTab === "categories" ? "active" : ""} href="/settings?tab=categories"><Tag size={15} /> Maintenance Categories</Link>
-        <Link className={activeTab === "service-intervals" ? "active" : ""} href="/settings?tab=service-intervals"><RefreshCw size={15} /> Service Intervals</Link>
-        <Link className={activeTab === "backup" ? "active" : ""} href="/settings?tab=backup"><HardDrive size={15} /> Backup & Restore</Link>
+      <div className={`settings-layout ${hasExplicitTab ? "has-tab" : "no-tab"}`}>
+      <nav className="settings-nav" aria-label="Settings sections">
+        {settingsSections.map(({ key, label, description, icon: Icon }) => (
+          <Link key={key} className={activeTab === key ? "active" : ""} aria-current={activeTab === key ? "page" : undefined} href={`/settings?tab=${key}`}>
+            <span className="settings-nav-icon"><Icon size={17} /></span>
+            <span className="settings-nav-text"><strong>{label}</strong><small>{description}</small></span>
+            <ChevronRight size={18} className="settings-nav-chevron" />
+          </Link>
+        ))}
       </nav>
+      <div className="settings-content">
 
       {activeTab === "personalisation" ? (
         <section className="settings-grid">
@@ -383,6 +397,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           ) : null}
         </section>
       ) : null}
+      </div>
+      </div>
     </AppFrame>
   );
 }
