@@ -5,94 +5,103 @@
   </picture>
 </p>
 
-Carvey is a self-hosted, local-first car maintenance tracker for managing vehicles, repairs, maintenance, MOTs, reminders and running costs. Your "digital service history" for your older cars, or your digital backup of all that paperwork you've got stuffed in a slippery fish.
+Carvey is a self-hosted car maintenance tracker. It keeps the service history, MOTs, reminders, receipts and running costs for every car you own in one place. No accounts, no cloud: one SQLite database and an uploads folder.
 
 ## Screenshots
 
-![Carvey App](screenshot/Screenshot_20260506_183228.png)
+<p align="center">
+  <img src="screenshot/desktop-garage-light.png" alt="Garage" width="49%">
+  <img src="screenshot/desktop-vehicle-dark.png" alt="Vehicle page (dark mode)" width="49%">
+</p>
+<p align="center">
+  <img src="screenshot/desktop-costs-light.png" alt="Costs" width="98%">
+</p>
+<p align="center">
+  <img src="screenshot/mobile-garage-light.png" alt="Garage on mobile" width="30%">
+  <img src="screenshot/mobile-vehicle-dark.png" alt="Vehicle page on mobile (dark mode)" width="30%">
+  <img src="screenshot/mobile-reminders-light.png" alt="Reminders on mobile" width="30%">
+</p>
 
-## What It Does
+## Features
 
-- Tracks multiple vehicles in one garage
-- Stores vehicle details, odometer readings, and notes
-- Logs maintenance, repairs, MOTs/emissions tests, and reminders
-- Attaches receipts and documents (PDF, images) to any record
-- Shows a dashboard with costs, reminders, and upcoming tests
-- Configurable regional settings for currency, distance, dates, and more
-- Backup & restore your config / data
+**Garage**
+- Any number of vehicles, each with a photo, plate, mileage, purchase details and notes
+- Garage overview: spend this year, open reminders, MOTs due soon and items to buy
+- Mark vehicles as sold
 
-## Regional Settings
+**Per vehicle**
+- **Maintenance** and **Repairs**: date, mileage, cost, category, garage/workshop and notes
+- **MOTs**: result, expiry and cost. Logging an MOT resets the MOT reminder
+- **Fuel**: fill-ups with volume, cost and odometer
+- **Reminders**: by date, mileage or both, with optional repeats
+- **Service Plan**: reusable intervals (e.g. oil every 12 months / 6,000 miles) linked to reminders
+- **To Buy**: planned parts, which convert into a maintenance or repair entry when bought
+- **Gallery** and **attachments**: receipts, invoices and photos (PDF or image) on any record
+- Printable full service history
 
-Carvey is configurable for different regions under **Settings → Regional**. All options default to UK values.
+**Across the garage**
+- **Reminders** page: MOT expiry and every open reminder, grouped by overdue and upcoming
+- **Costs** page: spend by month, type and vehicle, per year or all time
+- **Quick add**: log anything for any vehicle from the bottom bar (mobile) or **Add** button (desktop)
+
+**App**
+- Installable as a PWA, with mobile tab navigation and bottom-sheet forms
+- Light and dark mode, ten colour palettes, rounded or boxy shapes
+- One-click backup and restore (database and uploads in one zip, with a preview before restore)
+- Optional login, which can be turned off behind a trusted reverse proxy
+
+## Regional settings
+
+**Settings → Regional**. Defaults are UK.
 
 | Setting | Options |
 |---|---|
-| Currency | GBP (£) · USD ($) · EUR (€) |
-| Distance unit | Miles · Kilometres (km) |
-| Date format | DD Mon YYYY · ISO 8601 (YYYY-MM-DD) |
+| Currency | Any ISO 4217 currency |
+| Distance | Miles · Kilometres |
+| Fuel volume | Litres · Gallons |
+| Date format | DD Mon YYYY · ISO 8601 |
 | Plate colour | Yellow (rear) · White (front) |
-| Annual vehicle test | MOT · Emissions Test · Disabled |
+| Annual test | MOT · Inspection · Custom name · Disabled |
 
-## How It Works
+## Quick start
 
-- Built as a Next.js app with a server-rendered UI
-- Stores data in SQLite under `/app/data`
-- Saves uploaded vehicle images and file attachments alongside the database
-- Packages the database and uploads together for backup and restore
-- Authentication can be disabled for deployments behind a trusted reverse proxy
+**Docker Compose**
 
-## Quick Start
+```bash
+docker compose up -d
+```
 
-Local development:
+Open `http://localhost:3000` and create your admin account. Data is stored in `./data`.
+
+**Local development** (Node 24+)
 
 ```bash
 npm install
-npm run dev
+CARVEY_DATA_DIR=./data npm run dev
 ```
 
-Open `http://localhost:3000`.
+## Environment variables
 
-On first run, create your admin account in the setup screen.
+| Variable | Purpose |
+|---|---|
+| `CARVEY_DATA_DIR` | Where the database and uploads are stored (`/app/data` in Docker) |
+| `TZ` | Time zone, e.g. `Europe/London` |
+| `CARVEY_RESET_PASSWORD` | Resets the admin password on startup (see below) |
 
-Example local env:
+## Password reset
 
-```bash
-CARVEY_DATA_DIR=./data
-TZ=Europe/London
-```
-
-Docker Compose:
-
-```bash
-docker compose up -d --build
-```
-
-Then open `http://localhost:3000`.
-
-## Password Reset
-
-If you're locked out and can't use the **Settings → Admin → Password** form, there are two ways to reset the admin password.
-
-**Option 1 — CLI (no restart needed):**
+From inside the container, with no restart:
 
 ```bash
 docker exec -it <container-name> node scripts/reset-password.mjs
 ```
 
-You'll be prompted to enter and confirm a new password.
+Or set `CARVEY_RESET_PASSWORD=newpassword`, restart, log in, then remove the variable and restart again.
 
-**Option 2 — Environment variable (Docker Compose):**
+## Tech stack
 
-Add `CARVEY_RESET_PASSWORD=yournewpassword` to your Docker Compose environment, restart the container, log in with the new password, then remove the variable and restart again.
+Next.js · React · TypeScript · SQLite (`better-sqlite3`) · Sharp · Vitest
 
-## Tech Stack
+## Issues and feedback
 
-- Next.js
-- React
-- TypeScript
-- SQLite via `better-sqlite3`
-- Sharp for image processing
-- Vitest for tests
-
-## Issues and Feedback
-Please raise issues / bugs in the issues tab. Any feedback about features you'd like to see, raise [here](https://carvey.userjot.com/)
+Report bugs in [Issues](https://github.com/Revise0592/Carvey/issues). Send feature requests [here](https://carvey.userjot.com/).
