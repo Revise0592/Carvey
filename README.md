@@ -9,6 +9,9 @@ Carvey is a self-hosted car maintenance tracker. It keeps the service history, M
 
 ## Screenshots
 
+<details>
+<summary><b>Desktop</b></summary>
+<br>
 <p align="center">
   <img src="screenshot/desktop-garage-light.png" alt="Garage" width="49%">
   <img src="screenshot/desktop-vehicle-dark.png" alt="Vehicle page (dark mode)" width="49%">
@@ -16,11 +19,17 @@ Carvey is a self-hosted car maintenance tracker. It keeps the service history, M
 <p align="center">
   <img src="screenshot/desktop-costs-light.png" alt="Costs" width="98%">
 </p>
+</details>
+
+<details>
+<summary><b>Mobile</b></summary>
+<br>
 <p align="center">
   <img src="screenshot/mobile-garage-light.png" alt="Garage on mobile" width="30%">
   <img src="screenshot/mobile-vehicle-dark.png" alt="Vehicle page on mobile (dark mode)" width="30%">
   <img src="screenshot/mobile-reminders-light.png" alt="Reminders on mobile" width="30%">
 </p>
+</details>
 
 ## Features
 
