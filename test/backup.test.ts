@@ -339,6 +339,41 @@ describe("backup and restore", () => {
     target.db.closeDbForTests();
   });
 
+  it("keeps this server's account and private settings out of the showcase backup", async () => {
+    const demoAssetDir = await fs.mkdtemp(path.join(os.tmpdir(), "carvey-demo-private-"));
+    process.env.CARVEY_SHOWCASE_DEMO_BACKUP = path.join(demoAssetDir, "showcase-backup.zip");
+    await writeShowcaseDemoBackup(process.env.CARVEY_SHOWCASE_DEMO_BACKUP);
+
+    const target = await freshModules("carvey-demo-private-target-");
+    const adminId = Number(target.db.createAdminUser("owner", "owner-hash").lastInsertRowid);
+    target.db.createAuthSession("live-session-token", adminId, new Date(Date.now() + 60_000).toISOString());
+    target.db.setAppSetting("notify.token", "private-notify-token");
+    target.db.setAppSetting("calendar.token", "private-calendar-token");
+
+    // Loading the showcase keeps the signed-in admin and private settings.
+    expect(await target.backup.activateShowcaseDemoData()).toMatchObject({ ok: true });
+    expect(target.db.getAdminByUsername("owner")).toBeTruthy();
+    expect(target.db.getAuthSession("live-session-token")).toBeTruthy();
+    expect(target.db.getAppSetting("notify.token")).toBe("private-notify-token");
+    expect(target.db.getAppSetting("calendar.token")).toBe("private-calendar-token");
+
+    // Saving the showcase writes none of them.
+    await expect(target.backup.syncShowcaseDemoBackupIfActive()).resolves.toBe(true);
+    const zip = new AdmZip(await fs.readFile(process.env.CARVEY_SHOWCASE_DEMO_BACKUP));
+    const dbPath = path.join(demoAssetDir, "check.sqlite");
+    await fs.writeFile(dbPath, zip.getEntry("carvey.sqlite")!.getData());
+    const saved = new Database(dbPath, { readonly: true });
+    try {
+      expect(saved.prepare("SELECT COUNT(*) AS count FROM admin_users").get()).toEqual({ count: 0 });
+      expect(saved.prepare("SELECT COUNT(*) AS count FROM auth_sessions").get()).toEqual({ count: 0 });
+      expect(saved.prepare("SELECT key FROM app_settings WHERE key LIKE 'notify.%' OR key LIKE 'calendar.%'").all()).toEqual([]);
+      expect(saved.prepare("SELECT value FROM app_settings WHERE key = 'collectionName'").get()).toEqual({ value: "Press Garage" });
+    } finally {
+      saved.close();
+    }
+    target.db.closeDbForTests();
+  });
+
   it("fails safely when restoring previous demo data without a saved snapshot", async () => {
     const target = await freshModules("carvey-demo-missing-");
     await expect(target.backup.restorePreviousDebugDemoData()).resolves.toMatchObject({

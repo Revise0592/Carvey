@@ -56,7 +56,7 @@ export type ShowcaseDemoStatus = {
   summary: RestoreSummary | null;
 };
 
-export async function createBackupZip() {
+export async function createBackupZip(options: { showcase?: boolean } = {}) {
   ensureDataDirs();
   const token = crypto.randomUUID();
   const workDir = path.join(tempDir, `backup-${token}`);
@@ -64,7 +64,7 @@ export async function createBackupZip() {
   const dbCopyPath = path.join(workDir, dbFileName);
 
   await getDb().backup(dbCopyPath);
-  scrubBackupCopy(dbCopyPath);
+  scrubBackupCopy(dbCopyPath, options.showcase === true);
 
   const uploads = await listUploadFiles();
   const manifest: BackupManifest = {
@@ -92,13 +92,15 @@ export async function createBackupZip() {
  * Removes sign-in state from a backup copy: sessions, pending 2FA challenges and failed-login
  * counters belong to this server, and a stolen backup must not contain anything that logs in.
  */
-function scrubBackupCopy(dbPath: string) {
+function scrubBackupCopy(dbPath: string, showcase = false) {
   const copy = new Database(dbPath);
   try {
-    for (const table of tablesNotRestored) {
+    const tables = showcase ? showcaseTablesKept : tablesNotRestored;
+    for (const table of tables) {
       const exists = copy.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?").get(table);
       if (exists) copy.exec(`DELETE FROM "${table}"`);
     }
+    if (showcase) copy.exec(`DELETE FROM app_settings WHERE ${showcaseSettingsKeptWhere}`);
     copy.exec("VACUUM");
   } finally {
     copy.close();
@@ -189,7 +191,7 @@ export async function activateShowcaseDemoData(): Promise<MutationResult> {
   }
 
   const extractDir = path.join(debugDemoDir, "showcase-extract");
-  await restoreValidatedBackupBuffer(buffer, `showcase-${Date.now()}`, extractDir);
+  await restoreValidatedBackupBuffer(buffer, `showcase-${Date.now()}`, extractDir, true);
   await writeDebugDemoState({ active: true, activatedAt: new Date().toISOString() });
   return { ok: true };
 }
@@ -226,6 +228,15 @@ const tablesNotRestored = new Set(["auth_sessions", "auth_challenges", "auth_thr
  */
 const settingsNotRestored = ["authDisabled"];
 
+/**
+ * The packaged showcase backup is committed to a public repository, so it is written without this
+ * server's account, sign-in state, notification history or private settings (notification URLs
+ * and tokens, the calendar feed token). Loading it keeps those as they are on this server, so the
+ * admin stays signed in. Keep scripts/generate-showcase-backup.mjs in step with these lists.
+ */
+const showcaseTablesKept = new Set(["admin_users", "notification_log", ...tablesNotRestored]);
+const showcaseSettingsKeptWhere = `key LIKE 'notify.%' OR key LIKE 'calendar.%' OR key IN (${settingsNotRestored.map((key) => `'${key}'`).join(", ")})`;
+
 function tableColumns(database: Database.Database, schema: "main" | "restore_backup", table: string) {
   return (database.prepare(`PRAGMA ${schema}.table_info("${table}")`).all() as Array<{ name: string }>).map((column) => column.name);
 }
@@ -234,7 +245,7 @@ function tableColumns(database: Database.Database, schema: "main" | "restore_bac
  * Replaces every table's rows with the backup's. Driven by the live schema rather than a fixed
  * list, so new tables are always included; columns a backup predates fall back to their defaults.
  */
-function restoreDatabaseContents(backupDbPath: string) {
+function restoreDatabaseContents(backupDbPath: string, showcase = false) {
   const database = getDb();
   const backupPath = backupDbPath.replaceAll("'", "''");
 
@@ -246,17 +257,20 @@ function restoreDatabaseContents(backupDbPath: string) {
     const liveTables = listTables("main");
     const backupTables = new Set(listTables("restore_backup"));
 
+    const keptTables = showcase ? showcaseTablesKept : new Set<string>();
+    const keptSettingsWhere = showcase ? showcaseSettingsKeptWhere : `key IN (${settingsNotRestored.map((key) => `'${key}'`).join(", ")})`;
     const keptSettings = database
-      .prepare(`SELECT key, value, updated_at FROM app_settings WHERE key IN (${settingsNotRestored.map(() => "?").join(", ")})`)
-      .all(...settingsNotRestored) as Array<{ key: string; value: string; updated_at: string }>;
+      .prepare(`SELECT key, value, updated_at FROM app_settings WHERE ${keptSettingsWhere}`)
+      .all() as Array<{ key: string; value: string; updated_at: string }>;
 
     database.exec("BEGIN");
     for (const table of liveTables) {
+      if (keptTables.has(table)) continue;
       database.exec(`DELETE FROM "${table}"`);
     }
     const restored: string[] = [];
     for (const table of liveTables) {
-      if (tablesNotRestored.has(table) || !backupTables.has(table)) continue;
+      if (keptTables.has(table) || tablesNotRestored.has(table) || !backupTables.has(table)) continue;
       const backupColumns = new Set(tableColumns(database, "restore_backup", table));
       const columns = tableColumns(database, "main", table).filter((column) => backupColumns.has(column));
       if (!columns.length) continue;
@@ -264,7 +278,7 @@ function restoreDatabaseContents(backupDbPath: string) {
       database.exec(`INSERT INTO "${table}" (${list}) SELECT ${list} FROM restore_backup."${table}"`);
       restored.push(table);
     }
-    database.exec(`DELETE FROM app_settings WHERE key IN (${settingsNotRestored.map((key) => `'${key}'`).join(", ")})`);
+    database.exec(`DELETE FROM app_settings WHERE ${keptSettingsWhere}`);
     const keepSetting = database.prepare("INSERT INTO app_settings (key, value, updated_at) VALUES (@key, @value, @updated_at)");
     for (const row of keptSettings) keepSetting.run(row);
     const restoredList = restored.map((table) => `'${table}'`).join(", ");
@@ -363,24 +377,24 @@ async function createRollbackSnapshot() {
 async function writeCurrentDataToShowcaseDemoBackup() {
   ensureDataDirs();
   await fsp.mkdir(path.dirname(showcaseDemoBackupPath), { recursive: true });
-  const { buffer } = await createBackupZip();
+  const { buffer } = await createBackupZip({ showcase: true });
   const tempPath = `${showcaseDemoBackupPath}.tmp`;
   await fsp.writeFile(tempPath, buffer);
   await fsp.rename(tempPath, showcaseDemoBackupPath);
 }
 
-async function restoreExtractedBackup(extractDir: string) {
-  restoreDatabaseContents(path.join(extractDir, dbFileName));
+async function restoreExtractedBackup(extractDir: string, showcase = false) {
+  restoreDatabaseContents(path.join(extractDir, dbFileName), showcase);
   await fsp.rm(uploadDir, { recursive: true, force: true });
   await fsp.mkdir(uploadDir, { recursive: true });
   await copyDir(path.join(extractDir, "uploads"), uploadDir);
   ensureDataDirs();
 }
 
-async function restoreValidatedBackupBuffer(buffer: Buffer, token: string, extractDir: string) {
+async function restoreValidatedBackupBuffer(buffer: Buffer, token: string, extractDir: string, showcase = false) {
   try {
     await validateAndSummariseZip(buffer, token, extractDir);
-    await restoreExtractedBackup(extractDir);
+    await restoreExtractedBackup(extractDir, showcase);
   } finally {
     await fsp.rm(extractDir, { recursive: true, force: true });
   }
