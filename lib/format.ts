@@ -31,9 +31,7 @@ export function formatDate(value: string | null | undefined, settings?: { dateFo
   }).format(new Date(dateValue));
 }
 
-export function todayIso() {
-  return new Date().toISOString().slice(0, 10);
-}
+export { todayIso } from "./dates";
 
 export type MotResult = "pass" | "fail" | "advisory";
 export type ReminderStatusLabel = "done" | "overdue" | "upcoming" | "open";

@@ -44,7 +44,7 @@ describe("auth helpers", () => {
     const hash = await bcrypt.hash("password-123", 4);
     const userId = Number(db.createAdminUser("admin", hash).lastInsertRowid);
 
-    await expect(auth.login("admin", "password-123")).resolves.toBe(true);
+    await expect(auth.login("admin", "password-123")).resolves.toEqual({ status: "ok" });
     expect(cookieMock.set).toHaveBeenCalledWith("carvey_session", expect.stringMatching(/^[a-f0-9]{48}$/), expect.objectContaining({
       httpOnly: true,
       sameSite: "lax",
@@ -54,8 +54,10 @@ describe("auth helpers", () => {
     }));
 
     const sessionId = cookieMock.set.mock.calls[0][1] as string;
+    // Only a digest of the cookie is stored, so the database can't be replayed as a login.
+    expect(db.getDb().prepare("SELECT id FROM auth_sessions").all()).toEqual([{ id: db.hashToken(sessionId) }]);
     expect(db.getAuthSession(sessionId)).toMatchObject({
-      id: sessionId,
+      id: db.hashToken(sessionId),
       adminUserId: userId,
       revokedAt: null
     });
@@ -142,7 +144,7 @@ describe("auth helpers", () => {
     db.createAdminUser("admin", hash);
     headerMock.get.mockImplementation((name: string) => name === "x-forwarded-proto" ? "https" : null);
 
-    await expect(auth.login("admin", "password-123")).resolves.toBe(true);
+    await expect(auth.login("admin", "password-123")).resolves.toEqual({ status: "ok" });
 
     expect(cookieMock.set).toHaveBeenCalledWith("carvey_session", expect.any(String), expect.objectContaining({
       secure: true

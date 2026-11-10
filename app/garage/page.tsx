@@ -4,6 +4,7 @@ import { AppFrame } from "@/components/AppFrame";
 import { CreateVehicleForm } from "@/components/Forms";
 import { RegistrationPlate } from "@/components/RegistrationPlate";
 import { VehiclePhoto } from "@/components/VehiclePhoto";
+import { buildAgenda } from "@/lib/agenda";
 import { getCollectionName, getDashboardStats } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { formatCurrency, formatDate, formatMiles } from "@/lib/format";
@@ -17,6 +18,8 @@ export default async function GaragePage({ searchParams }: { searchParams: Promi
   const settings = getRegionalSettings();
   const regMode = settings.plateStyle;
   const motLabel = getMotLabel(settings);
+  const agenda = buildAgenda();
+  const nextReminders = agenda.slice(0, 8);
 
   return (
     <AppFrame>
@@ -42,7 +45,7 @@ export default async function GaragePage({ searchParams }: { searchParams: Promi
         <article className="stat-card stat-card-reminders">
           <CalendarClock size={20} />
           <span>Open reminders</span>
-          <strong>{stats.reminders.length}</strong>
+          <strong>{agenda.length}</strong>
         </article>
         <article className="stat-card stat-card-reminders">
           <PackagePlus size={20} />
@@ -93,10 +96,16 @@ export default async function GaragePage({ searchParams }: { searchParams: Promi
         ) : null}
         <div className="list-panel">
           <div className="panel-heading"><h2>Reminders</h2><Link href="/reminders" className="panel-link">See all</Link></div>
-          {stats.reminders.length ? stats.reminders.map((reminder) => (
+          {nextReminders.length ? nextReminders.map(({ reminder, timing }) => (
             <Link href={`/vehicles/${reminder.vehicleId}?tab=reminders`} className="list-row" key={reminder.id}>
               <span className="list-row-text"><span>{reminder.title}</span><small>{reminder.make} {reminder.model}</small></span>
-              <strong>{reminder.dueDate ? formatDate(reminder.dueDate, settings) : formatMiles(reminder.dueOdometer, settings)}</strong>
+              <strong>
+                {reminder.dueDate && !timing.estimatedDate
+                  ? formatDate(reminder.dueDate, settings)
+                  : timing.estimatedDate && !timing.probablyReached
+                    ? `≈ ${formatDate(timing.estimatedDate, settings)}`
+                    : formatMiles(reminder.dueOdometer, settings)}
+              </strong>
             </Link>
           )) : <p className="muted">No open reminders.</p>}
         </div>

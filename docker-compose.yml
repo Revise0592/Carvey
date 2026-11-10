@@ -9,6 +9,9 @@ services:
       TZ: Europe/London
       CARVEY_DATA_DIR: /app/data
       CARVEY_DEBUG_EASTER_EGGS: "false"
+      # Behind Authelia/Authentik/etc.? See "Sign-in and reverse proxies" in the README.
+      # CARVEY_AUTH_MODE: proxy
+      # CARVEY_PROXY_SECRET: "change-me-to-a-long-random-string"
     volumes:
       - ./data:/app/data
     restart: unless-stopped

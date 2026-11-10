@@ -2,7 +2,7 @@
 
 import { Monitor, Moon, Sun } from "lucide-react";
 import { resolveThemeMode } from "@/lib/theme-branding";
-import { themePalettes, themeShapes, type ThemeMode, type ThemePalette, type ThemeShape } from "@/lib/theme-options";
+import { themePalettes, type ThemeMode, type ThemePalette, type ThemeShape } from "@/lib/theme-options";
 
 const modeOptions: Array<{ mode: ThemeMode; label: string; icon: React.ReactNode }> = [
   { mode: "system", label: "System", icon: <Monitor size={17} /> },

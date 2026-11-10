@@ -2,7 +2,7 @@
 
 import { Paperclip, Trash2, Upload } from "lucide-react";
 import { useRef, useState } from "react";
-import type { RecordAttachment } from "@/lib/db";
+import type { RecordAttachment } from "@/lib/db/types";
 
 export function AttachmentSection({
   attachments,

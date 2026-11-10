@@ -1,26 +1,25 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { Download } from "lucide-react";
 
+type InstallWindow = Window & { __carveyPwaInstall?: () => Promise<void> };
+
+function subscribeNoop() {
+  return () => {};
+}
+
+function subscribeInstallAvailable(onChange: () => void) {
+  window.addEventListener("carvey-install-available", onChange);
+  return () => window.removeEventListener("carvey-install-available", onChange);
+}
+
 export function InstallAppPanel() {
-  const [canInstall, setCanInstall] = useState(false);
-  const [installed, setInstalled] = useState(false);
-
-  useEffect(() => {
-    // Already running as installed PWA
-    if (window.matchMedia("(display-mode: standalone)").matches) {
-      setInstalled(true);
-      return;
-    }
-
-    const w = window as Window & { __carveyPwaInstall?: () => Promise<void> };
-    if (w.__carveyPwaInstall) setCanInstall(true);
-
-    const onAvailable = () => setCanInstall(true);
-    window.addEventListener("carvey-install-available", onAvailable);
-    return () => window.removeEventListener("carvey-install-available", onAvailable);
-  }, []);
+  // Read browser state through external stores so SSR renders nothing and hydration stays in sync.
+  const installed = useSyncExternalStore(subscribeNoop, () => window.matchMedia("(display-mode: standalone)").matches, () => false);
+  const available = useSyncExternalStore(subscribeInstallAvailable, () => Boolean((window as InstallWindow).__carveyPwaInstall), () => false);
+  const [dismissed, setDismissed] = useState(false);
+  const canInstall = available && !dismissed;
 
   if (installed) {
     return (
@@ -34,10 +33,10 @@ export function InstallAppPanel() {
   if (!canInstall) return null;
 
   async function handleInstall() {
-    const w = window as Window & { __carveyPwaInstall?: () => Promise<void> };
+    const w = window as InstallWindow;
     if (!w.__carveyPwaInstall) return;
     await w.__carveyPwaInstall();
-    setCanInstall(false);
+    setDismissed(true);
   }
 
   return (

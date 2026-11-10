@@ -6,6 +6,15 @@ All notable changes to Carvey will be documented here.
 
 ### Added
 
+- **Notifications**: a daily summary of reminders that are coming up or due, sent to ntfy, Gotify, Apprise, Discord or a generic webhook. Set the warning window and send time in **Settings → Notifications**, with **Send test** and **Check now** buttons
+- **Calendar feed**: a private subscription link that shows every open reminder as an all-day event, with an alert before it's due
+- **Mileage-based due dates**: Carvey works out how far each car is driven from its odometer readings, then shows when mileage-only reminders are likely to fall due (for example "≈ 14 Mar 2027"). Reminders are sorted by that date, and the vehicle overview shows typical yearly distance and an estimated current reading
+- **Renewals**: a new vehicle tab for insurance, road tax, warranty and breakdown cover, with provider, policy number, dates, cost and attached documents. Each type keeps one reminder on the latest renewal date. Ticking it opens a pre-filled renewal form, with a "Not renewing" option. Renewal costs count towards spend and the Costs page
+- **CSV export**: export any record type for one vehicle or all of them, or everything as a zip of CSV files
+- **Two-factor authentication**: authenticator-app codes (TOTP) with 10 single-use recovery codes, set up from **Settings → Admin**. Recover with `reset-password.mjs --disable-2fa` or `CARVEY_RESET_2FA=true`
+- **Reverse-proxy sign-in** (`CARVEY_AUTH_MODE=proxy`): trust Authelia, Authentik and similar via a shared secret header, while direct access to the port still requires a password
+- **Signed-in devices**: see active sessions and sign any of them out
+- **CSV import**: import maintenance, repairs, MOTs, fuel or renewals from a spreadsheet or another app. Columns are matched by name or common alias. Day-first and month-first dates and most number formats work, and rows can be matched to vehicles by registration. A preview shows exactly what will be imported, skipped or treated as a duplicate
 - App-style navigation: on phones and tablets, a compact top bar (back button and page title on sub-pages) and a bottom tab bar for Garage, Reminders, Costs and Settings
 - Quick-add button (centre of the bottom bar, or **Add** on desktop) to log maintenance, repairs, MOTs, fuel, reminders, To Buy items or photos for any vehicle, or add a new vehicle
 - **Reminders** page listing open reminders and MOT expiry across all vehicles, grouped by overdue / upcoming
@@ -14,6 +23,10 @@ All notable changes to Carvey will be documented here.
 
 ### Changed
 
+- Vehicle pages are much lighter: each tab now loads only its own data, and edit forms are no longer sent with every row. A Fuel tab with 150 fill-ups went from 591 KB to 246 KB (about 15 KB gzipped)
+- Fuel fill-ups now count as odometer readings for a vehicle's current mileage
+- Regional settings load in one query instead of nine
+- Internal: the data layer and server actions are split into modules by area, and the vehicle page into one file per tab
 - Refreshed design: flatter cards, a native system font, a sticky translucent top bar and sticky vehicle section tabs that keep the active tab in view
 - Forms open as bottom sheets on mobile with a fixed header and a scrolling body
 - Vehicle page header is more compact on mobile, with Photo / Print / Edit side by side
@@ -21,6 +34,9 @@ All notable changes to Carvey will be documented here.
 
 ### Fixed
 
+- **Restoring a backup lost fuel records, service plans, attachments and gallery photos.** Restore now copies every table, so nothing is left out, including anything added in future
+- The garage "Open reminders" count stopped at 8
+- A lint error in the Install App panel
 - Long forms in pop-ups could be cut off on mobile, hiding the save button
 - Record rows on mobile stranded the Edit button on its own line and squeezed titles beside the badge
 - Badges of different widths misaligned record titles on desktop
@@ -30,6 +46,15 @@ All notable changes to Carvey will be documented here.
 - Assigning a service interval always said "miles", even with kilometres selected
 
 ### Security
+
+- Backups no longer contain login sessions. Session tokens were stored as-is and copied into every backup, so a backup file could be used to sign in for up to 30 days. Tokens are now stored as SHA-256 digests (existing sessions are upgraded on first use, so nobody is logged out), and backups strip sessions, 2FA challenges and login counters
+- Sign-in is rate limited per client and per account. Failed sign-ins take the same time whether or not the username exists
+- Upload, restore and import endpoints reject cross-site requests. Before, another app on a sibling subdomain could post to them with your session
+- Turning sign-in off now needs your password (and 2FA code). Restoring a backup can no longer change the sign-in mode
+- Changing your password, or turning 2FA on or off, signs out every other device
+- Security headers on every response (no framing, `nosniff`, referrer policy). Uploaded files are served sandboxed so they can never run as a page
+- Setup can only ever create one admin, even if two requests race
+- A password shorter than 8 characters on the login form caused a server error instead of "Those details did not match"
 
 - Upgraded Next.js to 16.4.3 (fixes critical unauthenticated RCE and SSRF advisories in Image Optimization, plus cache poisoning and Server Actions DoS)
 - Upgraded sharp to 0.35.5 (bundled libvips, libheif and librsvg fixes for crafted image uploads)

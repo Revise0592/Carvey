@@ -1,11 +1,14 @@
 import { requireUser } from "@/lib/auth";
 import { stageRestorePreview } from "@/lib/backup";
+import { rejectCrossOrigin } from "@/lib/security/request";
 
 function redirect(path: string) {
   return new Response(null, { status: 303, headers: { Location: path } });
 }
 
 export async function POST(request: Request) {
+  const blocked = rejectCrossOrigin(request);
+  if (blocked) return blocked;
   await requireUser();
   let formData: FormData;
   try {

@@ -8,6 +8,7 @@ import {
   CalendarDays,
   CarFront,
   ChevronRight,
+  FileBadge,
   Fuel,
   Hammer,
   Images,
@@ -120,6 +121,7 @@ function QuickAddSheet({ config, open, onClose, pathname }: { config: QuickAddCo
     config.motLabel ? { tab: "mots", label: config.motLabel, icon: ShieldCheck } : null,
     config.fuelEnabled ? { tab: "fuel", label: "Fuel", icon: Fuel } : null,
     { tab: "reminders", label: "Reminder", icon: CalendarDays },
+    { tab: "renewals", label: "Renewal", icon: FileBadge },
     { tab: "to-buy", label: "To Buy", icon: PackagePlus },
     { tab: "gallery", label: "Photo", icon: Images }
   ].filter((a): a is NonNullable<typeof a> => a !== null);
