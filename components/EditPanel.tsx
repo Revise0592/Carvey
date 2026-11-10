@@ -1,3 +1,5 @@
+"use client";
+
 import { ConfirmDelete } from "./ConfirmDelete";
 import { ModalPanel } from "./ModalPanel";
 

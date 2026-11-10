@@ -1,16 +1,18 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
-import { getAppSetting, getAttachmentByFilename } from "@/lib/db";
+import { getAttachmentByFilename } from "@/lib/db";
 import { currentUser } from "@/lib/auth";
 import { safeUploadPath } from "@/lib/paths";
 
+// Uploaded files are user content: stop browsers sniffing them into HTML and sandbox them if opened directly.
+const uploadSecurityHeaders = {
+  "x-content-type-options": "nosniff",
+  "content-security-policy": "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; sandbox"
+};
+
 export async function GET(_request: Request, { params }: { params: Promise<{ path: string[] }> }) {
-  const authDisabled = getAppSetting("authDisabled") === "true";
-  if (!authDisabled) {
-    const user = await currentUser();
-    if (!user) return new NextResponse(null, { status: 404 });
-  }
+  if (!(await currentUser())) return new NextResponse(null, { status: 404 });
   const { path: pathParts } = await params;
   let filePath: string;
   try {
@@ -37,7 +39,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ pat
       headers: {
         "content-type": contentType,
         "content-disposition": `${disposition}; filename="${encodeURIComponent(originalName)}"`,
-        "cache-control": "private, max-age=31536000, immutable"
+        "cache-control": "private, max-age=31536000, immutable",
+        ...uploadSecurityHeaders
       }
     });
   }
@@ -45,7 +48,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ pat
   return new NextResponse(new Uint8Array(file), {
     headers: {
       "content-type": "image/webp",
-      "cache-control": "private, max-age=31536000, immutable"
+      "cache-control": "private, max-age=31536000, immutable",
+      ...uploadSecurityHeaders
     }
   });
 }

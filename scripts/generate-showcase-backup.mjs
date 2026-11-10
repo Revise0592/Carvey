@@ -18,6 +18,7 @@ const backupDbPath = path.join(workDir, "carvey.sqlite");
 const db = new Database(dbPath, { fileMustExist: true });
 await db.backup(backupDbPath);
 db.close();
+scrubShowcaseCopy(backupDbPath);
 
 const uploads = await listUploadFiles(uploadsDir);
 const manifest = {
@@ -61,5 +62,24 @@ async function walkUploads(root, relativeDir, files) {
     } else if (entry.isFile()) {
       files.push(relativePath.split(path.sep).join("/"));
     }
+  }
+}
+
+/**
+ * This zip is committed to a public repository, so it must not carry the account, sign-in state,
+ * notification history or private settings of the instance it came from. Keep in step with
+ * showcaseTablesKept and showcaseSettingsKeptWhere in lib/backup.ts.
+ */
+function scrubShowcaseCopy(filePath) {
+  const copy = new Database(filePath);
+  try {
+    for (const table of ["admin_users", "notification_log", "auth_sessions", "auth_challenges", "auth_throttle"]) {
+      const exists = copy.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?").get(table);
+      if (exists) copy.exec(`DELETE FROM "${table}"`);
+    }
+    copy.exec("DELETE FROM app_settings WHERE key LIKE 'notify.%' OR key LIKE 'calendar.%' OR key = 'authDisabled'");
+    copy.exec("VACUUM");
+  } finally {
+    copy.close();
   }
 }

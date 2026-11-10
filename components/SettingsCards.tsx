@@ -1,6 +1,5 @@
 "use client";
 
-import { Trash2 } from "lucide-react";
 import {
   deleteMaintenanceCategoryAction,
   deleteServiceIntervalAction,
@@ -9,7 +8,7 @@ import {
   updateServiceIntervalAction,
   updateWorkshopAction
 } from "@/app/actions";
-import type { MaintenanceCategory, ServiceInterval, Workshop } from "@/lib/db";
+import type { MaintenanceCategory, ServiceInterval, Workshop } from "@/lib/db/types";
 import { ConfirmDelete } from "./ConfirmDelete";
 
 export function WorkshopCard({ workshop }: { workshop: Workshop }) {

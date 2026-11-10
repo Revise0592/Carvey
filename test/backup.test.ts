@@ -160,6 +160,39 @@ describe("backup and restore", () => {
     target.db.closeDbForTests();
   });
 
+  it("restores fuel, service plans, attachments, gallery photos and renewals", async () => {
+    const source = await freshModules("carvey-full-source-");
+    const vehicleId = Number(source.db.createVehicle(vehicleInput("Full")).lastInsertRowid);
+    source.db.createFuelRecord({ vehicleId, date: "2026-01-05", odometer: 1200, volumeLitres: 40, totalCost: 60, fuelType: "petrol", fullTank: 1, station: null, notes: null });
+    const intervalId = Number(source.db.createServiceInterval({ name: "Oil", intervalMonths: 12, intervalMileage: 6000 }).lastInsertRowid);
+    source.db.assignServiceInterval(vehicleId, intervalId);
+    const motId = Number(source.db.createMot({ vehicleId, testDate: "2026-01-01", expiryDate: "2026-12-31", odometer: 1100, result: "pass", advisories: null, cost: 54.85, certificateRef: null }).lastInsertRowid);
+    source.db.createAttachment({ recordType: "mot", recordId: motId, vehicleId, filename: "cert.pdf", originalFilename: "cert.pdf", mimeType: "application/pdf", fileSize: 3, filePath: "/uploads/attachments/cert.pdf" });
+    source.db.createGalleryPhoto({ vehicleId, recordType: null, recordId: null, filename: "g.webp", originalFilename: "g.webp", mimeType: "image/webp", fileSize: 3, filePath: "/uploads/gallery/g.webp", caption: "Front" });
+    source.db.createRenewal({ vehicleId, type: "insurance", provider: "Acme", reference: "P-1", startDate: "2026-02-01", endDate: "2027-01-31", cost: 400, notes: null });
+    const sourceBackup = await source.backup.createBackupZip();
+    source.db.closeDbForTests();
+
+    const target = await freshModules("carvey-full-target-");
+    const staleId = Number(target.db.createVehicle(vehicleInput("Stale")).lastInsertRowid);
+    target.db.createFuelRecord({ vehicleId: staleId, date: "2025-01-01", odometer: 10, volumeLitres: 1, totalCost: 1, fuelType: "petrol", fullTank: 1, station: null, notes: null });
+    const preview = await target.backup.stageRestorePreview(new File([new Uint8Array(sourceBackup.buffer)], "backup.zip", { type: "application/zip" }));
+    if (!preview.ok) throw new Error("preview failed");
+    expect(preview.summary.counts).toMatchObject({ fuel: 1, renewals: 1 });
+    expect(await target.backup.confirmRestore(preview.summary.token)).toMatchObject({ ok: true });
+
+    const [vehicle] = target.db.listVehicles();
+    expect(vehicle.make).toBe("Full");
+    expect(target.db.listFuelRecords(vehicle.id)).toMatchObject([{ odometer: 1200, totalCost: 60 }]);
+    expect(target.db.listVehicleServiceIntervals(vehicle.id)).toMatchObject([{ name: "Oil" }]);
+    expect(target.db.listAttachments("mot", motId)).toHaveLength(1);
+    expect(target.db.listVehicleGalleryPhotos(vehicle.id)).toMatchObject([{ caption: "Front" }]);
+    expect(target.db.listRenewals(vehicle.id)).toMatchObject([{ provider: "Acme", endDate: "2027-01-31" }]);
+    // The stale vehicle's fuel record must not survive the restore.
+    expect(target.db.getDb().prepare("SELECT COUNT(*) as count FROM fuel_records").get()).toEqual({ count: 1 });
+    target.db.closeDbForTests();
+  });
+
   it("restores older backups without planned purchases", async () => {
     const source = await freshModules("carvey-legacy-source-");
     source.db.createVehicle(vehicleInput("Legacy"));
@@ -303,6 +336,41 @@ describe("backup and restore", () => {
     expect(target.db.getCollectionName()).toBe("Demo Garage Updated");
     expect(refreshedCivic?.photoPath).toBe("/uploads/vehicles/custom-demo.webp");
     await expect(fs.stat(path.join(target.paths.vehiclePhotoDir, "custom-demo.webp"))).resolves.toBeTruthy();
+    target.db.closeDbForTests();
+  });
+
+  it("keeps this server's account and private settings out of the showcase backup", async () => {
+    const demoAssetDir = await fs.mkdtemp(path.join(os.tmpdir(), "carvey-demo-private-"));
+    process.env.CARVEY_SHOWCASE_DEMO_BACKUP = path.join(demoAssetDir, "showcase-backup.zip");
+    await writeShowcaseDemoBackup(process.env.CARVEY_SHOWCASE_DEMO_BACKUP);
+
+    const target = await freshModules("carvey-demo-private-target-");
+    const adminId = Number(target.db.createAdminUser("owner", "owner-hash").lastInsertRowid);
+    target.db.createAuthSession("live-session-token", adminId, new Date(Date.now() + 60_000).toISOString());
+    target.db.setAppSetting("notify.token", "private-notify-token");
+    target.db.setAppSetting("calendar.token", "private-calendar-token");
+
+    // Loading the showcase keeps the signed-in admin and private settings.
+    expect(await target.backup.activateShowcaseDemoData()).toMatchObject({ ok: true });
+    expect(target.db.getAdminByUsername("owner")).toBeTruthy();
+    expect(target.db.getAuthSession("live-session-token")).toBeTruthy();
+    expect(target.db.getAppSetting("notify.token")).toBe("private-notify-token");
+    expect(target.db.getAppSetting("calendar.token")).toBe("private-calendar-token");
+
+    // Saving the showcase writes none of them.
+    await expect(target.backup.syncShowcaseDemoBackupIfActive()).resolves.toBe(true);
+    const zip = new AdmZip(await fs.readFile(process.env.CARVEY_SHOWCASE_DEMO_BACKUP));
+    const dbPath = path.join(demoAssetDir, "check.sqlite");
+    await fs.writeFile(dbPath, zip.getEntry("carvey.sqlite")!.getData());
+    const saved = new Database(dbPath, { readonly: true });
+    try {
+      expect(saved.prepare("SELECT COUNT(*) AS count FROM admin_users").get()).toEqual({ count: 0 });
+      expect(saved.prepare("SELECT COUNT(*) AS count FROM auth_sessions").get()).toEqual({ count: 0 });
+      expect(saved.prepare("SELECT key FROM app_settings WHERE key LIKE 'notify.%' OR key LIKE 'calendar.%'").all()).toEqual([]);
+      expect(saved.prepare("SELECT value FROM app_settings WHERE key = 'collectionName'").get()).toEqual({ value: "Press Garage" });
+    } finally {
+      saved.close();
+    }
     target.db.closeDbForTests();
   });
 

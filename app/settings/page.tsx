@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { Bug, Building2, ChevronRight, Download, Globe, HardDrive, KeyRound, Monitor, Palette, RefreshCw, RotateCcw, Server, Settings2, ShieldCheck, Tag, Upload, UserRound } from "lucide-react";
+import { BellRing, Bug, Building2, ChevronRight, FileSpreadsheet, Download, Globe, HardDrive, Monitor, Palette, RefreshCw, RotateCcw, Server, Settings2, Tag, Upload, UserRound } from "lucide-react";
 import { AppFrame } from "@/components/AppFrame";
 import { ThemeControls } from "@/components/ThemeControls";
 import { MotFeatureField } from "@/components/MotFeatureField";
 import { InstallAppPanel } from "@/components/InstallAppPanel";
 import { CategoryCard, ServiceIntervalCard, WorkshopCard } from "@/components/SettingsCards";
-import { createMaintenanceCategoryAction, createServiceIntervalAction, createWorkshopAction, loadShowcaseDemoDataAction, restorePreviousDemoDataAction, saveCurrentShowcaseDemoDataAction, updateAuthSettingsAction, updateCollectionNameAction, updateMaintenanceCategoryAction, updatePasswordAction, updateRegionalSettingsAction, updateServiceIntervalAction, updateUsernameAction, updateWorkshopAction } from "@/app/actions";
+import { createMaintenanceCategoryAction, createServiceIntervalAction, createWorkshopAction, loadShowcaseDemoDataAction, restorePreviousDemoDataAction, saveCurrentShowcaseDemoDataAction, updateCollectionNameAction, updateRegionalSettingsAction } from "@/app/actions";
 import { requireUser } from "@/lib/auth";
 import { getShowcaseDemoStatus, readRestoreSummary } from "@/lib/backup";
 import { debugEasterEggsEnabled } from "@/lib/debug";
@@ -13,20 +13,25 @@ import { getCollectionName, listMaintenanceCategories, listServiceIntervals, lis
 import { formatDate } from "@/lib/format";
 import { CURRENCY_CODES, getRegionalSettings } from "@/lib/regional-settings";
 import packageJson from "@/package.json";
+import { AdminPanel } from "./_panels/admin";
+import { DataPanel } from "./_panels/data";
+import { NotificationsPanel } from "./_panels/notifications";
 
 export const dynamic = "force-dynamic";
 
-const settingsTabs = ["personalisation", "admin", "regional", "workshops", "categories", "service-intervals", "backup"] as const;
+const settingsTabs = ["personalisation", "admin", "regional", "notifications", "workshops", "categories", "service-intervals", "data", "backup"] as const;
 type SettingsTab = (typeof settingsTabs)[number];
 
 const settingsSections: { key: SettingsTab; label: string; description: string; icon: typeof Palette }[] = [
   { key: "personalisation", label: "Personalisation", description: "Theme, colours and app install", icon: Palette },
   { key: "admin", label: "Admin", description: "Account, password and sign-in", icon: UserRound },
   { key: "regional", label: "Regional", description: "Currency, units and dates", icon: Globe },
+  { key: "notifications", label: "Notifications", description: "Daily alerts and calendar feed", icon: BellRing },
   { key: "workshops", label: "Garages & Workshops", description: "Places that work on your cars", icon: Building2 },
   { key: "categories", label: "Maintenance Categories", description: "Labels for maintenance entries", icon: Tag },
   { key: "service-intervals", label: "Service Intervals", description: "Reusable service schedules", icon: RefreshCw },
-  { key: "backup", label: "Backup & Restore", description: "Export or restore your data", icon: HardDrive }
+  { key: "data", label: "Import & Export", description: "CSV files for spreadsheets and other apps", icon: FileSpreadsheet },
+  { key: "backup", label: "Backup & Restore", description: "Full backup of data and photos", icon: HardDrive }
 ];
 
 const COMMON_CURRENCIES = ["GBP", "USD", "EUR"];
@@ -39,7 +44,7 @@ function currencyOptionLabel(code: string) {
   return `${code} — ${currencyDisplayNames.of(code)}`;
 }
 
-export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ tab?: string; account?: string; app?: string; workshop?: string; category?: string; interval?: string; restore?: string; token?: string; debug?: string; message?: string }> }) {
+export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ tab?: string; account?: string; app?: string; workshop?: string; category?: string; interval?: string; restore?: string; token?: string; debug?: string; message?: string; notify?: string; import?: string; count?: string; skipped?: string; label?: string; left?: string }> }) {
   const user = await requireUser();
   const params = await searchParams;
   const hasExplicitTab = settingsTabs.includes(params.tab as SettingsTab);
@@ -100,61 +105,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         </section>
       ) : null}
 
-      {activeTab === "admin" ? (
-        <section className="settings-grid">
-          {!regionalSettings.authDisabled ? (
-            <article className="settings-panel">
-              <h2><UserRound size={19} /> Account</h2>
-              {params.account === "username-updated" ? <p className="success">Username updated.</p> : null}
-              <form action={updateUsernameAction} className="record-form">
-                <label>
-                  Username
-                  <input name="username" defaultValue={user.username} required minLength={2} />
-                </label>
-                <button className="primary-button" type="submit">Save username</button>
-              </form>
-            </article>
-          ) : null}
-
-          {!regionalSettings.authDisabled ? (
-            <article className="settings-panel">
-              <h2><KeyRound size={19} /> Password</h2>
-              {params.account === "password-updated" ? <p className="success">Password updated.</p> : null}
-              {params.account === "password-error" ? <p className="error">Current password did not match.</p> : null}
-              <form action={updatePasswordAction} className="record-form">
-                <label>
-                  Current password
-                  <input name="currentPassword" type="password" autoComplete="current-password" required />
-                </label>
-                <label>
-                  New password
-                  <input name="nextPassword" type="password" autoComplete="new-password" required minLength={8} />
-                </label>
-                <button className="primary-button" type="submit">Change password</button>
-              </form>
-            </article>
-          ) : null}
-
-          <article className={`settings-panel${!regionalSettings.authDisabled ? " settings-panel-col2-span2" : ""}`}>
-            <h2><ShieldCheck size={19} /> Authentication</h2>
-            <p className="muted">Disable login when Carvey is deployed behind a trusted reverse proxy that handles authentication.</p>
-            {regionalSettings.authDisabled ? <p className="error">Warning: authentication is currently disabled. Anyone who can reach this URL has full access.</p> : null}
-            {params.app === "auth-updated" ? <p className="success">Authentication setting saved.</p> : null}
-            {params.app === "auth-confirm-required" ? <p className="error">Confirm the change before saving.</p> : null}
-            <form action={updateAuthSettingsAction} className="record-form">
-              <label className="checkbox-field">
-                <input name="authDisabled" type="checkbox" defaultChecked={regionalSettings.authDisabled} />
-                Disable authentication
-              </label>
-              <label className="checkbox-field">
-                <input name="confirmed" type="checkbox" required={!regionalSettings.authDisabled} />
-                I understand this removes all login protection
-              </label>
-              <button className="primary-button" type="submit">Save authentication settings</button>
-            </form>
-          </article>
-        </section>
-      ) : null}
+      {activeTab === "admin" ? <AdminPanel user={user} account={params.account} app={params.app} recoveryLeft={params.left} /> : null}
 
       {activeTab === "regional" ? (
         <section className="settings-grid">
@@ -217,6 +168,10 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
 
         </section>
       ) : null}
+
+      {activeTab === "notifications" ? <NotificationsPanel status={params.notify} message={params.message} /> : null}
+
+      {activeTab === "data" ? <DataPanel params={params} settings={regionalSettings} /> : null}
 
       {activeTab === "workshops" ? (
         <section className="settings-grid">
@@ -382,6 +337,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                 <strong>{restoreSummary.counts.reminders}</strong>
                 <span>To Buy</span>
                 <strong>{restoreSummary.counts.plannedPurchases}</strong>
+                {restoreSummary.counts.fuel !== undefined ? <><span>Fuel</span><strong>{restoreSummary.counts.fuel}</strong></> : null}
+                {restoreSummary.counts.renewals !== undefined ? <><span>Renewals</span><strong>{restoreSummary.counts.renewals}</strong></> : null}
                 <span>Images/files</span>
                 <strong>{restoreSummary.uploadCount}</strong>
               </dl>

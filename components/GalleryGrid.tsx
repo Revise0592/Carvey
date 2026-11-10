@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { EditPanel } from "./EditPanel";
-import type { MaintenanceRecord, RepairRecord } from "@/lib/db";
+import type { MaintenanceRecord, RepairRecord } from "@/lib/db/types";
 
 export type GalleryItem = {
   id: string;

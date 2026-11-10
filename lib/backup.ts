@@ -37,6 +37,8 @@ export type RestoreSummary = {
     mots: number;
     reminders: number;
     plannedPurchases: number;
+    fuel?: number;
+    renewals?: number;
   };
 };
 
@@ -54,7 +56,7 @@ export type ShowcaseDemoStatus = {
   summary: RestoreSummary | null;
 };
 
-export async function createBackupZip() {
+export async function createBackupZip(options: { showcase?: boolean } = {}) {
   ensureDataDirs();
   const token = crypto.randomUUID();
   const workDir = path.join(tempDir, `backup-${token}`);
@@ -62,6 +64,7 @@ export async function createBackupZip() {
   const dbCopyPath = path.join(workDir, dbFileName);
 
   await getDb().backup(dbCopyPath);
+  scrubBackupCopy(dbCopyPath, options.showcase === true);
 
   const uploads = await listUploadFiles();
   const manifest: BackupManifest = {
@@ -83,6 +86,25 @@ export async function createBackupZip() {
   const buffer = zip.toBuffer();
   await fsp.rm(workDir, { recursive: true, force: true });
   return { buffer, manifest };
+}
+
+/**
+ * Removes sign-in state from a backup copy: sessions, pending 2FA challenges and failed-login
+ * counters belong to this server, and a stolen backup must not contain anything that logs in.
+ */
+function scrubBackupCopy(dbPath: string, showcase = false) {
+  const copy = new Database(dbPath);
+  try {
+    const tables = showcase ? showcaseTablesKept : tablesNotRestored;
+    for (const table of tables) {
+      const exists = copy.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?").get(table);
+      if (exists) copy.exec(`DELETE FROM "${table}"`);
+    }
+    if (showcase) copy.exec(`DELETE FROM app_settings WHERE ${showcaseSettingsKeptWhere}`);
+    copy.exec("VACUUM");
+  } finally {
+    copy.close();
+  }
 }
 
 export async function stageRestorePreview(file: File): Promise<PreviewResult> {
@@ -169,7 +191,7 @@ export async function activateShowcaseDemoData(): Promise<MutationResult> {
   }
 
   const extractDir = path.join(debugDemoDir, "showcase-extract");
-  await restoreValidatedBackupBuffer(buffer, `showcase-${Date.now()}`, extractDir);
+  await restoreValidatedBackupBuffer(buffer, `showcase-${Date.now()}`, extractDir, true);
   await writeDebugDemoState({ active: true, activatedAt: new Date().toISOString() });
   return { ok: true };
 }
@@ -197,91 +219,80 @@ export async function syncShowcaseDemoBackupIfActive() {
   return true;
 }
 
-function restoreDatabaseContents(backupDbPath: string) {
+/** Tables that are never copied from a backup: sign-in state belongs to this server, not the data. */
+const tablesNotRestored = new Set(["auth_sessions", "auth_challenges", "auth_throttle"]);
+
+/**
+ * Settings that stay as they are on this server when restoring. Otherwise a backup taken with
+ * sign-in turned off (or a tampered one) could silently turn sign-in off here.
+ */
+const settingsNotRestored = ["authDisabled"];
+
+/**
+ * The packaged showcase backup is committed to a public repository, so it is written without this
+ * server's account, sign-in state, notification history or private settings (notification URLs
+ * and tokens, the calendar feed token). Loading it keeps those as they are on this server, so the
+ * admin stays signed in. Keep scripts/generate-showcase-backup.mjs in step with these lists.
+ */
+const showcaseTablesKept = new Set(["admin_users", "notification_log", ...tablesNotRestored]);
+const showcaseSettingsKeptWhere = `key LIKE 'notify.%' OR key LIKE 'calendar.%' OR key IN (${settingsNotRestored.map((key) => `'${key}'`).join(", ")})`;
+
+function tableColumns(database: Database.Database, schema: "main" | "restore_backup", table: string) {
+  return (database.prepare(`PRAGMA ${schema}.table_info("${table}")`).all() as Array<{ name: string }>).map((column) => column.name);
+}
+
+/**
+ * Replaces every table's rows with the backup's. Driven by the live schema rather than a fixed
+ * list, so new tables are always included; columns a backup predates fall back to their defaults.
+ */
+function restoreDatabaseContents(backupDbPath: string, showcase = false) {
   const database = getDb();
   const backupPath = backupDbPath.replaceAll("'", "''");
-  const tables = [
-    {
-      name: "admin_users",
-      columns: ["id", "username", "password_hash", "created_at"]
-    },
-    {
-      name: "vehicles",
-      columns: ["id", "make", "model", "year", "registration", "vin", "current_odometer", "purchase_price", "purchase_date", "photo_path", "thumbnail_path", "notes", "debug_destroyed", "archived", "sold", "created_at", "updated_at"]
-    },
-    {
-      name: "workshops",
-      columns: ["id", "name", "address", "phone", "email", "website", "notes", "preferred", "created_at", "updated_at"]
-    },
-    {
-      name: "maintenance_categories",
-      columns: ["id", "name", "created_at", "updated_at"]
-    },
-    {
-      name: "maintenance_records",
-      columns: ["id", "vehicle_id", "date", "odometer", "category", "description", "garage", "workshop_id", "cost", "notes", "created_at"]
-    },
-    {
-      name: "repair_records",
-      columns: ["id", "vehicle_id", "date", "odometer", "fault", "garage", "workshop_id", "cost", "notes", "created_at"]
-    },
-    {
-      name: "mot_records",
-      columns: ["id", "vehicle_id", "test_date", "expiry_date", "odometer", "result", "advisories", "cost", "certificate_ref", "created_at"]
-    },
-    {
-      name: "reminders",
-      columns: ["id", "vehicle_id", "title", "due_date", "due_odometer", "recurrence", "completed_at", "created_at"]
-    },
-    {
-      name: "planned_purchases",
-      columns: ["id", "vehicle_id", "item_name", "quantity", "estimated_cost", "actual_cost", "supplier", "url", "due_date", "due_odometer", "notes", "reminder_id", "purchased_date", "converted_to_type", "converted_record_id", "converted_at", "created_at", "updated_at"]
-    }
-  ];
 
   database.pragma("foreign_keys = OFF");
   database.exec(`ATTACH DATABASE '${backupPath}' AS restore_backup`);
   try {
-    const restoreVehicleColumns = new Set((database.prepare("PRAGMA restore_backup.table_info(vehicles)").all() as Array<{ name: string }>).map((column) => column.name));
-    const restoreAppSettingsColumns = new Set((database.prepare("PRAGMA restore_backup.table_info(app_settings)").all() as Array<{ name: string }>).map((column) => column.name));
-    const restoreTables = new Set((database.prepare("SELECT name FROM restore_backup.sqlite_master WHERE type = 'table'").all() as Array<{ name: string }>).map((table) => table.name));
-    const restoreRepairColumns = restoreTables.has("repair_records")
-      ? new Set((database.prepare("PRAGMA restore_backup.table_info(repair_records)").all() as Array<{ name: string }>).map((column) => column.name))
-      : new Set<string>();
-    const restoreMaintenanceColumns = restoreTables.has("maintenance_records")
-      ? new Set((database.prepare("PRAGMA restore_backup.table_info(maintenance_records)").all() as Array<{ name: string }>).map((column) => column.name))
-      : new Set<string>();
-    const restorePlannedPurchaseColumns = restoreTables.has("planned_purchases")
-      ? new Set((database.prepare("PRAGMA restore_backup.table_info(planned_purchases)").all() as Array<{ name: string }>).map((column) => column.name))
-      : new Set<string>();
+    const listTables = (schema: "main" | "restore_backup") =>
+      (database.prepare(`SELECT name FROM ${schema}.sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'`).all() as Array<{ name: string }>).map((table) => table.name);
+    const liveTables = listTables("main");
+    const backupTables = new Set(listTables("restore_backup"));
+
+    const keptTables = showcase ? showcaseTablesKept : new Set<string>();
+    const keptSettingsWhere = showcase ? showcaseSettingsKeptWhere : `key IN (${settingsNotRestored.map((key) => `'${key}'`).join(", ")})`;
+    const keptSettings = database
+      .prepare(`SELECT key, value, updated_at FROM app_settings WHERE ${keptSettingsWhere}`)
+      .all() as Array<{ key: string; value: string; updated_at: string }>;
+
     database.exec("BEGIN");
-    database.exec("DELETE FROM auth_sessions");
-    database.exec("DELETE FROM app_settings");
-    for (const table of [...tables].reverse()) {
-      database.exec(`DELETE FROM ${table.name}`);
+    for (const table of liveTables) {
+      if (keptTables.has(table)) continue;
+      database.exec(`DELETE FROM "${table}"`);
     }
-    for (const table of tables) {
-      if (!restoreTables.has(table.name)) continue;
-      const columns = table.columns.join(", ");
-      const sourceColumns = table.columns.map((column) => {
-        if (table.name === "vehicles" && column === "debug_destroyed" && !restoreVehicleColumns.has(column)) return "0 AS debug_destroyed";
-        if (table.name === "vehicles" && column === "sold" && !restoreVehicleColumns.has(column)) return "0 AS sold";
-        if (table.name === "maintenance_records" && (column === "garage" || column === "workshop_id") && !restoreMaintenanceColumns.has(column)) return `NULL AS ${column}`;
-        if (table.name === "repair_records" && column === "workshop_id" && !restoreRepairColumns.has(column)) return "NULL AS workshop_id";
-        if (table.name === "planned_purchases" && !restorePlannedPurchaseColumns.has(column)) return `NULL AS ${column}`;
-        return column;
-      }).join(", ");
-      database.exec(`INSERT INTO ${table.name} (${columns}) SELECT ${sourceColumns} FROM restore_backup.${table.name}`);
+    const restored: string[] = [];
+    for (const table of liveTables) {
+      if (keptTables.has(table) || tablesNotRestored.has(table) || !backupTables.has(table)) continue;
+      const backupColumns = new Set(tableColumns(database, "restore_backup", table));
+      const columns = tableColumns(database, "main", table).filter((column) => backupColumns.has(column));
+      if (!columns.length) continue;
+      const list = columns.map((column) => `"${column}"`).join(", ");
+      database.exec(`INSERT INTO "${table}" (${list}) SELECT ${list} FROM restore_backup."${table}"`);
+      restored.push(table);
     }
-    if (restoreAppSettingsColumns.has("key") && restoreAppSettingsColumns.has("value") && restoreAppSettingsColumns.has("updated_at")) {
-      database.exec("INSERT INTO app_settings (key, value, updated_at) SELECT key, value, updated_at FROM restore_backup.app_settings");
+    database.exec(`DELETE FROM app_settings WHERE ${keptSettingsWhere}`);
+    const keepSetting = database.prepare("INSERT INTO app_settings (key, value, updated_at) VALUES (@key, @value, @updated_at)");
+    for (const row of keptSettings) keepSetting.run(row);
+    const restoredList = restored.map((table) => `'${table}'`).join(", ");
+    if (restoredList) {
+      database.exec(`DELETE FROM sqlite_sequence WHERE name IN (${restoredList})`);
+      const hasBackupSequence = database.prepare("SELECT 1 FROM restore_backup.sqlite_master WHERE name = 'sqlite_sequence'").get();
+      if (hasBackupSequence) {
+        database.exec(`
+          INSERT INTO sqlite_sequence (name, seq)
+          SELECT name, seq FROM restore_backup.sqlite_sequence
+          WHERE name IN (${restoredList});
+        `);
+      }
     }
-    database.exec(`
-      DELETE FROM sqlite_sequence WHERE name IN (${tables.map((table) => `'${table.name}'`).join(", ")});
-      INSERT OR REPLACE INTO sqlite_sequence (name, seq)
-      SELECT name, seq FROM restore_backup.sqlite_sequence
-      WHERE name IN (${tables.map((table) => `'${table.name}'`).join(", ")});
-    `);
     database.exec("COMMIT");
   } catch (error) {
     try {
@@ -330,7 +341,9 @@ async function validateAndSummariseZip(buffer: Buffer, token: string, extractDir
       repairs: countRows(backupDb, "repair_records"),
       mots: countRows(backupDb, "mot_records"),
       reminders: countRows(backupDb, "reminders"),
-      plannedPurchases: countRows(backupDb, "planned_purchases")
+      plannedPurchases: countRows(backupDb, "planned_purchases"),
+      fuel: countRows(backupDb, "fuel_records"),
+      renewals: countRows(backupDb, "renewals")
     };
     return {
       token,
@@ -364,24 +377,24 @@ async function createRollbackSnapshot() {
 async function writeCurrentDataToShowcaseDemoBackup() {
   ensureDataDirs();
   await fsp.mkdir(path.dirname(showcaseDemoBackupPath), { recursive: true });
-  const { buffer } = await createBackupZip();
+  const { buffer } = await createBackupZip({ showcase: true });
   const tempPath = `${showcaseDemoBackupPath}.tmp`;
   await fsp.writeFile(tempPath, buffer);
   await fsp.rename(tempPath, showcaseDemoBackupPath);
 }
 
-async function restoreExtractedBackup(extractDir: string) {
-  restoreDatabaseContents(path.join(extractDir, dbFileName));
+async function restoreExtractedBackup(extractDir: string, showcase = false) {
+  restoreDatabaseContents(path.join(extractDir, dbFileName), showcase);
   await fsp.rm(uploadDir, { recursive: true, force: true });
   await fsp.mkdir(uploadDir, { recursive: true });
   await copyDir(path.join(extractDir, "uploads"), uploadDir);
   ensureDataDirs();
 }
 
-async function restoreValidatedBackupBuffer(buffer: Buffer, token: string, extractDir: string) {
+async function restoreValidatedBackupBuffer(buffer: Buffer, token: string, extractDir: string, showcase = false) {
   try {
     await validateAndSummariseZip(buffer, token, extractDir);
-    await restoreExtractedBackup(extractDir);
+    await restoreExtractedBackup(extractDir, showcase);
   } finally {
     await fsp.rm(extractDir, { recursive: true, force: true });
   }

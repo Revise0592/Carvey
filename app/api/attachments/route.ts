@@ -7,6 +7,7 @@ import { requireUser } from "@/lib/auth";
 import { createAttachment } from "@/lib/db";
 import { attachmentDir } from "@/lib/paths";
 import { z } from "zod";
+import { rejectCrossOrigin } from "@/lib/security/request";
 
 const allowedMimeTypes = new Set([
   "application/pdf",
@@ -18,9 +19,11 @@ const allowedMimeTypes = new Set([
 
 const maxFileBytes = 25 * 1024 * 1024;
 
-const recordTypeSchema = z.enum(["maintenance", "repair", "mot"]);
+const recordTypeSchema = z.enum(["maintenance", "repair", "mot", "renewal"]);
 
 export async function POST(request: Request) {
+  const blocked = rejectCrossOrigin(request);
+  if (blocked) return blocked;
   await requireUser();
 
   let formData: FormData;
@@ -73,8 +76,8 @@ export async function POST(request: Request) {
   return new Response(null, { status: 303, headers: { Location: location } });
 }
 
-function tabForRecordType(recordType: "maintenance" | "repair" | "mot") {
-  const map = { maintenance: "maintenance", repair: "repairs", mot: "mots" } as const;
+function tabForRecordType(recordType: z.infer<typeof recordTypeSchema>) {
+  const map = { maintenance: "maintenance", repair: "repairs", mot: "mots", renewal: "renewals" } as const;
   return map[recordType];
 }
 

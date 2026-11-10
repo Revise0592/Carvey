@@ -1,4 +1,4 @@
-import { getAppSetting, setAppSetting } from "./db";
+import { getAppSettings, setAppSetting } from "./db";
 
 export const CURRENCY_CODES = Intl.supportedValuesOf("currency");
 
@@ -15,23 +15,25 @@ export type RegionalSettings = {
 };
 
 export function getRegionalSettings(): RegionalSettings {
-  const currency = getAppSetting("currency") ?? "GBP";
+  const stored = getAppSettings();
+  const get = (key: string) => stored.get(key) ?? null;
+  const currency = get("currency") ?? "GBP";
   // Legacy installs may still have "emissionsTest" stored from before the custom-label option existed.
-  const rawMotFeature = getAppSetting("motFeature");
+  const rawMotFeature = get("motFeature");
   const motFeature: RegionalSettings["motFeature"] =
     rawMotFeature === "emissionsTest" ? "custom" : (rawMotFeature as RegionalSettings["motFeature"]) ?? "mot";
-  const motCustomLabel = getAppSetting("motCustomLabel") ?? (rawMotFeature === "emissionsTest" ? "Emissions Test" : "");
+  const motCustomLabel = get("motCustomLabel") ?? (rawMotFeature === "emissionsTest" ? "Emissions Test" : "");
   return {
     currency,
     // Legacy installs never set fuelVolumeUnit explicitly; it used to be inferred from currency === "USD".
-    fuelVolumeUnit: (getAppSetting("fuelVolumeUnit") as RegionalSettings["fuelVolumeUnit"]) ?? (currency === "USD" ? "gallons" : "litres"),
+    fuelVolumeUnit: (get("fuelVolumeUnit") as RegionalSettings["fuelVolumeUnit"]) ?? (currency === "USD" ? "gallons" : "litres"),
     motFeature,
     motCustomLabel,
-    dateFormat: (getAppSetting("dateFormat") as RegionalSettings["dateFormat"]) ?? "dd-mon-yyyy",
-    distanceUnit: (getAppSetting("distanceUnit") as RegionalSettings["distanceUnit"]) ?? "miles",
-    plateStyle: (getAppSetting("plateStyle") as RegionalSettings["plateStyle"]) ?? "uk-yellow",
-    authDisabled: getAppSetting("authDisabled") === "true",
-    fuelDisabled: getAppSetting("fuelDisabled") === "true"
+    dateFormat: (get("dateFormat") as RegionalSettings["dateFormat"]) ?? "dd-mon-yyyy",
+    distanceUnit: (get("distanceUnit") as RegionalSettings["distanceUnit"]) ?? "miles",
+    plateStyle: (get("plateStyle") as RegionalSettings["plateStyle"]) ?? "uk-yellow",
+    authDisabled: get("authDisabled") === "true",
+    fuelDisabled: get("fuelDisabled") === "true"
   };
 }
 

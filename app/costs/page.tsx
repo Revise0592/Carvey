@@ -15,7 +15,8 @@ const typeTab: Record<SpendType, string> = {
   repair: "repairs",
   mot: "mots",
   fuel: "fuel",
-  parts: "to-buy"
+  parts: "to-buy",
+  renewal: "renewals"
 };
 
 export default async function CostsPage({ searchParams }: { searchParams: Promise<{ year?: string }> }) {
@@ -28,7 +29,8 @@ export default async function CostsPage({ searchParams }: { searchParams: Promis
     repair: "Repairs",
     mot: motLabel,
     fuel: "Fuel",
-    parts: "Parts & supplies"
+    parts: "Parts & supplies",
+    renewal: "Renewals"
   };
 
   const all = listSpendEntries();
@@ -141,7 +143,7 @@ export default async function CostsPage({ searchParams }: { searchParams: Promis
           </section>
         </>
       ) : (
-        <p className="inset-empty">Nothing logged {period === "all" ? "yet" : `in ${period}`}. Costs from maintenance, repairs, tests, fuel and parts appear here.</p>
+        <p className="inset-empty">Nothing logged {period === "all" ? "yet" : `in ${period}`}. Costs from maintenance, repairs, tests, fuel, parts and renewals appear here.</p>
       )}
     </AppFrame>
   );

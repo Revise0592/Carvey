@@ -3,8 +3,11 @@ import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { syncShowcaseDemoBackupIfActive } from "@/lib/backup";
 import { processVehiclePhotoUpload } from "@/lib/photo-upload";
+import { rejectCrossOrigin } from "@/lib/security/request";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const blocked = rejectCrossOrigin(request);
+  if (blocked) return blocked;
   await requireUser();
   const { id } = await params;
   const vehicleId = Number.parseInt(id, 10);

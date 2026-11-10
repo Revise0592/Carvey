@@ -1,4 +1,6 @@
-import { CalendarDays, Check, Fuel, Gauge, Hammer, PackagePlus, Pencil, Plus, ShieldCheck, ShoppingCart, Trash2, Wrench } from "lucide-react";
+"use client";
+
+import { CalendarDays, Check, FileBadge, Fuel, Gauge, Hammer, PackagePlus, Pencil, Plus, ShieldCheck, ShoppingCart, Trash2, Wrench } from "lucide-react";
 import {
   completeReminderAction,
   createFuelRecordAction,
@@ -8,6 +10,7 @@ import {
   createMaintenanceAction,
   createMotAction,
   createReminderAction,
+  createRenewalAction,
   createRepairFromPurchaseAction,
   createRepairAction,
   deleteFuelRecordAction,
@@ -16,7 +19,9 @@ import {
   deleteMaintenanceAction,
   deleteMotAction,
   deleteReminderAction,
+  deleteRenewalAction,
   deleteRepairAction,
+  dismissReminderAction,
   markPlannedPurchaseBoughtAction,
   updateVehicleDebugAction,
   updateFuelRecordAction,
@@ -25,11 +30,14 @@ import {
   updatePlannedPurchaseAction,
   updatePlannedPurchasePurchasedDateAction,
   updateReminderAction,
+  updateRenewalAction,
   updateRepairAction,
   updateVehicleAction
 } from "@/app/actions";
-import type { FuelRecord, MaintenanceCategory, MaintenanceRecord, MotRecord, PlannedPurchase, Reminder, RepairRecord, Vehicle, Workshop } from "@/lib/db";
-import { formatVolume, todayIso } from "@/lib/format";
+import type { FuelRecord, MaintenanceCategory, MaintenanceRecord, MotRecord, PlannedPurchase, Reminder, Renewal, RenewalType, RepairRecord, Vehicle, Workshop } from "@/lib/db/types";
+import { addMonths } from "@/lib/dates";
+import { renewalTypeLabels, renewalTypeOptions } from "@/lib/renewals";
+import { todayIso } from "@/lib/dates";
 import type { RegionalSettings } from "@/lib/regional-settings";
 import { ConfirmDelete } from "./ConfirmDelete";
 import { EditPanel } from "./EditPanel";
@@ -194,6 +202,15 @@ export function EditReminderForm({ record, isLinked = false, motLabel = "MOT" }:
       <button className="primary-button" type="submit">Save changes</button>
     </form>
   );
+  if (record.renewalType) {
+    return (
+      <ModalPanel trigger="Edit" title="Edit reminder">
+        <div className="edit-menu">
+          <p className="muted">This reminder follows the latest {renewalTypeLabels[record.renewalType].toLowerCase()} record. Change the dates on the Renewals tab instead.</p>
+        </div>
+      </ModalPanel>
+    );
+  }
   if (isLinked) {
     return (
       <ModalPanel trigger="Edit" title="Edit reminder">
@@ -599,5 +616,73 @@ function PlannedPurchaseFields({ record, disabled = false }: { record?: PlannedP
       <Field label="Link"><input name="url" type="url" defaultValue={record?.url ?? ""} disabled={disabled} /></Field>
       <Field label="Notes"><textarea name="notes" defaultValue={record?.notes ?? ""} disabled={disabled} /></Field>
     </>
+  );
+}
+
+// ─── Renewals ───────────────────────────────────────────────────────────────
+
+function RenewalFields({ record, defaults }: { record?: Renewal; defaults?: { type?: RenewalType; startDate?: string; endDate?: string; provider?: string | null } }) {
+  const startDate = record?.startDate ?? defaults?.startDate ?? todayIso();
+  return (
+    <>
+      <Field label="Type">
+        <select name="type" defaultValue={record?.type ?? defaults?.type ?? "insurance"} required>
+          {renewalTypeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+        </select>
+      </Field>
+      <Field label="Provider"><input name="provider" defaultValue={record?.provider ?? defaults?.provider ?? ""} placeholder="Insurer, DVLA, warranty company..." /></Field>
+      <Field label="Policy or reference number"><input name="reference" defaultValue={record?.reference ?? ""} /></Field>
+      <Field label="Start date"><input name="startDate" type="date" defaultValue={startDate} /></Field>
+      <Field label="End / renewal date"><input name="endDate" type="date" defaultValue={record?.endDate ?? defaults?.endDate ?? addMonths(startDate, 12)} required /></Field>
+      <Field label="Cost"><input name="cost" type="number" min="0" step="0.01" defaultValue={record?.cost ?? ""} /></Field>
+      <Field label="Notes"><textarea name="notes" defaultValue={record?.notes ?? ""} /></Field>
+    </>
+  );
+}
+
+export function RenewalForm({ vehicleId, autoOpenKey }: { vehicleId: number; autoOpenKey?: string }) {
+  const action = createRenewalAction.bind(null, vehicleId);
+  return (
+    <ModalPanel trigger={<><FileBadge size={17} /> Add renewal</>} title="Add renewal" autoOpenKey={autoOpenKey}>
+      <form action={action} className="record-form">
+        <RenewalFields />
+        <button className="primary-button" type="submit">Save renewal</button>
+      </form>
+    </ModalPanel>
+  );
+}
+
+export function EditRenewalForm({ record }: { record: Renewal }) {
+  const updateAction = updateRenewalAction.bind(null, record.vehicleId, record.id);
+  const deleteAction = deleteRenewalAction.bind(null, record.vehicleId, record.id);
+  return (
+    <EditPanel deleteAction={deleteAction} title={`Edit ${renewalTypeLabels[record.type].toLowerCase()}`}>
+      <form action={updateAction} className="record-form">
+        <RenewalFields record={record} />
+        <button className="primary-button" type="submit">Save changes</button>
+      </form>
+    </EditPanel>
+  );
+}
+
+/** Ticking a renewal reminder logs the renewed policy, which moves the reminder to the new end date. */
+export function CompleteRenewalReminderButton({ reminder, previous }: { reminder: Reminder; previous: Pick<Renewal, "endDate" | "provider"> | null }) {
+  const type = reminder.renewalType ?? "other";
+  const action = createRenewalAction.bind(null, reminder.vehicleId);
+  const dismissAction = dismissReminderAction.bind(null, reminder.vehicleId, reminder.id);
+  const startDate = previous?.endDate ?? reminder.dueDate ?? todayIso();
+  return (
+    <ModalPanel trigger={<Check size={17} />} triggerClassName="icon-button" triggerLabel={`Renew ${renewalTypeLabels[type].toLowerCase()}`} title={`Renew ${renewalTypeLabels[type].toLowerCase()}`}>
+      <p className="muted sheet-intro">Log the renewed cover and the reminder moves to its new end date.</p>
+      <form action={action} className="record-form">
+        <RenewalFields defaults={{ type, startDate, endDate: addMonths(startDate, 12), provider: previous?.provider }} />
+        <button className="primary-button" type="submit">Save renewal</button>
+      </form>
+      <hr className="modal-divider" />
+      <form action={dismissAction} className="record-form">
+        <p className="muted">Not renewing? Mark the reminder done instead.</p>
+        <button className="secondary-button" type="submit">Not renewing</button>
+      </form>
+    </ModalPanel>
   );
 }
