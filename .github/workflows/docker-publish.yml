@@ -1,11 +1,20 @@
 name: Build and publish image
 
+# Images are published when a GitHub release is published: :latest always matches the newest
+# full release, and each release also gets its own version tag (v1.5.0 / V1.5.0 -> :1.5.0).
+# Pre-releases get only their version tag. Pull requests are built to check they still build,
+# but nothing is pushed. Run it by hand on a tag to rebuild that release's image.
 on:
-  push:
-    branches: [main]
-    tags: ["v*.*.*"]
+  release:
+    types: [published]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+
+# Two releases published close together must not race each other for :latest.
+concurrency:
+  group: docker-publish-${{ github.event_name == 'pull_request' && github.ref || 'release' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build-and-push:
@@ -17,31 +26,49 @@ jobs:
     steps:
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
 
+      - name: Work out image tags
+        id: meta
+        env:
+          EVENT: ${{ github.event_name }}
+          PRERELEASE: ${{ github.event.release.prerelease }}
+        run: |
+          image=ghcr.io/revise0592/carvey
+          if [[ "$EVENT" == "pull_request" ]]; then
+            echo "push=false" >> "$GITHUB_OUTPUT"
+            echo "tags=${image}:pr-${{ github.event.pull_request.number }}" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [[ "$GITHUB_REF" != refs/tags/* ]]; then
+            echo "::error::Run this on a release tag, not a branch (Use workflow from: Tags)."
+            exit 1
+          fi
+          tag="${GITHUB_REF#refs/tags/}"
+          version="${tag#[vV]}"
+          tags="${image}:${version}"
+          if [[ "$PRERELEASE" != "true" ]]; then
+            tags="${tags},${image}:latest"
+          fi
+          echo "push=true" >> "$GITHUB_OUTPUT"
+          echo "tags=${tags}" >> "$GITHUB_OUTPUT"
+          echo "Publishing: ${tags}"
+
       - name: Log in to GitHub Container Registry
-        if: github.event_name != 'pull_request'
+        if: steps.meta.outputs.push == 'true'
         uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract version from tag
-        id: meta
-        run: |
-          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
-            VERSION="${GITHUB_REF#refs/tags/v}"
-            echo "tags=ghcr.io/revise0592/carvey:latest,ghcr.io/revise0592/carvey:${VERSION}" >> "$GITHUB_OUTPUT"
-          else
-            echo "tags=ghcr.io/revise0592/carvey:latest,ghcr.io/revise0592/carvey:${{ github.sha }}" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Build image
         uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7.0.0
         with:
           context: .
-          push: ${{ github.event_name != 'pull_request' }}
+          push: ${{ steps.meta.outputs.push == 'true' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: |
             org.opencontainers.image.title=Carvey
             org.opencontainers.image.description=Self-hosted car maintenance dashboard
             org.opencontainers.image.source=https://github.com/Revise0592/Carvey
+            org.opencontainers.image.version=${{ github.ref_name }}
+            org.opencontainers.image.revision=${{ github.sha }}
