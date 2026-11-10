@@ -171,5 +171,4 @@ Or set `CARVEY_RESET_PASSWORD=newpassword` and/or `CARVEY_RESET_2FA=true`, resta
 Next.js · React · TypeScript · SQLite (`better-sqlite3`) · Sharp · Vitest
 
 ## Issues and feedback
-
-Report bugs and feature requests in [Issues](https://github.com/Revise0592/Carvey/issues).
+Report bugs and feature requests [here](https://github.com/Revise0592/Carvey/issues).
