@@ -113,4 +113,4 @@ Next.js · React · TypeScript · SQLite (`better-sqlite3`) · Sharp · Vitest
 
 ## Issues and feedback
 
-Report bugs in [Issues](https://github.com/Revise0592/Carvey/issues). Send feature requests [here](https://carvey.userjot.com/).
+Report bugs and feature requests [here](https://github.com/Revise0592/Carvey/issues).
