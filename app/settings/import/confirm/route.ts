@@ -1,4 +1,5 @@
 import { revalidatePath } from "next/cache";
+import { audit } from "@/lib/audit";
 import { requireUser } from "@/lib/auth";
 import { syncShowcaseDemoBackupIfActive } from "@/lib/backup";
 import { commitCsvImport, discardImport } from "@/lib/data-transfer";
@@ -20,6 +21,7 @@ export async function POST(request: Request) {
   }
   const result = await commitCsvImport(token, formData.get("includeDuplicates") === "on");
   if (!result.ok) return redirect({ import: "error", message: result.message });
+  await audit("csv.imported", `${result.imported} ${result.label.toLowerCase()} (${result.skipped} skipped)`);
   await syncShowcaseDemoBackupIfActive();
   revalidatePath("/", "layout");
   return redirect({ import: "done", count: String(result.imported), skipped: String(result.skipped), label: result.label });

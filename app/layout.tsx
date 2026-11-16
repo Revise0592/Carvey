@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import { ThemeScript } from "@/components/ThemeScript";
 import { PwaRegistration } from "@/components/PwaRegistration";
 import { faviconPath } from "@/lib/theme-branding";
@@ -25,11 +26,13 @@ export const viewport: Viewport = {
   ]
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  // Set by proxy.ts. Reading it also makes every page render per request, which nonces need.
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (
     <html lang="en-GB" suppressHydrationWarning>
       <body>
-        <ThemeScript />
+        <ThemeScript nonce={nonce} />
         <PwaRegistration />
         {children}
       </body>

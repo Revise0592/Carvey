@@ -36,6 +36,7 @@ import { estimateMileageRate, reminderTiming } from "@/lib/mileage";
 import type { RegionalSettings } from "@/lib/regional-settings";
 import { getReminderStatus } from "@/lib/reminders";
 import { addYear, byNumber, byText, EmptyRecords, plannedPurchaseStatus, reminderStatusTone, SortBar, sortBy, sortState, type SectionProps } from "./shared";
+import { ActionForm } from "@/components/ActionForm";
 
 export function RemindersSection({ vehicle, settings, motLabel, query }: SectionProps) {
   const reminders = listReminders(vehicle.id);
@@ -234,7 +235,7 @@ function AssignServiceIntervalForm({ vehicleId, intervals, distanceUnit }: { veh
   const action = assignServiceIntervalAction.bind(null, vehicleId);
   return (
     <ModalPanel trigger={<><Plus size={17} /> Assign interval</>} title="Assign service interval">
-      <form action={action} className="record-form">
+      <ActionForm action={action} className="record-form">
         <label>
           Service interval
           <select name="serviceIntervalId" required>
@@ -249,7 +250,7 @@ function AssignServiceIntervalForm({ vehicleId, intervals, distanceUnit }: { veh
           </select>
         </label>
         <button className="primary-button" type="submit">Assign</button>
-      </form>
+      </ActionForm>
     </ModalPanel>
   );
 }
@@ -290,7 +291,7 @@ function RecordServiceButton({ record, vehicle, compact = false }: { record: Veh
       title={`Record ${record.name}`}
     >
       {compact ? <p className="muted sheet-intro">Logs this service in Maintenance and sets the next reminder.</p> : null}
-      <form action={recordAction} className="record-form">
+      <ActionForm action={recordAction} className="record-form">
         <label>
           Date
           <input name="serviceDate" type="date" defaultValue={todayIso()} required />
@@ -304,7 +305,7 @@ function RecordServiceButton({ record, vehicle, compact = false }: { record: Veh
           <input name="cost" type="number" min="0" step="0.01" defaultValue="0" />
         </label>
         <button className="primary-button" type="submit">Save service record</button>
-      </form>
+      </ActionForm>
     </ModalPanel>
   );
 }

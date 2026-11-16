@@ -6,7 +6,7 @@ import { requireUser } from "@/lib/auth";
 import { daysUntil } from "@/lib/dates";
 import { listCurrentRenewals, listLatestMotExpiries } from "@/lib/db";
 import { formatDate, formatMiles } from "@/lib/format";
-import { getMotLabel, getRegionalSettings, type RegionalSettings } from "@/lib/regional-settings";
+import { getMotLabel, getRegionalSettings, motLabelInSentence, type RegionalSettings } from "@/lib/regional-settings";
 import { renewalTypeLabels } from "@/lib/renewals";
 
 export const dynamic = "force-dynamic";
@@ -22,8 +22,12 @@ function expiryTone(days: number) {
   return days < 0 ? "tag-danger" : days <= 30 ? "tag-warning" : "tag-neutral";
 }
 
-export default async function RemindersPage() {
+/** Upcoming reminders further out than this are folded behind "Show all" to keep the page light. */
+const upcomingHorizonDays = 90;
+
+export default async function RemindersPage({ searchParams }: { searchParams: Promise<{ all?: string }> }) {
   await requireUser();
+  const showAll = (await searchParams).all === "1";
   const settings = getRegionalSettings();
   const motLabel = getMotLabel(settings);
   const agenda = buildAgenda();
@@ -32,11 +36,14 @@ export default async function RemindersPage() {
   // Renewal reminders are already shown in the Renewals section above, so don't list them twice.
   const reminders = agenda.filter((item) => !item.reminder.renewalType);
 
+  const upcoming = reminders.filter((item) => item.status === "upcoming");
+  const laterCount = showAll ? 0 : upcoming.filter((item) => item.daysLeft !== null && item.daysLeft > upcomingHorizonDays).length;
+
   const groups = [
     { key: "overdue", label: "Overdue", tone: "tag-danger", items: reminders.filter((item) => item.status === "overdue") },
-    { key: "upcoming", label: "Upcoming", tone: "tag-warning", items: reminders.filter((item) => item.status === "upcoming") },
+    { key: "upcoming", label: "Upcoming", tone: "tag-warning", items: upcoming.filter((item) => showAll || item.daysLeft === null || item.daysLeft <= upcomingHorizonDays) },
     { key: "open", label: "No due date", tone: "tag-neutral", items: reminders.filter((item) => item.status === "open") }
-  ].filter((group) => group.items.length);
+  ].filter((group) => group.items.length || (group.key === "upcoming" && laterCount));
 
   return (
     <AppFrame>
@@ -66,7 +73,7 @@ export default async function RemindersPage() {
                 );
               })}
             </div>
-          ) : <p className="inset-empty">No {motLabel.toLowerCase()}s logged yet.</p>}
+          ) : <p className="inset-empty">No {motLabelInSentence(motLabel)}s logged yet.</p>}
         </section>
       ) : null}
 
@@ -99,6 +106,12 @@ export default async function RemindersPage() {
               <ReminderRow key={item.reminder.id} item={item} tone={group.tone} settings={settings} />
             ))}
           </div>
+          {group.key === "upcoming" && laterCount ? (
+            <div className="show-more">
+              <span className="muted">{laterCount} more due after the next {upcomingHorizonDays} days</span>
+              <Link className="secondary-button" href="/reminders?all=1">Show all</Link>
+            </div>
+          ) : null}
         </section>
       )) : (
         <section className="grouped-section">

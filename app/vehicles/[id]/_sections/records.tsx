@@ -5,7 +5,8 @@ import { EditFuelRecordForm, EditMaintenanceForm, EditMotForm, EditRepairForm, F
 import { RecordItem } from "@/components/RecordItem";
 import { groupAttachmentsByRecord, listFuelRecords, listMaintenance, listMaintenanceCategories, listMots, listRepairs, listWorkshops, type AttachmentRecordType } from "@/lib/db";
 import { computeAverageFuelEconomy, computeFuelEconomies, formatCurrency, formatDate, formatMiles, formatMotResult, formatVolume } from "@/lib/format";
-import { byNumber, byText, EmptyRecords, motResultTone, SortBar, sortBy, sortState, type SectionProps } from "./shared";
+import { byNumber, byText, EmptyRecords, motResultTone, paginate, ShowMore, SortBar, sortBy, sortState, type SectionProps } from "./shared";
+import { motLabelInSentence } from "@/lib/regional-settings";
 
 function attachmentRenderer(vehicleId: number, recordType: AttachmentRecordType) {
   const grouped = groupAttachmentsByRecord(vehicleId, recordType);
@@ -26,6 +27,7 @@ export function MaintenanceSection({ vehicle, settings, query }: SectionProps) {
     cost: byNumber((r) => r.cost),
     category: byText((r) => r.category)
   });
+  const page = paginate(sorted, query);
   return (
     <section className="records-shell">
       <div className="section-heading">
@@ -40,7 +42,7 @@ export function MaintenanceSection({ vehicle, settings, query }: SectionProps) {
             { key: "category", label: "Category" }
           ]} />
           <div className="record-list">
-            {sorted.map((record) => (
+            {page.items.map((record) => (
               <RecordItem
                 key={record.id}
                 tag={<span className="tag">{record.category}</span>}
@@ -52,6 +54,7 @@ export function MaintenanceSection({ vehicle, settings, query }: SectionProps) {
               />
             ))}
           </div>
+          <ShowMore vehicleId={vehicle.id} tab="maintenance" query={query} page={page} />
         </>
       ) : (
         <EmptyRecords title="No maintenance logged">Add the first service or upkeep entry for this car, or import a history from CSV in Settings.</EmptyRecords>
@@ -69,6 +72,7 @@ export function RepairsSection({ vehicle, settings, query }: SectionProps) {
     date: byText((r) => r.date),
     cost: byNumber((r) => r.cost)
   });
+  const page = paginate(sorted, query);
   return (
     <section className="records-shell">
       <div className="section-heading">
@@ -82,7 +86,7 @@ export function RepairsSection({ vehicle, settings, query }: SectionProps) {
             { key: "cost", label: "Cost" }
           ]} />
           <div className="record-list">
-            {sorted.map((record) => (
+            {page.items.map((record) => (
               <RecordItem
                 key={record.id}
                 tag={<span className="tag">{record.garage ?? "Repair"}</span>}
@@ -94,6 +98,7 @@ export function RepairsSection({ vehicle, settings, query }: SectionProps) {
               />
             ))}
           </div>
+          <ShowMore vehicleId={vehicle.id} tab="repairs" query={query} page={page} />
         </>
       ) : (
         <EmptyRecords title="No repairs logged">Track faults, fixes, and garage work once they happen.</EmptyRecords>
@@ -111,6 +116,7 @@ export function MotsSection({ vehicle, settings, motLabel, query }: SectionProps
     testDate: byText((r) => r.testDate),
     cost: byNumber((r) => r.cost)
   });
+  const page = paginate(sorted, query);
   return (
     <section className="records-shell">
       <div className="section-heading">
@@ -125,7 +131,7 @@ export function MotsSection({ vehicle, settings, motLabel, query }: SectionProps
             { key: "cost", label: "Cost" }
           ]} />
           <div className="record-list">
-            {sorted.map((record) => (
+            {page.items.map((record) => (
               <RecordItem
                 key={record.id}
                 tag={<span className={`tag ${motResultTone(record.result)}`}>{formatMotResult(record.result)}</span>}
@@ -137,10 +143,11 @@ export function MotsSection({ vehicle, settings, motLabel, query }: SectionProps
               />
             ))}
           </div>
+          <ShowMore vehicleId={vehicle.id} tab="mots" query={query} page={page} />
         </>
       ) : (
-        <EmptyRecords title={`No ${motLabel.toLowerCase()} history yet`}>
-          Add the latest {motLabel.toLowerCase()} result to start building this vehicle&apos;s test record.
+        <EmptyRecords title={`No ${motLabelInSentence(motLabel)} history yet`}>
+          Add the latest {motLabelInSentence(motLabel)} result to start building this vehicle&apos;s test record.
         </EmptyRecords>
       )}
     </section>
@@ -155,6 +162,7 @@ export function FuelSection({ vehicle, settings, query }: SectionProps) {
     cost: byNumber((r) => r.totalCost),
     odometer: byNumber((r) => r.odometer)
   });
+  const page = paginate(sorted, query);
   const economies = computeFuelEconomies(records, settings);
   const averageEconomy = computeAverageFuelEconomy(records, settings);
   const totalFuelSpend = records.reduce((sum, r) => sum + (r.totalCost ?? 0), 0);
@@ -180,7 +188,7 @@ export function FuelSection({ vehicle, settings, query }: SectionProps) {
             { key: "odometer", label: "Odometer" }
           ]} />
           <div className="record-list">
-            {sorted.map((record) => {
+            {page.items.map((record) => {
               const economy = economies.get(record.id);
               return (
                 <RecordItem
@@ -194,6 +202,7 @@ export function FuelSection({ vehicle, settings, query }: SectionProps) {
               );
             })}
           </div>
+          <ShowMore vehicleId={vehicle.id} tab="fuel" query={query} page={page} />
         </>
       ) : (
         <EmptyRecords title="No fuel logged">Log fill-ups to track spend and fuel economy over time.</EmptyRecords>

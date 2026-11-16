@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { loginAction } from "../actions";
 import { BrandLogo } from "@/components/BrandLogo";
+import { ForgetOfflinePages } from "@/components/ForgetOfflinePages";
 import { currentUser } from "@/lib/auth";
 import { hasAdminUser } from "@/lib/db";
 
@@ -19,6 +20,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   const message = params.error ? errors[params.error] ?? errors["1"] : null;
   return (
     <main className="auth-shell">
+      <ForgetOfflinePages />
       <section className="auth-card">
         <div className="auth-header auth-header-wordmark">
           <div className="auth-header-copy">

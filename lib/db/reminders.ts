@@ -1,4 +1,4 @@
-import { addMonths } from "../dates";
+import { addMonths, todayIso } from "../dates";
 import { getDb } from "./connection";
 import { createMaintenance } from "./records";
 import type { Reminder, ServiceInterval, VehicleServiceInterval } from "./types";
@@ -85,7 +85,7 @@ export function completeReminder(id: number, vehicleId: number) {
 // Completes a reminder from the reminders list. Recurring reminders are rolled forward to their
 // next due date/mileage instead of being marked done; reminders owned by the Service Plan are
 // left to the Service Plan, which creates the next one itself.
-export function completeOrRepeatReminder(id: number, vehicleId: number, today = new Date().toISOString().slice(0, 10)) {
+export function completeOrRepeatReminder(id: number, vehicleId: number, today = todayIso()) {
   const db = getDb();
   const reminder = db
     .prepare("SELECT recurrence, due_odometer as dueOdometer FROM reminders WHERE id = ? AND vehicle_id = ?")

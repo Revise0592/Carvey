@@ -17,7 +17,25 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # Nothing is published unless typecheck, lint and the test suite pass.
+  test:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npm run lint
+      - run: npm test
+      - run: npm audit --omit=dev --audit-level=high
+
   build-and-push:
+    needs: test
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -44,6 +62,13 @@ jobs:
           fi
           tag="${GITHUB_REF#refs/tags/}"
           version="${tag#[vV]}"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          # The image reports the tag's version (CARVEY_VERSION), so a stale package.json can't make
+          # a release show the wrong number. Still flag it, so the source stays in step.
+          package_version="$(jq -r .version package.json)"
+          if [[ "$package_version" != "$version" ]]; then
+            echo "::warning title=package.json version::package.json says ${package_version} but this release is ${version}. The image will report ${version}; bump package.json in the next commit."
+          fi
           tags="${image}:${version}"
           if [[ "$PRERELEASE" != "true" ]]; then
             tags="${tags},${image}:latest"
@@ -66,9 +91,12 @@ jobs:
           context: .
           push: ${{ steps.meta.outputs.push == 'true' }}
           tags: ${{ steps.meta.outputs.tags }}
+          build-args: |
+            CARVEY_VERSION=${{ steps.meta.outputs.version }}
+            CARVEY_COMMIT=${{ github.sha }}
           labels: |
             org.opencontainers.image.title=Carvey
             org.opencontainers.image.description=Self-hosted car maintenance dashboard
             org.opencontainers.image.source=https://github.com/Revise0592/Carvey
-            org.opencontainers.image.version=${{ github.ref_name }}
+            org.opencontainers.image.version=${{ steps.meta.outputs.version || github.ref_name }}
             org.opencontainers.image.revision=${{ github.sha }}

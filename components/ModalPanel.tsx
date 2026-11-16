@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { CloseModalContext } from "./ActionForm";
 import { Sheet } from "./Sheet";
 
 export function ModalPanel({
@@ -52,7 +53,12 @@ export function ModalPanel({
         {trigger}
       </button>
       <Sheet open={open} onClose={close} title={title}>
-        <div onSubmitCapture={() => window.setTimeout(close, 0)}>{children}</div>
+        {/* Plain forms close the sheet as they submit; ActionForms close it themselves once the save worked. */}
+        <CloseModalContext.Provider value={close}>
+          <div onSubmitCapture={(event) => {
+            if (!(event.target instanceof HTMLElement && event.target.hasAttribute("data-action-form"))) window.setTimeout(close, 0);
+          }}>{children}</div>
+        </CloseModalContext.Provider>
       </Sheet>
     </>
   );

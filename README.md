@@ -60,6 +60,7 @@ Carvey is a self-hosted car maintenance tracker. It keeps the service history, M
 - Installable as a PWA, with mobile tab navigation and bottom-sheet forms
 - Light and dark mode, ten colour palettes, rounded or boxy shapes
 - One-click backup and restore (database and uploads in one zip, with a preview before restore)
+- Automatic nightly backups to `data/backups/` (keeps the newest 3 by default)
 - CSV export (per record type or everything as a zip) and CSV import with column matching, duplicate detection and a preview before saving
 - Sign-in with optional two-factor authentication (authenticator app + recovery codes), a signed-in devices list, and a reverse-proxy mode for Authelia, Authentik and similar
 
@@ -93,6 +94,8 @@ npm install
 CARVEY_DATA_DIR=./data npm run dev
 ```
 
+To open the dev server from another device (a phone on your LAN), list its address: `CARVEY_DEV_ORIGINS=192.168.1.20 npm run dev`.
+
 ## Environment variables
 
 | Variable | Purpose |
@@ -105,9 +108,11 @@ CARVEY_DATA_DIR=./data npm run dev
 | `CARVEY_PROXY_SECRET_HEADER` | Header carrying the secret. Default `X-Carvey-Proxy-Secret` |
 | `CARVEY_PROXY_USER_HEADER` | Optional. Header with the signed-in user from your proxy, e.g. `Remote-User`. When set, requests without it are refused |
 | `CARVEY_ALLOWED_ORIGINS` | Extra origins allowed to post to Carvey, comma-separated. Only needed if your proxy rewrites the `Host` header without setting `X-Forwarded-Host` |
+| `CARVEY_TRUSTED_PROXY_HOPS` | How many proxies sit in front of Carvey (default `1`). Used to read the real client address from `X-Forwarded-For` for sign-in rate limits. `0` ignores the header (no proxy) |
 | `CARVEY_SECURE_COOKIES` | `true` or `false` to force the session cookie's Secure flag. Default: on when the request arrived over HTTPS |
 | `CARVEY_RESET_2FA` | Set to `true` to turn off two-factor on startup (see below) |
-| `CARVEY_DISABLE_SCHEDULER` | Set to `true` to stop the built-in daily notification check (for example, when running several replicas) |
+| `CARVEY_MAX_RESTORE_MB` | Largest backup file you can restore from the browser, in MB (default `256`). The file is held in memory while it uploads, so leave headroom in the container's memory limit |
+| `CARVEY_DISABLE_SCHEDULER` | Set to `true` to stop the built-in scheduler: the daily notification check, nightly backups and data-folder clean-up (for example, when running several replicas) |
 
 ## Notifications and calendar
 
@@ -123,6 +128,12 @@ CARVEY_DATA_DIR=./data npm run dev
 
 **Calendar feed:** select **Create calendar link** and subscribe to it from your calendar app. The link works without a login, so treat it like a password; **Reset link** invalidates the old one.
 
+## Backups
+
+**Settings → Backup & Restore.** *Download backup* gives you a zip of the database and every photo and document. Every night after 03:00 Carvey also saves one to the `backups` folder in its data directory and keeps the newest 3 (change it, or turn it off, on the same page). Those files sit on the same disk as the data, so copy the folder elsewhere with your usual backup tool. Any of them can be restored from the same page.
+
+Carvey also tidies its data folder daily: unfinished restore previews and imports older than a day are removed, and only the 3 most recent pre-restore snapshots (`restore-rollback/`) are kept.
+
 ## Importing from CSV
 
 **Settings → Import & Export.** Choose what the file contains (maintenance, repairs, MOTs, fuel or renewals) and which vehicle it's for, or match rows by a registration column. Headers are matched by name, and common alternatives such as `mileage`, `price` or `litres` work. Dates can be ISO, day-first or month-first. A preview shows the columns used, the rows that will be skipped and why, and any rows already in Carvey, before anything is saved. Files exported from Carvey import back unchanged.
@@ -131,7 +142,7 @@ CARVEY_DATA_DIR=./data npm run dev
 
 **Password (default).** Sign in with your username and password. Turn on two-factor in **Settings → Admin**: scan the QR code with any authenticator app, then save the 10 recovery codes it gives you. Each recovery code works once.
 
-Failed sign-ins are rate limited (5 per 15 minutes from one client, 25 per 15 minutes for the account). Sessions last 30 days. **Settings → Admin** lists signed-in devices and can sign them out. Changing your password, or turning two-factor on or off, signs out every other device.
+Failed sign-ins are rate limited (5 per 15 minutes from one client, 25 per 15 minutes for the account). Browsers you've signed in from before are remembered for a year and keep their own limit, so someone guessing your password can't lock you out of your own devices. Re-entering your password or code in **Settings → Admin** is limited to 5 wrong tries per 15 minutes. Sessions last 30 days. **Settings → Admin** lists signed-in devices and can sign them out. Changing your password, or turning two-factor on or off, signs out every other device.
 
 **Behind a reverse proxy that handles sign-in** (Authelia, Authentik, Cloudflare Access, oauth2-proxy, ...). Set:
 
@@ -165,6 +176,10 @@ docker exec -it <container-name> node scripts/reset-password.mjs --disable-2fa  
 ```
 
 Or set `CARVEY_RESET_PASSWORD=newpassword` and/or `CARVEY_RESET_2FA=true`, restart, log in, then remove the variables and restart again. Every reset signs out all existing sessions.
+
+## Releasing
+
+Publish a GitHub release with a version tag (`V1.7.0` or `v1.7.0`). The workflow runs the tests, then builds and pushes `ghcr.io/revise0592/carvey:<version>` (and `:latest` for full releases). The image reports the tag's version in **Settings → Backup & Restore** and in backup files, even if `package.json` wasn't bumped; the workflow warns when they differ so you can bump it afterwards. Builds from source without a tag report the `package.json` version.
 
 ## Tech stack
 

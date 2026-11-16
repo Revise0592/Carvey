@@ -3,13 +3,22 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import fsp from "node:fs/promises";
 import path from "node:path";
+import type { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
+import yazl from "yazl";
 import Database from "better-sqlite3";
-import { dbFileName, getDb } from "./db";
+import { appVersion as currentAppVersion } from "./version";
+import { dbFileName, getAuthSessionById, getDb, getFirstAdmin, reinstateAuthSession } from "./db";
 import { dataDir, ensureDataDirs, restoreRollbackDir, restoreStagingDir, tempDir, uploadDir } from "./paths";
 
 const backupFormatVersion = 1;
-const appVersion = "0.1.0";
-const maxRestoreBytes = 256 * 1024 * 1024;
+// Recorded in each backup manifest so a restore can tell which release wrote it.
+const appVersion: string = currentAppVersion();
+/** Largest backup file accepted for restore through the browser (CARVEY_MAX_RESTORE_MB, default 256). */
+const maxRestoreBytes = Math.max(1, Number.parseInt(process.env.CARVEY_MAX_RESTORE_MB ?? "", 10) || 256) * 1024 * 1024;
+/** Uploads are stored uncompressed, so a real backup expands very little; anything far beyond this is a zip bomb. */
+const maxExtractedBytes = maxRestoreBytes * 4;
+const maxEntries = 100_000;
 const showcaseDemoBackupPath = process.env.CARVEY_SHOWCASE_DEMO_BACKUP ?? path.resolve(process.cwd(), "data/demo/showcase-backup.zip");
 const debugDemoDir = path.join(dataDir, "debug-demo");
 const debugDemoRollbackZipPath = path.join(debugDemoDir, "previous-live-data.zip");
@@ -56,36 +65,79 @@ export type ShowcaseDemoStatus = {
   summary: RestoreSummary | null;
 };
 
-export async function createBackupZip(options: { showcase?: boolean } = {}) {
+export type BackupStream = {
+  manifest: BackupManifest;
+  /** The zip, produced while it is read. Files are streamed from disk, never held in memory. */
+  stream: Readable;
+};
+
+/**
+ * Starts writing a backup zip: a scrubbed, consistent copy of the database plus every upload.
+ * The temporary database copy is removed once the stream ends or is abandoned.
+ */
+export async function createBackupStream(options: { showcase?: boolean } = {}): Promise<BackupStream> {
   ensureDataDirs();
-  const token = crypto.randomUUID();
-  const workDir = path.join(tempDir, `backup-${token}`);
+  const workDir = path.join(tempDir, `backup-${crypto.randomUUID()}`);
   await fsp.mkdir(workDir, { recursive: true });
-  const dbCopyPath = path.join(workDir, dbFileName);
+  try {
+    const dbCopyPath = path.join(workDir, dbFileName);
+    await getDb().backup(dbCopyPath);
+    scrubBackupCopy(dbCopyPath, options.showcase === true);
 
-  await getDb().backup(dbCopyPath);
-  scrubBackupCopy(dbCopyPath, options.showcase === true);
+    const uploads = await listUploadFiles();
+    const manifest: BackupManifest = {
+      app: "Carvey",
+      appVersion,
+      formatVersion: backupFormatVersion,
+      createdAt: new Date().toISOString(),
+      database: dbFileName,
+      uploads
+    };
 
-  const uploads = await listUploadFiles();
-  const manifest: BackupManifest = {
-    app: "Carvey",
-    appVersion,
-    formatVersion: backupFormatVersion,
-    createdAt: new Date().toISOString(),
-    database: dbFileName,
-    uploads
-  };
+    const zip = new yazl.ZipFile();
+    zip.addFile(dbCopyPath, dbFileName);
+    zip.addBuffer(Buffer.from(JSON.stringify(manifest, null, 2)), "manifest.json");
+    // Photos and PDFs are already compressed; storing them as-is saves CPU for no loss.
+    for (const relativePath of uploads) zip.addFile(path.join(uploadDir, relativePath), `uploads/${relativePath}`, { compress: false });
+    zip.end();
 
-  const zip = new AdmZip();
-  zip.addLocalFile(dbCopyPath, "", dbFileName);
-  zip.addFile("manifest.json", Buffer.from(JSON.stringify(manifest, null, 2)));
-  for (const relativePath of uploads) {
-    zip.addLocalFile(path.join(uploadDir, relativePath), "uploads", relativePath);
+    const stream = zip.outputStream as Readable;
+    let cleaned = false;
+    const cleanUp = () => {
+      if (cleaned) return;
+      cleaned = true;
+      void fsp.rm(workDir, { recursive: true, force: true });
+    };
+    stream.once("end", cleanUp);
+    stream.once("close", cleanUp);
+    stream.once("error", cleanUp);
+    return { manifest, stream };
+  } catch (error) {
+    await fsp.rm(workDir, { recursive: true, force: true });
+    throw error;
   }
+}
 
-  const buffer = zip.toBuffer();
-  await fsp.rm(workDir, { recursive: true, force: true });
-  return { buffer, manifest };
+/** Writes a backup to `filePath` (via a temporary file, so a partial backup never has the final name). */
+export async function writeBackupFile(filePath: string, options: { showcase?: boolean } = {}) {
+  const { manifest, stream } = await createBackupStream(options);
+  const partial = `${filePath}.partial`;
+  try {
+    await pipeline(stream, fs.createWriteStream(partial));
+    await fsp.rename(partial, filePath);
+  } catch (error) {
+    await fsp.rm(partial, { force: true });
+    throw error;
+  }
+  return manifest;
+}
+
+/** The whole backup in memory. Only for small backups (tests, the showcase demo); downloads stream. */
+export async function createBackupZip(options: { showcase?: boolean } = {}) {
+  const { manifest, stream } = await createBackupStream(options);
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) chunks.push(chunk as Buffer);
+  return { buffer: Buffer.concat(chunks), manifest };
 }
 
 /**
@@ -110,7 +162,7 @@ function scrubBackupCopy(dbPath: string, showcase = false) {
 export async function stageRestorePreview(file: File): Promise<PreviewResult> {
   ensureDataDirs();
   if (file.size <= 0) return { ok: false, message: "Choose a backup file to restore." };
-  if (file.size > maxRestoreBytes) return { ok: false, message: "Backup file is larger than 256 MB." };
+  if (file.size > maxRestoreBytes) return { ok: false, message: `Backup file is larger than ${Math.round(maxRestoreBytes / 1024 / 1024)} MB. Set CARVEY_MAX_RESTORE_MB to allow bigger ones.` };
 
   const buffer = Buffer.from(await file.arrayBuffer());
   const token = crypto.randomUUID();
@@ -140,7 +192,12 @@ export async function readRestoreSummary(token: string | undefined) {
   }
 }
 
-export async function confirmRestore(token: string) {
+/**
+ * Restores a staged backup. Restoring empties the sign-in tables, so `keepSessionId` (the hashed id
+ * of the session that asked for the restore) is put back afterwards, attached to the restored
+ * admin, and the person who restored stays signed in.
+ */
+export async function confirmRestore(token: string, options: { keepSessionId?: string | null } = {}) {
   if (!isSafeToken(token)) return { ok: false as const, message: "Invalid restore token." };
   const stageDir = path.join(restoreStagingDir, token);
   const zipPath = path.join(stageDir, "backup.zip");
@@ -156,7 +213,10 @@ export async function confirmRestore(token: string) {
   try {
     await validateAndSummariseZip(buffer, token, extractDir);
     const rollbackDir = await createRollbackSnapshot();
+    const session = options.keepSessionId ? getAuthSessionById(options.keepSessionId) : undefined;
     await restoreExtractedBackup(extractDir);
+    const admin = getFirstAdmin();
+    if (session && admin) reinstateAuthSession(session, admin.id);
     await fsp.rm(stageDir, { recursive: true, force: true });
     return { ok: true as const, rollbackDir };
   } catch (error) {
@@ -186,8 +246,7 @@ export async function activateShowcaseDemoData(): Promise<MutationResult> {
 
   // Preserve the original live data snapshot while demo mode is active.
   if (!state.active || !rollbackExists) {
-    const liveBackup = await createBackupZip();
-    await fsp.writeFile(debugDemoRollbackZipPath, liveBackup.buffer);
+    await writeBackupFile(debugDemoRollbackZipPath);
   }
 
   const extractDir = path.join(debugDemoDir, "showcase-extract");
@@ -220,13 +279,15 @@ export async function syncShowcaseDemoBackupIfActive() {
 }
 
 /** Tables that are never copied from a backup: sign-in state belongs to this server, not the data. */
-const tablesNotRestored = new Set(["auth_sessions", "auth_challenges", "auth_throttle"]);
+const tablesNotRestored = new Set(["auth_sessions", "auth_challenges", "auth_throttle", "audit_log"]);
+/** Tables whose rows on this server survive a restore untouched (and are never in a backup). */
+const serverLocalTables = ["audit_log"];
 
 /**
  * Settings that stay as they are on this server when restoring. Otherwise a backup taken with
  * sign-in turned off (or a tampered one) could silently turn sign-in off here.
  */
-const settingsNotRestored = ["authDisabled"];
+const settingsNotRestored = ["authDisabled", "auth.deviceSecret"];
 
 /**
  * The packaged showcase backup is committed to a public repository, so it is written without this
@@ -236,6 +297,11 @@ const settingsNotRestored = ["authDisabled"];
  */
 const showcaseTablesKept = new Set(["admin_users", "notification_log", ...tablesNotRestored]);
 const showcaseSettingsKeptWhere = `key LIKE 'notify.%' OR key LIKE 'calendar.%' OR key IN (${settingsNotRestored.map((key) => `'${key}'`).join(", ")})`;
+
+function backupHasAdmin(database: Database.Database) {
+  const exists = database.prepare("SELECT 1 FROM restore_backup.sqlite_master WHERE type = 'table' AND name = 'admin_users'").get();
+  return Boolean(exists && database.prepare("SELECT 1 FROM restore_backup.admin_users LIMIT 1").get());
+}
 
 function tableColumns(database: Database.Database, schema: "main" | "restore_backup", table: string) {
   return (database.prepare(`PRAGMA ${schema}.table_info("${table}")`).all() as Array<{ name: string }>).map((column) => column.name);
@@ -257,7 +323,11 @@ function restoreDatabaseContents(backupDbPath: string, showcase = false) {
     const liveTables = listTables("main");
     const backupTables = new Set(listTables("restore_backup"));
 
-    const keptTables = showcase ? showcaseTablesKept : new Set<string>();
+    const keptTables = new Set<string>([...(showcase ? showcaseTablesKept : []), ...serverLocalTables]);
+    // A backup with no admin account (the packaged showcase backup, or one taken before setup)
+    // must not delete this server's account: that would send Carvey back to /setup, where anyone
+    // who can reach it could create a new admin and take over the data.
+    if (!backupHasAdmin(database)) keptTables.add("admin_users");
     const keptSettingsWhere = showcase ? showcaseSettingsKeptWhere : `key IN (${settingsNotRestored.map((key) => `'${key}'`).join(", ")})`;
     const keptSettings = database
       .prepare(`SELECT key, value, updated_at FROM app_settings WHERE ${keptSettingsWhere}`)
@@ -312,8 +382,14 @@ async function validateAndSummariseZip(buffer: Buffer, token: string, extractDir
   const entries = zip.getEntries();
   if (!entries.length) throw new Error("Backup zip is empty.");
 
+  if (entries.length > maxEntries) throw new Error("Backup contains too many files.");
+  const declaredSize = entries.reduce((total, entry) => total + (entry.header.size ?? 0), 0);
+  if (declaredSize > maxExtractedBytes) throw new Error("Backup expands to more data than Carvey will restore at once.");
+
   for (const entry of entries) {
-    if (!isSafeZipPath(entry.entryName)) {
+    // Zips made by Finder, 7-Zip and most tools also list folders ("uploads/"); those are fine.
+    const name = entry.isDirectory ? entry.entryName.replace(/\/$/, "") : entry.entryName;
+    if (!isSafeZipPath(name)) {
       throw new Error("Backup contains an unsafe file path.");
     }
   }
@@ -377,10 +453,7 @@ async function createRollbackSnapshot() {
 async function writeCurrentDataToShowcaseDemoBackup() {
   ensureDataDirs();
   await fsp.mkdir(path.dirname(showcaseDemoBackupPath), { recursive: true });
-  const { buffer } = await createBackupZip({ showcase: true });
-  const tempPath = `${showcaseDemoBackupPath}.tmp`;
-  await fsp.writeFile(tempPath, buffer);
-  await fsp.rename(tempPath, showcaseDemoBackupPath);
+  await writeBackupFile(showcaseDemoBackupPath, { showcase: true });
 }
 
 async function restoreExtractedBackup(extractDir: string, showcase = false) {

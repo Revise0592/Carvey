@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Offline · Carvey</title>
+  <style>
+    :root { color-scheme: light dark; --bg: #f6f7f9; --fg: #15171c; --muted: #6d7280; --accent: #0f766e; }
+    @media (prefers-color-scheme: dark) { :root { --bg: #101114; --fg: #eceef2; --muted: #a3a8b4; --accent: #2dd4bf; } }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, sans-serif; padding: 24px; box-sizing: border-box; }
+    main { max-width: 26rem; text-align: center; }
+    h1 { font-size: 1.4rem; margin: 0 0 8px; }
+    p { color: var(--muted); margin: 0 0 20px; }
+    a { display: inline-block; padding: 10px 18px; border-radius: 10px; background: var(--accent); color: #fff; text-decoration: none; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>You're offline</h1>
+    <p>This page hasn't been saved on this device yet. Pages you've opened recently, such as your garage and vehicles, still work without a connection.</p>
+    <a href="/garage">Open garage</a>
+  </main>
+</body>
+</html>
