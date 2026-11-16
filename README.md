@@ -177,10 +177,6 @@ docker exec -it <container-name> node scripts/reset-password.mjs --disable-2fa  
 
 Or set `CARVEY_RESET_PASSWORD=newpassword` and/or `CARVEY_RESET_2FA=true`, restart, log in, then remove the variables and restart again. Every reset signs out all existing sessions.
 
-## Releasing
-
-Publish a GitHub release with a version tag (`V1.7.0` or `v1.7.0`). The workflow runs the tests, then builds and pushes `ghcr.io/revise0592/carvey:<version>` (and `:latest` for full releases). The image reports the tag's version in **Settings → Backup & Restore** and in backup files, even if `package.json` wasn't bumped; the workflow warns when they differ so you can bump it afterwards. Builds from source without a tag report the `package.json` version.
-
 ## Tech stack
 
 Next.js · React · TypeScript · SQLite (`better-sqlite3`) · Sharp · Vitest
