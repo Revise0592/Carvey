@@ -10,6 +10,11 @@ updates:
         patterns: ["next", "eslint-config-next", "react", "react-dom", "@types/react", "@types/react-dom"]
       minor-and-patch:
         update-types: ["minor", "patch"]
+    ignore:
+      # typescript-eslint (used by eslint-config-next) doesn't support TypeScript 7 yet, so lint
+      # fails on it. Remove this once typescript-eslint supports TS 7.
+      - dependency-name: "typescript"
+        versions: [">=7"]
     open-pull-requests-limit: 5
   - package-ecosystem: docker
     directory: /
@@ -19,3 +24,8 @@ updates:
     directory: /
     schedule:
       interval: monthly
+    # One PR for all action bumps: they edit neighbouring lines of the same workflow, so separate
+    # PRs conflict with each other as soon as one is merged.
+    groups:
+      actions:
+        patterns: ["*"]
