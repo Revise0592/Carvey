@@ -76,6 +76,11 @@ export async function logoutAction() {
 
 // ─── Account (Settings → Admin) ─────────────────────────────────────────────
 
+/** Settings → Admin message key for a failed password/code re-check. */
+function reauthError(reason: "password" | "code" | "throttled", prefix = "") {
+  return `${prefix}${reason === "code" ? "code-error" : reason === "throttled" ? "reauth-throttled" : "password-error"}`;
+}
+
 function adminUrl(account: string) {
   return `/settings?tab=admin&account=${account}`;
 }
@@ -90,7 +95,7 @@ export async function updateUsernameAction(formData: FormData) {
   const user = await requireAccountUser();
   const username = z.string().min(2).max(48).parse(str(formData, "username"));
   const check = await verifyReauthentication(user.id, (formData.get("currentPassword") as string | null) ?? "", str(formData, "code") || null);
-  if (!check.ok) redirect(adminUrl(check.reason === "code" ? "code-error" : "password-error"));
+  if (!check.ok) redirect(adminUrl(reauthError(check.reason)));
   await changeUsername(user.id, username);
   revalidatePath("/settings");
   redirect(adminUrl("username-updated"));
@@ -100,8 +105,8 @@ export async function updatePasswordAction(formData: FormData) {
   const user = await requireAccountUser();
   const currentPassword = z.string().min(1).parse(formData.get("currentPassword"));
   const nextPassword = z.string().min(8).max(256).parse(formData.get("nextPassword"));
-  const ok = await changePassword(user.id, currentPassword, nextPassword, user.sessionId);
-  if (!ok) redirect(adminUrl("password-error"));
+  const result = await changePassword(user.id, currentPassword, nextPassword, user.sessionId);
+  if (result !== "ok") redirect(adminUrl(result === "throttled" ? "reauth-throttled" : "password-error"));
   redirect(adminUrl("password-updated"));
 }
 
@@ -132,7 +137,7 @@ export async function updateAuthSettingsAction(formData: FormData) {
     if (str(formData, "confirmed") !== "on") redirect("/settings?tab=admin&app=auth-confirm-required");
     if (user.id === 0) redirect("/settings?tab=admin&app=auth-updated");
     const check = await verifyReauthentication(user.id, (formData.get("currentPassword") as string | null) ?? "", str(formData, "code") || null);
-    if (!check.ok) redirect(`/settings?tab=admin&app=${check.reason === "code" ? "auth-code-error" : "auth-password-error"}`);
+    if (!check.ok) redirect(`/settings?tab=admin&app=${reauthError(check.reason, "auth-")}`);
   }
   setAppSetting("authDisabled", authDisabled ? "true" : "false");
   revalidatePath("/", "layout");
@@ -140,6 +145,8 @@ export async function updateAuthSettingsAction(formData: FormData) {
 }
 
 // ─── Two-factor setup (returns state to a client form) ──────────────────────
+
+const throttledMessage = "Too many wrong attempts. Wait 15 minutes and try again.";
 
 export type TwoFactorState =
   | { step: "idle"; message?: string; error?: string }
@@ -160,7 +167,7 @@ export async function twoFactorSetupAction(_previous: TwoFactorState, formData: 
     return { step: "idle" };
   }
 
-  const result = confirmTotpSetup(user.id, str(formData, "code"), user.sessionId);
+  const result = await confirmTotpSetup(user.id, str(formData, "code"), user.sessionId);
   if (result.ok) {
     // No revalidatePath here: refreshing now would swap this form for the "on" view and lose the
     // recovery codes before they're saved. The client refreshes when the user presses Done.
@@ -168,20 +175,21 @@ export async function twoFactorSetupAction(_previous: TwoFactorState, formData: 
   }
   const pending = getAdminById(user.id)?.totpPendingSecret;
   if (result.reason === "no-setup" || !pending) return { step: "idle", error: "Setup expired. Start again." };
+  if (result.reason === "throttled") return { step: "setup", ...totpSetupDetails(user.username, pending), error: throttledMessage };
   return { step: "setup", ...totpSetupDetails(user.username, pending), error: "That code didn't match. Check your phone's clock and try the newest code." };
 }
 
 export async function regenerateRecoveryCodesAction(_previous: TwoFactorState, formData: FormData): Promise<TwoFactorState> {
   const user = await requireAccountUser();
-  const result = regenerateRecoveryCodes(user.id, str(formData, "code"));
-  if (!result.ok) return { step: "idle", error: "That code didn't match." };
+  const result = await regenerateRecoveryCodes(user.id, str(formData, "code"));
+  if (!result.ok) return { step: "idle", error: result.reason === "throttled" ? throttledMessage : "That code didn't match." };
   return { step: "codes", recoveryCodes: result.recoveryCodes, message: "New recovery codes created. The old ones no longer work." };
 }
 
 export async function disableTwoFactorAction(formData: FormData) {
   const user = await requireAccountUser();
   const result = await disableTwoFactor(user.id, (formData.get("currentPassword") as string | null) ?? "", str(formData, "code"), user.sessionId);
-  if (!result.ok) redirect(adminUrl(result.reason === "code" ? "code-error" : "password-error"));
+  if (!result.ok) redirect(adminUrl(reauthError(result.reason)));
   revalidatePath("/settings");
   redirect(adminUrl("2fa-disabled"));
 }

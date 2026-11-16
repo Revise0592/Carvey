@@ -44,9 +44,9 @@ async function freshModules() {
 }
 
 /** Turns on 2FA for the user and returns the secret. */
-function enrol(db: Awaited<ReturnType<typeof freshModules>>["db"], twoFactor: Awaited<ReturnType<typeof freshModules>>["twoFactor"], userId: number) {
+async function enrol(db: Awaited<ReturnType<typeof freshModules>>["db"], twoFactor: Awaited<ReturnType<typeof freshModules>>["twoFactor"], userId: number) {
   const { secret } = twoFactor.beginTotpSetup(db.getAdminById(userId)!);
-  const result = twoFactor.confirmTotpSetup(userId, totpCode(secret, totpCounter() - 1), null);
+  const result = await twoFactor.confirmTotpSetup(userId, totpCode(secret, totpCounter() - 1), null);
   if (!result.ok) throw new Error("enrol failed");
   return { secret, recoveryCodes: result.recoveryCodes };
 }
@@ -102,7 +102,7 @@ describe("sign-in", () => {
 
   it("asks for a second factor and accepts each code only once", async () => {
     const { auth, db, twoFactor, userId } = await freshModules();
-    const { secret } = enrol(db, twoFactor, userId);
+    const { secret } = await enrol(db, twoFactor, userId);
 
     expect(await auth.login("admin", "correct-horse")).toEqual({ status: "two-factor" });
     expect(jar.values.has("carvey_session")).toBe(false);
@@ -123,7 +123,7 @@ describe("sign-in", () => {
 
   it("accepts each recovery code once and ends the challenge after five wrong codes", async () => {
     const { auth, db, twoFactor, userId } = await freshModules();
-    const { recoveryCodes } = enrol(db, twoFactor, userId);
+    const { recoveryCodes } = await enrol(db, twoFactor, userId);
 
     await auth.login("admin", "correct-horse");
     expect(await auth.completeSecondFactor(recoveryCodes[3].toUpperCase())).toEqual({ status: "ok", usedRecoveryCode: true, recoveryCodesLeft: 9 });
@@ -139,7 +139,7 @@ describe("sign-in", () => {
 
   it("requires the password and a code to turn two-factor off, and signs out other devices", async () => {
     const { auth, db, twoFactor, userId } = await freshModules();
-    const { secret } = enrol(db, twoFactor, userId);
+    const { secret } = await enrol(db, twoFactor, userId);
     const other = auth.createSessionToken();
     db.createAuthSession(other, userId, new Date(Date.now() + 60_000).toISOString());
 
@@ -158,7 +158,7 @@ describe("sign-in", () => {
     const other = auth.createSessionToken();
     db.createAuthSession(other, userId, new Date(Date.now() + 60_000).toISOString());
 
-    expect(await auth.changePassword(userId, "correct-horse", "battery-staple", current!.sessionId)).toBe(true);
+    expect(await auth.changePassword(userId, "correct-horse", "battery-staple", current!.sessionId)).toBe("ok");
     expect(db.getAuthSession(other)?.revokedAt).toEqual(expect.any(String));
     expect(await auth.currentUser()).toMatchObject({ id: userId });
     db.closeDbForTests();

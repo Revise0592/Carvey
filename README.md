@@ -107,6 +107,7 @@ To open the dev server from another device (a phone on your LAN), list its addre
 | `CARVEY_PROXY_SECRET_HEADER` | Header carrying the secret. Default `X-Carvey-Proxy-Secret` |
 | `CARVEY_PROXY_USER_HEADER` | Optional. Header with the signed-in user from your proxy, e.g. `Remote-User`. When set, requests without it are refused |
 | `CARVEY_ALLOWED_ORIGINS` | Extra origins allowed to post to Carvey, comma-separated. Only needed if your proxy rewrites the `Host` header without setting `X-Forwarded-Host` |
+| `CARVEY_TRUSTED_PROXY_HOPS` | How many proxies sit in front of Carvey (default `1`). Used to read the real client address from `X-Forwarded-For` for sign-in rate limits. `0` ignores the header (no proxy) |
 | `CARVEY_SECURE_COOKIES` | `true` or `false` to force the session cookie's Secure flag. Default: on when the request arrived over HTTPS |
 | `CARVEY_RESET_2FA` | Set to `true` to turn off two-factor on startup (see below) |
 | `CARVEY_DISABLE_SCHEDULER` | Set to `true` to stop the built-in daily notification check (for example, when running several replicas) |
@@ -133,7 +134,7 @@ To open the dev server from another device (a phone on your LAN), list its addre
 
 **Password (default).** Sign in with your username and password. Turn on two-factor in **Settings → Admin**: scan the QR code with any authenticator app, then save the 10 recovery codes it gives you. Each recovery code works once.
 
-Failed sign-ins are rate limited (5 per 15 minutes from one client, 25 per 15 minutes for the account). Sessions last 30 days. **Settings → Admin** lists signed-in devices and can sign them out. Changing your password, or turning two-factor on or off, signs out every other device.
+Failed sign-ins are rate limited (5 per 15 minutes from one client, 25 per 15 minutes for the account). Browsers you've signed in from before are remembered for a year and keep their own limit, so someone guessing your password can't lock you out of your own devices. Re-entering your password or code in **Settings → Admin** is limited to 5 wrong tries per 15 minutes. Sessions last 30 days. **Settings → Admin** lists signed-in devices and can sign them out. Changing your password, or turning two-factor on or off, signs out every other device.
 
 **Behind a reverse proxy that handles sign-in** (Authelia, Authentik, Cloudflare Access, oauth2-proxy, ...). Set:
 

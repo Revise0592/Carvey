@@ -77,7 +77,7 @@ function scrubShowcaseCopy(filePath) {
       const exists = copy.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?").get(table);
       if (exists) copy.exec(`DELETE FROM "${table}"`);
     }
-    copy.exec("DELETE FROM app_settings WHERE key LIKE 'notify.%' OR key LIKE 'calendar.%' OR key = 'authDisabled'");
+    copy.exec("DELETE FROM app_settings WHERE key LIKE 'notify.%' OR key LIKE 'calendar.%' OR key IN ('authDisabled', 'auth.deviceSecret')");
     copy.exec("VACUUM");
   } finally {
     copy.close();

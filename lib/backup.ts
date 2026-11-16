@@ -228,7 +228,7 @@ const tablesNotRestored = new Set(["auth_sessions", "auth_challenges", "auth_thr
  * Settings that stay as they are on this server when restoring. Otherwise a backup taken with
  * sign-in turned off (or a tampered one) could silently turn sign-in off here.
  */
-const settingsNotRestored = ["authDisabled"];
+const settingsNotRestored = ["authDisabled", "auth.deviceSecret"];
 
 /**
  * The packaged showcase backup is committed to a public repository, so it is written without this

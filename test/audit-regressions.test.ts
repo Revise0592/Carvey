@@ -342,3 +342,67 @@ describe("record form input", () => {
     expect(() => optionalText(form, "notes")).toThrow();
   });
 });
+
+describe("account lockout by strangers", () => {
+  it("still lets a known device sign in while the account is locked for everyone else", async () => {
+    await freshDataDir("carvey-audit-device-");
+    const db = await import("@/lib/db");
+    const auth = await import("@/lib/auth");
+    db.createAdminUser("admin", await bcrypt.hash("correct-horse", 4));
+
+    // The owner signs in once from their phone and gets a known-device cookie.
+    await expect(auth.login("admin", "correct-horse")).resolves.toEqual({ status: "ok" });
+    const deviceCookie = cookieMock.set.mock.calls.find(([name]) => name === "carvey_device")?.[1] as string;
+    expect(deviceCookie).toMatch(/^1\.\d+\.[a-f0-9]{24}\.[\w-]+$/);
+
+    // A stranger rotates through addresses until the account-wide limit locks the account.
+    let address = 0;
+    headerMock.get.mockImplementation((name: string) => (name === "x-forwarded-for" ? `203.0.113.${address}` : null));
+    for (; address < 25; address++) await auth.login("admin", "guess");
+    await expect(auth.login("admin", "correct-horse")).resolves.toMatchObject({ status: "throttled" });
+
+    // The owner's phone is unaffected.
+    cookieMock.get.mockImplementation((name: string) => (name === "carvey_device" ? { value: deviceCookie } : undefined));
+    await expect(auth.login("admin", "correct-horse")).resolves.toEqual({ status: "ok" });
+  });
+
+  it("rejects forged, expired or other-account device cookies", async () => {
+    await freshDataDir("carvey-audit-device-verify-");
+    const device = await import("@/lib/security/known-device");
+    const now = Date.now();
+    const token = device.issueKnownDeviceToken(1, now);
+    expect(device.verifyKnownDeviceToken(token, 1, now)).toMatch(/^[a-f0-9]{24}$/);
+    expect(device.verifyKnownDeviceToken(token, 2, now)).toBeNull();
+    expect(device.verifyKnownDeviceToken(token.replace(/.$/, (c) => (c === "A" ? "B" : "A")), 1, now)).toBeNull();
+    expect(device.verifyKnownDeviceToken(token, 1, now + (device.knownDeviceMaxAgeSeconds + 60) * 1000)).toBeNull();
+    expect(device.verifyKnownDeviceToken("2.1.aaaaaaaaaaaaaaaaaaaaaaaa.x", 2, now)).toBeNull();
+  });
+});
+
+describe("client address for rate limiting", () => {
+  const headers = (values: Record<string, string>) => ({ get: (name: string) => values[name] ?? null });
+
+  it("takes the entry written by the trusted proxy, not one the client sent", async () => {
+    const { clientAddress } = await import("@/lib/security/request");
+    // The client sent a fake X-Forwarded-For; Traefik appended the real address.
+    expect(clientAddress(headers({ "x-forwarded-for": "1.2.3.4, 198.51.100.7" }), {})).toBe("198.51.100.7");
+    expect(clientAddress(headers({ "x-forwarded-for": "198.51.100.7, 10.0.0.2" }), { CARVEY_TRUSTED_PROXY_HOPS: "2" })).toBe("198.51.100.7");
+    expect(clientAddress(headers({ "x-forwarded-for": "1.2.3.4" }), { CARVEY_TRUSTED_PROXY_HOPS: "0" })).toBe("direct");
+    expect(clientAddress(headers({ "x-real-ip": "198.51.100.9" }), {})).toBe("198.51.100.9");
+    expect(clientAddress(headers({}), {})).toBe("direct");
+  });
+});
+
+describe("re-authentication before account changes", () => {
+  it("is throttled, so a stolen session can't guess the password", async () => {
+    await freshDataDir("carvey-audit-reauth-");
+    const db = await import("@/lib/db");
+    const twoFactor = await import("@/lib/two-factor");
+    const userId = Number(db.createAdminUser("admin", await bcrypt.hash("correct-horse", 4)).lastInsertRowid);
+
+    const guesses = await Promise.all(Array.from({ length: 8 }, () => twoFactor.verifyReauthentication(userId, "guess", null)));
+    expect(guesses.filter((r) => !r.ok && r.reason === "password")).toHaveLength(5);
+    expect(guesses.filter((r) => !r.ok && r.reason === "throttled")).toHaveLength(3);
+    await expect(twoFactor.verifyReauthentication(userId, "correct-horse", null)).resolves.toEqual({ ok: false, reason: "throttled" });
+  });
+});

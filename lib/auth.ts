@@ -5,7 +5,6 @@ import crypto from "node:crypto";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import {
-  clearThrottle,
   createAuthChallenge,
   createAuthSession,
   createFirstAdminUser,
@@ -16,18 +15,19 @@ import {
   getAuthChallenge,
   getAuthSession,
   getFirstAdmin,
-  getThrottle,
   hasAdminUser,
   pruneAuthSessions,
   recordAuthChallengeFailure,
   revokeAuthSession,
   revokeOtherAuthSessions,
-  saveThrottle,
   touchAuthSession,
   type AdminUser
 } from "./db";
 import { changePasswordForAdmin, changeUsernameForAdmin } from "./account";
 import { checkSecondFactor } from "./two-factor";
+import { issueKnownDeviceToken, knownDeviceCookieName, knownDeviceMaxAgeSeconds, verifyKnownDeviceToken } from "./security/known-device";
+import { clientAddress } from "./security/request";
+import { clearThrottle, withThrottle, type ThrottleKey } from "./security/throttle";
 
 const cookieName = "carvey_session";
 const challengeCookieName = "carvey_2fa";
@@ -145,54 +145,32 @@ async function startSession(userId: number) {
   const token = createSessionToken();
   createAuthSession(token, userId, sessionExpiry(), requestHeaders.get("user-agent"));
   jar.set(cookieName, token, buildSessionCookieOptions(requestHeaders));
+  // Remember this browser so a lockout aimed at the account can't shut it out (see known-device.ts).
+  if (!verifyKnownDeviceToken(jar.get(knownDeviceCookieName)?.value, userId)) {
+    jar.set(knownDeviceCookieName, issueKnownDeviceToken(userId), buildSessionCookieOptions(requestHeaders, knownDeviceMaxAgeSeconds));
+  }
   pruneAuthSessions();
 }
 
 // ─── Throttling ─────────────────────────────────────────────────────────────
 
-const throttleWindowMs = 15 * 60 * 1000;
 const perClientLimit = 5;
 const perAccountLimit = 25;
 
-function clientKey(requestHeaders: HeaderLike) {
-  // Only meaningful behind a proxy that sets it; spoofed values still hit the per-account limit.
-  return requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() || requestHeaders.get("x-real-ip") || "direct";
-}
-
-function throttleKeys(username: string, requestHeaders: HeaderLike) {
+/**
+ * Which counters a sign-in attempt for `username` is charged to. A browser holding a valid
+ * known-device cookie for the account has its own counter and is exempt from the account-wide
+ * lock; everyone else shares the per-client and per-account limits.
+ */
+async function throttleKeysFor(username: string, requestHeaders: HeaderLike): Promise<ThrottleKey[]> {
   const account = username.trim().toLowerCase();
+  const user = getAdminByUsername(username);
+  const deviceId = user ? verifyKnownDeviceToken((await cookies()).get(knownDeviceCookieName)?.value, user.id) : null;
+  if (deviceId) return [{ key: `login:${account}:device:${deviceId}`, limit: perClientLimit }];
   return [
-    { key: `login:${account}:${clientKey(requestHeaders)}`, limit: perClientLimit },
+    { key: `login:${account}:${clientAddress(requestHeaders)}`, limit: perClientLimit },
     { key: `login:${account}`, limit: perAccountLimit }
   ];
-}
-
-/** Seconds until another attempt is allowed, or 0. */
-export function throttleRetryAfter(keys: Array<{ key: string }>, now = Date.now()) {
-  let wait = 0;
-  for (const { key } of keys) {
-    const state = getThrottle(key);
-    if (state?.lockedUntil) wait = Math.max(wait, Math.ceil((Date.parse(state.lockedUntil) - now) / 1000));
-  }
-  return Math.max(0, wait);
-}
-
-function recordThrottleFailure(keys: Array<{ key: string; limit: number }>, now = Date.now()) {
-  for (const { key, limit } of keys) {
-    const state = getThrottle(key);
-    const windowStart = state && now - Date.parse(state.windowStartedAt) < throttleWindowMs ? state.windowStartedAt : new Date(now).toISOString();
-    const failures = (state && windowStart === state.windowStartedAt ? state.failures : 0) + 1;
-    const lockedUntil = failures >= limit ? new Date(Date.parse(windowStart) + throttleWindowMs).toISOString() : null;
-    saveThrottle(key, { failures, windowStartedAt: windowStart, lockedUntil });
-  }
-}
-
-/** Gives back an attempt that was charged up front but turned out to be a correct password. */
-function refundThrottleAttempt(key: string) {
-  const state = getThrottle(key);
-  if (!state) return;
-  if (state.failures <= 1) clearThrottle(key);
-  else saveThrottle(key, { ...state, failures: state.failures - 1, lockedUntil: null });
 }
 
 // ─── Sign-in ────────────────────────────────────────────────────────────────
@@ -211,21 +189,16 @@ export type LoginResult =
 
 export async function login(username: string, password: string): Promise<LoginResult> {
   const requestHeaders = await headers();
-  const keys = throttleKeys(username, requestHeaders);
-  const retryAfterSeconds = throttleRetryAfter(keys);
-  if (retryAfterSeconds > 0) return { status: "throttled", retryAfterSeconds };
-
-  // Charge the attempt before the (async) bcrypt check. Checking and charging happen in the same
-  // synchronous step, so a burst of parallel requests can't all pass the check before any failure
-  // is recorded. A correct password gets its attempt back below.
-  recordThrottleFailure(keys);
+  const keys = await throttleKeysFor(username, requestHeaders);
   const user = getAdminByUsername(username);
-  const ok = await bcrypt.compare(password, user?.passwordHash ?? timingDummyHash);
-  if (!user || !ok) return { status: "invalid" };
-  clearThrottle(keys[0].key);
-  refundThrottleAttempt(keys[1].key);
+  const outcome = await withThrottle(keys, () => bcrypt.compare(password, user?.passwordHash ?? timingDummyHash));
+  if (outcome.status === "throttled") return outcome;
+  if (outcome.status === "failed" || !user) return { status: "invalid" };
 
   if (user.totpEnabledAt && user.totpSecret) {
+    // The password was right: this client's own counter starts again, but the account-wide one
+    // only clears once the second factor is right too.
+    clearThrottle(keys[0].key);
     const token = createSessionToken();
     createAuthChallenge(token, user.id, new Date(Date.now() + challengeMaxAgeSeconds * 1000).toISOString());
     const jar = await cookies();
@@ -233,7 +206,7 @@ export async function login(username: string, password: string): Promise<LoginRe
     return { status: "two-factor" };
   }
 
-  clearThrottle(keys[1].key);
+  for (const { key } of keys) clearThrottle(key);
   await startSession(user.id);
   return { status: "ok" };
 }
@@ -264,14 +237,12 @@ export async function completeSecondFactor(code: string): Promise<SecondFactorRe
   }
   const { user, challenge } = pending;
   const requestHeaders = await headers();
-  const keys = throttleKeys(user.username, requestHeaders);
-  const retryAfterSeconds = throttleRetryAfter(keys);
-  if (retryAfterSeconds > 0) return { status: "throttled", retryAfterSeconds };
-
-  const check = checkSecondFactor(user, code);
+  const keys = await throttleKeysFor(user.username, requestHeaders);
+  let check = { ok: false } as ReturnType<typeof checkSecondFactor>;
+  const outcome = await withThrottle(keys, () => (check = checkSecondFactor(user, code)).ok);
+  if (outcome.status === "throttled") return outcome;
   if (!check.ok) {
     recordAuthChallengeFailure(challenge.id);
-    recordThrottleFailure(keys);
     const attemptsLeft = maxChallengeAttempts - challenge.attempts - 1;
     if (attemptsLeft <= 0) {
       deleteAuthChallenge(challenge.id);
@@ -368,11 +339,11 @@ export async function changeUsername(userId: number, username: string) {
   changeUsernameForAdmin(userId, username);
 }
 
-/** Changing the password signs out every other session. */
+/** Changing the password signs out every other session. Returns "ok", "invalid" or "throttled". */
 export async function changePassword(userId: number, currentPassword: string, nextPassword: string, keepSessionId: string | null = null) {
-  const ok = await changePasswordForAdmin(userId, currentPassword, nextPassword);
-  if (ok) revokeOtherAuthSessions(userId, keepSessionId);
-  return ok;
+  const result = await changePasswordForAdmin(userId, currentPassword, nextPassword);
+  if (result === "ok") revokeOtherAuthSessions(userId, keepSessionId);
+  return result;
 }
 
 export async function logout() {

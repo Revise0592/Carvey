@@ -19,6 +19,7 @@ const accountMessages: Record<string, { tone: "success" | "error"; text: string 
   "password-updated": { tone: "success", text: "Password updated. Other devices have been signed out." },
   "password-error": { tone: "error", text: "Your current password didn't match." },
   "code-error": { tone: "error", text: "That two-factor code didn't match." },
+  "reauth-throttled": { tone: "error", text: "Too many wrong attempts. Wait 15 minutes and try again." },
   "2fa-disabled": { tone: "success", text: "Two-factor authentication is off. Other devices have been signed out." },
   "sessions-revoked": { tone: "success", text: "Signed out of every other device." },
   "session-revoked": { tone: "success", text: "That device has been signed out." },
@@ -31,6 +32,7 @@ const appMessages: Record<string, { tone: "success" | "error"; text: string }> =
   "auth-confirm-required": { tone: "error", text: "Tick the confirmation box before turning sign-in off." },
   "auth-password-error": { tone: "error", text: "Your current password didn't match, so sign-in is still on." },
   "auth-code-error": { tone: "error", text: "That two-factor code didn't match, so sign-in is still on." },
+  "auth-reauth-throttled": { tone: "error", text: "Too many wrong attempts, so sign-in is still on. Wait 15 minutes and try again." },
   "auth-env-managed": { tone: "error", text: "Sign-in is set by CARVEY_AUTH_MODE, so it can't be changed here." }
 };
 

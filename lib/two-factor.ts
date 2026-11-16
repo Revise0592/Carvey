@@ -11,6 +11,7 @@ import {
   setRecoveryCodes,
   type AdminUser
 } from "./db";
+import { reauthKeys, withThrottle } from "./security/throttle";
 import { generateRecoveryCodes, generateTotpSecret, hashRecoveryCode, otpauthUri, verifyTotp } from "./security/totp";
 
 export function isTwoFactorEnabled(user: Pick<AdminUser, "totpEnabledAt" | "totpSecret">) {
@@ -46,9 +47,16 @@ export function checkSecondFactor(user: AdminUser, input: string): CheckResult {
  * factor when two-factor is on.
  */
 export async function verifyReauthentication(userId: number, password: string, code: string | null) {
-  const user = getAdminById(userId);
-  if (!user || !(await bcrypt.compare(password, user.passwordHash))) return { ok: false as const, reason: "password" as const };
-  if (isTwoFactorEnabled(user) && !checkSecondFactor(user, code ?? "").ok) return { ok: false as const, reason: "code" as const };
+  // Throttled per account, so a stolen session can't be used to guess the password or a code.
+  let reason = "password" as "password" | "code";
+  const outcome = await withThrottle(reauthKeys(userId), async () => {
+    const user = getAdminById(userId);
+    if (!user || !(await bcrypt.compare(password, user.passwordHash))) return false;
+    reason = "code";
+    return !isTwoFactorEnabled(user) || checkSecondFactor(user, code ?? "").ok;
+  });
+  if (outcome.status === "throttled") return { ok: false as const, reason: "throttled" as const };
+  if (outcome.status === "failed") return { ok: false as const, reason };
   return { ok: true as const };
 }
 
@@ -72,10 +80,13 @@ export function totpSetupDetails(username: string, secret: string) {
 }
 
 /** Turns two-factor on once the user proves their app works, and returns fresh recovery codes. */
-export function confirmTotpSetup(userId: number, code: string, keepSessionId: string | null) {
+export async function confirmTotpSetup(userId: number, code: string, keepSessionId: string | null) {
   const user = getAdminById(userId);
   if (!user?.totpPendingSecret) return { ok: false as const, reason: "no-setup" as const };
-  const counter = verifyTotp(user.totpPendingSecret, code);
+  const pendingSecret = user.totpPendingSecret;
+  let counter: number | null = null;
+  const outcome = await withThrottle(reauthKeys(userId), () => (counter = verifyTotp(pendingSecret, code)) !== null);
+  if (outcome.status === "throttled") return { ok: false as const, reason: "throttled" as const };
   if (counter === null) return { ok: false as const, reason: "code" as const };
   const codes = generateRecoveryCodes();
   enableTotp(user.id, user.totpPendingSecret, counter, codes.map(hashRecoveryCode));
@@ -95,9 +106,12 @@ export async function disableTwoFactor(userId: number, password: string, code: s
   return { ok: true as const };
 }
 
-export function regenerateRecoveryCodes(userId: number, code: string) {
+export async function regenerateRecoveryCodes(userId: number, code: string) {
   const user = getAdminById(userId);
-  if (!user || !checkSecondFactor(user, code).ok) return { ok: false as const };
+  if (!user) return { ok: false as const, reason: "code" as const };
+  const outcome = await withThrottle(reauthKeys(userId), () => checkSecondFactor(user, code).ok);
+  if (outcome.status === "throttled") return { ok: false as const, reason: "throttled" as const };
+  if (outcome.status === "failed") return { ok: false as const, reason: "code" as const };
   const codes = generateRecoveryCodes();
   setRecoveryCodes(userId, codes.map(hashRecoveryCode));
   return { ok: true as const, recoveryCodes: codes };
