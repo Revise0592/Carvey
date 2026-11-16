@@ -1,7 +1,7 @@
 import Script from "next/script";
 import { themePalettes, themeShapes } from "@/lib/theme-options";
 
-export function ThemeScript() {
+export function ThemeScript({ nonce }: { nonce?: string }) {
   const palettes = themePalettes.map((palette) => palette.id);
   const shapes = [...themeShapes];
   const script = `
@@ -29,5 +29,5 @@ export function ThemeScript() {
       });
     })();
   `;
-  return <Script id="carvey-theme-script" strategy="afterInteractive" dangerouslySetInnerHTML={{ __html: script }} />;
+  return <Script id="carvey-theme-script" strategy="afterInteractive" nonce={nonce} dangerouslySetInnerHTML={{ __html: script }} />;
 }

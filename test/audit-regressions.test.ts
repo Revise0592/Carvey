@@ -10,7 +10,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
  */
 
 const cookieMock = vi.hoisted(() => ({ set: vi.fn(), delete: vi.fn(), get: vi.fn() }));
-const headerMock = vi.hoisted(() => ({ get: vi.fn((name: string): string | null => (name ? null : null)) }));
+// Typed with a parameter so tests can mock per-header values; returns no headers by default.
+const headerMock = vi.hoisted(() => ({ get: vi.fn<(name: string) => string | null>(() => null) }));
 
 vi.mock("server-only", () => ({}));
 vi.mock("next/headers", () => ({
@@ -421,5 +422,20 @@ describe("To Buy links", () => {
     for (const bad of ["javascript:alert(1)", "data:text/html,<script>", "ftp://example.com/x"]) {
       expect(() => optionalHttpUrl(form(bad), "url")).toThrow();
     }
+  });
+});
+
+describe("content security policy", () => {
+  it("only lets scripts with this request's nonce run, and keeps LAN http access working", async () => {
+    const { buildContentSecurityPolicy, createNonce } = await import("@/lib/security/csp");
+    const nonce = createNonce();
+    expect(nonce).not.toBe(createNonce());
+    const policy = buildContentSecurityPolicy(nonce);
+    expect(policy).toContain(`script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`);
+    expect(policy).not.toMatch(/script-src[^;]*'unsafe-inline'/);
+    expect(policy).not.toContain("unsafe-eval");
+    expect(policy).toContain("frame-ancestors 'none'");
+    expect(policy).not.toContain("upgrade-insecure-requests");
+    expect(buildContentSecurityPolicy(nonce, { development: true })).toContain("'unsafe-eval'");
   });
 });
