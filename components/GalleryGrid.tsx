@@ -94,6 +94,9 @@ export function GalleryGrid({
               onClick={() => setOpen(idx)}
               aria-label={`View ${item.caption || item.recordDescription || item.originalFilename}`}
             >
+              {/* Plain <img> on purpose: uploads are served by an authenticated route and already
+                  resized (gallery thumbnails), so next/image's optimiser would add nothing. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={item.thumbnailPath ?? item.filePath}
                 alt={item.caption || item.recordDescription || item.originalFilename}
@@ -199,6 +202,7 @@ export function GalleryGrid({
                 </button>
               </>
             ) : null}
+            {/* eslint-disable-next-line @next/next/no-img-element -- the original upload, shown full size */}
             <img
               src={current.filePath}
               alt={current.caption || current.recordDescription || current.originalFilename}
