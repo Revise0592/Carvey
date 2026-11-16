@@ -26,6 +26,10 @@ RUN useradd --system --uid 1001 --create-home carvey
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
+# Account recovery (`docker exec <container> node scripts/reset-password.mjs`) runs outside Next,
+# so neither the script nor bcryptjs is part of the traced standalone output: copy them in.
+COPY --from=builder /app/scripts/reset-password.mjs ./scripts/reset-password.mjs
+COPY --from=deps /app/node_modules/bcryptjs ./node_modules/bcryptjs
 RUN mkdir -p /app/data && chown -R carvey:carvey /app
 
 USER carvey
