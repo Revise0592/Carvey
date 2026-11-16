@@ -10,6 +10,10 @@ updates:
         patterns: ["next", "eslint-config-next", "react", "react-dom", "@types/react", "@types/react-dom"]
       minor-and-patch:
         update-types: ["minor", "patch"]
+      # Majors arrive as one PR too. If one of them breaks CI, split it out with
+      # `@dependabot ignore <package> major version` on that PR and merge the rest.
+      major:
+        update-types: ["major"]
     ignore:
       # typescript-eslint (used by eslint-config-next) doesn't support TypeScript 7 yet, so lint
       # fails on it. Remove this once typescript-eslint supports TS 7.
