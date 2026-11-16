@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { setupAction } from "../actions";
 import { BrandLogo } from "@/components/BrandLogo";
+import { ForgetOfflinePages } from "@/components/ForgetOfflinePages";
 import { hasAdminUser } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -10,6 +11,7 @@ export default async function SetupPage({ searchParams }: { searchParams: Promis
   const { error } = await searchParams;
   return (
     <main className="auth-shell">
+      <ForgetOfflinePages />
       <section className="auth-card">
         <div className="auth-header auth-header-wordmark">
           <div className="auth-header-copy">
