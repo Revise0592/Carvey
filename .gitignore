@@ -47,3 +47,6 @@ Thumbs.db
 
 # Claude Code local settings/config
 .claude/
+
+# Local audit notes (kept out of the repository)
+/docs/audit/
