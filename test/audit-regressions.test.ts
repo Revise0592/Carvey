@@ -581,3 +581,24 @@ describe("health check", () => {
     }
   });
 });
+
+describe("restoring while signed in", () => {
+  it("keeps the session that ran the restore, and only that one", async () => {
+    await freshDataDir("carvey-audit-restore-session-");
+    const db = await import("@/lib/db");
+    const backup = await import("@/lib/backup");
+    const adminId = Number(db.createAdminUser("owner", await bcrypt.hash("pw-123456", 4)).lastInsertRowid);
+    db.createVehicle(vehicleInput());
+    const { buffer } = await backup.createBackupZip();
+    db.createAuthSession("a".repeat(48), adminId, new Date(Date.now() + 86_400_000).toISOString(), "Mine");
+    db.createAuthSession("b".repeat(48), adminId, new Date(Date.now() + 86_400_000).toISOString(), "Other");
+    const mine = db.hashToken("a".repeat(48));
+
+    const staged = await backup.stageRestorePreview(new File([new Uint8Array(buffer)], "b.zip", { type: "application/zip" }));
+    if (!staged.ok) throw new Error(staged.message);
+    await expect(backup.confirmRestore(staged.summary.token, { keepSessionId: mine })).resolves.toMatchObject({ ok: true });
+
+    expect(db.getAuthSession("a".repeat(48))).toMatchObject({ id: mine, adminUserId: adminId, revokedAt: null });
+    expect(db.getAuthSession("b".repeat(48))).toBeUndefined();
+  });
+});

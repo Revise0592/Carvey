@@ -8,7 +8,7 @@ import { pipeline } from "node:stream/promises";
 import yazl from "yazl";
 import Database from "better-sqlite3";
 import packageJson from "../package.json";
-import { dbFileName, getDb } from "./db";
+import { dbFileName, getAuthSessionById, getDb, getFirstAdmin, reinstateAuthSession } from "./db";
 import { dataDir, ensureDataDirs, restoreRollbackDir, restoreStagingDir, tempDir, uploadDir } from "./paths";
 
 const backupFormatVersion = 1;
@@ -192,7 +192,12 @@ export async function readRestoreSummary(token: string | undefined) {
   }
 }
 
-export async function confirmRestore(token: string) {
+/**
+ * Restores a staged backup. Restoring empties the sign-in tables, so `keepSessionId` (the hashed id
+ * of the session that asked for the restore) is put back afterwards, attached to the restored
+ * admin, and the person who restored stays signed in.
+ */
+export async function confirmRestore(token: string, options: { keepSessionId?: string | null } = {}) {
   if (!isSafeToken(token)) return { ok: false as const, message: "Invalid restore token." };
   const stageDir = path.join(restoreStagingDir, token);
   const zipPath = path.join(stageDir, "backup.zip");
@@ -208,7 +213,10 @@ export async function confirmRestore(token: string) {
   try {
     await validateAndSummariseZip(buffer, token, extractDir);
     const rollbackDir = await createRollbackSnapshot();
+    const session = options.keepSessionId ? getAuthSessionById(options.keepSessionId) : undefined;
     await restoreExtractedBackup(extractDir);
+    const admin = getFirstAdmin();
+    if (session && admin) reinstateAuthSession(session, admin.id);
     await fsp.rm(stageDir, { recursive: true, force: true });
     return { ok: true as const, rollbackDir };
   } catch (error) {
