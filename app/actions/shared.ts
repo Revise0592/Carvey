@@ -2,6 +2,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { revalidatePath } from "next/cache";
+import { unstable_rethrow } from "next/navigation";
 import { z } from "zod";
 import { syncShowcaseDemoBackupIfActive } from "@/lib/backup";
 import { getOrCreateWorkshopByName } from "@/lib/db";
@@ -18,15 +19,40 @@ export function nullableStr(formData: FormData, key: string) {
   return value.length ? value : null;
 }
 
+// ─── Validation ─────────────────────────────────────────────────────────────
+
 /**
  * Number and date fields are validated here as well as in the browser: a client without a native
  * date picker, or a script, could otherwise store "next tuesday" as a date, which then crashed
- * every page that formats it.
+ * every page that formats it. Failures throw FormFieldError, which formResult() turns into a
+ * message the form shows ("Date must be a date (YYYY-MM-DD)").
  */
+export class FormFieldError extends Error {
+  constructor(readonly field: string, problem: string) {
+    super(`${fieldLabel(field)} ${problem}`);
+    this.name = "FormFieldError";
+  }
+}
+
+/** "dueOdometer" → "Due odometer". */
+export function fieldLabel(key: string) {
+  const words = key.replace(/([a-z0-9])([A-Z])/g, "$1 $2").toLowerCase();
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+function field<T>(key: string, schema: z.ZodType<T>, value: unknown): T {
+  const result = schema.safeParse(value);
+  if (!result.success) throw new FormFieldError(key, result.error.issues[0]?.message ?? "isn't valid");
+  return result.data;
+}
+
+const numberSchema = z.number({ error: "must be a number" }).refine(Number.isFinite, "must be a number");
+const isoDateSchema = z.string().refine(isIsoDate, "must be a date (YYYY-MM-DD)");
+
 export function nullableInt(formData: FormData, key: string) {
   const value = str(formData, key);
   if (!value.length) return null;
-  return z.coerce.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).parse(Math.trunc(Number(value)));
+  return Math.trunc(field(key, numberSchema.pipe(z.number().min(0, "can't be negative").max(Number.MAX_SAFE_INTEGER, "is too large")), Number(value)));
 }
 
 export function money(formData: FormData, key: string) {
@@ -36,18 +62,37 @@ export function money(formData: FormData, key: string) {
 export function nullableMoney(formData: FormData, key: string) {
   const value = str(formData, key);
   if (!value.length) return null;
-  return z.number().finite().min(-1e9).max(1e9).parse(Number(value));
+  return field(key, numberSchema.pipe(z.number().min(-1e9, "is too large").max(1e9, "is too large")), Number(value));
 }
 
-const isoDateSchema = z.string().refine(isIsoDate, "Enter a date as YYYY-MM-DD");
-
 export function isoDate(formData: FormData, key: string) {
-  return isoDateSchema.parse(str(formData, key));
+  const value = str(formData, key);
+  if (!value) throw new FormFieldError(key, "is required");
+  return field(key, isoDateSchema, value);
 }
 
 export function nullableIsoDate(formData: FormData, key: string) {
   const value = str(formData, key);
-  return value.length ? isoDateSchema.parse(value) : null;
+  return value.length ? field(key, isoDateSchema, value) : null;
+}
+
+export type FormResult = { error: string } | undefined;
+
+/**
+ * Runs a form action and turns validation failures into `{ error }` for the form to show, instead
+ * of an error page (and instead of a thrown message, which production builds hide). Redirects and
+ * other Next.js control flow pass straight through.
+ */
+export async function formResult(run: () => Promise<unknown>): Promise<FormResult> {
+  try {
+    await run();
+    return undefined;
+  } catch (error) {
+    unstable_rethrow(error);
+    if (error instanceof FormFieldError) return { error: error.message };
+    if (error instanceof z.ZodError) return { error: "Some fields aren't valid. Check the form and try again." };
+    throw error;
+  }
 }
 
 export function workshopInput(formData: FormData) {
@@ -66,19 +111,19 @@ export function workshopInput(formData: FormData) {
 export function optionalHttpUrl(formData: FormData, key: string) {
   const value = nullableStr(formData, key);
   if (!value) return null;
-  const url = z.string().max(2000).url().parse(/^[a-z][a-z0-9+.-]*:/i.test(value) ? value : `https://${value}`);
-  if (!/^https?:$/i.test(new URL(url).protocol)) throw new z.ZodError([{ code: "custom", path: [key], message: "Use an http:// or https:// link", input: value }]);
+  const url = field(key, z.string().max(2000, "is too long").url("must be a web link"), /^[a-z][a-z0-9+.-]*:/i.test(value) ? value : `https://${value}`);
+  if (!/^https?:$/i.test(new URL(url).protocol)) throw new FormFieldError(key, "must be an http:// or https:// link");
   return url;
 }
 
 /** Required single-line text, trimmed, with a sensible length cap. */
 export function requiredText(formData: FormData, key: string, max = 200) {
-  return z.string().min(1).max(max).parse(str(formData, key));
+  return field(key, z.string().min(1, "is required").max(max, `must be ${max} characters or fewer`), str(formData, key));
 }
 
 /** Optional free text (notes, advisories), capped so one field can't bloat every page that shows it. */
 export function optionalText(formData: FormData, key: string, max = 10_000) {
-  return z.string().max(max).nullable().parse(nullableStr(formData, key));
+  return field(key, z.string().max(max, `must be ${max.toLocaleString("en-GB")} characters or fewer`).nullable(), nullableStr(formData, key));
 }
 
 /**

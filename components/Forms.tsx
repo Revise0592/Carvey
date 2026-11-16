@@ -39,6 +39,7 @@ import { addMonths } from "@/lib/dates";
 import { renewalTypeLabels, renewalTypeOptions } from "@/lib/renewals";
 import { todayIso } from "@/lib/dates";
 import type { RegionalSettings } from "@/lib/regional-settings";
+import { ActionForm } from "./ActionForm";
 import { ConfirmDelete } from "./ConfirmDelete";
 import { EditPanel } from "./EditPanel";
 import { ModalPanel } from "./ModalPanel";
@@ -46,7 +47,7 @@ import { ModalPanel } from "./ModalPanel";
 export function CreateVehicleForm({ registrationLabel = "Registration", autoOpenKey }: { registrationLabel?: string; autoOpenKey?: string }) {
   return (
     <ModalPanel trigger={<><Plus size={17} /> Add vehicle</>} title="Add vehicle" autoOpenKey={autoOpenKey}>
-      <form action={createVehicleAction} className="record-form">
+      <ActionForm action={createVehicleAction} className="record-form">
         <Field label="Make"><input name="make" required /></Field>
         <Field label="Model"><input name="model" required /></Field>
         <Field label="Year"><input name="year" type="number" min="1886" max="2100" /></Field>
@@ -57,7 +58,7 @@ export function CreateVehicleForm({ registrationLabel = "Registration", autoOpen
         <Field label="Purchase date"><input name="purchaseDate" type="date" /></Field>
         <Field label="Notes"><textarea name="notes" /></Field>
         <button className="primary-button" type="submit">Create vehicle</button>
-      </form>
+      </ActionForm>
     </ModalPanel>
   );
 }
@@ -67,7 +68,7 @@ export function EditVehicleForm({ vehicle, registrationLabel = "Registration" }:
   const deleteAction = deleteVehicleAction.bind(null, vehicle.id);
   return (
     <ModalPanel trigger={<><Pencil size={17} /> Edit</>} title="Edit car">
-      <form action={updateAction} className="record-form">
+      <ActionForm action={updateAction} className="record-form">
         <Field label="Make"><input name="make" defaultValue={vehicle.make} required /></Field>
         <Field label="Model"><input name="model" defaultValue={vehicle.model} required /></Field>
         <Field label="Year"><input name="year" type="number" min="1886" max="2100" defaultValue={vehicle.year ?? ""} /></Field>
@@ -82,7 +83,7 @@ export function EditVehicleForm({ vehicle, registrationLabel = "Registration" }:
           Mark as sold
         </label>
         <button className="primary-button" type="submit">Save car</button>
-      </form>
+      </ActionForm>
       <hr className="modal-divider" />
       <p className="muted">This removes {vehicle.make} {vehicle.model} and all of its logs.</p>
       <ConfirmDelete action={deleteAction} label="Delete car" />
@@ -94,14 +95,14 @@ export function DebugVehicleForm({ vehicle }: { vehicle: Vehicle }) {
   const action = updateVehicleDebugAction.bind(null, vehicle.id);
   return (
     <ModalPanel trigger="Debug" title="Debug car">
-      <form action={action} className="delete-confirm">
+      <ActionForm action={action} className="delete-confirm">
         <p className="muted">Debug easter egg controls for this car.</p>
         <label>
           <input type="checkbox" name="debugDestroyed" defaultChecked={Boolean(vehicle.debugDestroyed)} />
           Car has been destroyed
         </label>
         <button className="secondary-button" type="submit">Save debug flag</button>
-      </form>
+      </ActionForm>
     </ModalPanel>
   );
 }
@@ -111,7 +112,7 @@ export function EditMaintenanceForm({ record, categories, workshops }: { record:
   const deleteAction = deleteMaintenanceAction.bind(null, record.vehicleId, record.id);
   return (
     <EditPanel deleteAction={deleteAction} title="Edit maintenance">
-      <form action={updateAction} className="record-form">
+      <ActionForm action={updateAction} className="record-form">
         <Field label="Date"><input name="date" type="date" defaultValue={record.date} required /></Field>
         <Field label="Odometer"><input name="odometer" type="number" min="0" defaultValue={record.odometer ?? ""} /></Field>
         <Field label="Category">
@@ -130,7 +131,7 @@ export function EditMaintenanceForm({ record, categories, workshops }: { record:
         </Field>
         <Field label="Notes"><textarea name="notes" defaultValue={record.notes ?? ""} /></Field>
         <button className="primary-button" type="submit">Save changes</button>
-      </form>
+      </ActionForm>
     </EditPanel>
   );
 }
@@ -140,7 +141,7 @@ export function EditRepairForm({ record, workshops }: { record: RepairRecord; wo
   const deleteAction = deleteRepairAction.bind(null, record.vehicleId, record.id);
   return (
     <EditPanel deleteAction={deleteAction} title="Edit repair">
-      <form action={updateAction} className="record-form">
+      <ActionForm action={updateAction} className="record-form">
         <Field label="Date"><input name="date" type="date" defaultValue={record.date} required /></Field>
         <Field label="Odometer"><input name="odometer" type="number" min="0" defaultValue={record.odometer ?? ""} /></Field>
         <Field label="Fault or repair"><input name="fault" defaultValue={record.fault} required /></Field>
@@ -153,7 +154,7 @@ export function EditRepairForm({ record, workshops }: { record: RepairRecord; wo
         <Field label="Cost"><input name="cost" type="number" min="0" step="0.01" defaultValue={record.cost} /></Field>
         <Field label="Notes"><textarea name="notes" defaultValue={record.notes ?? ""} /></Field>
         <button className="primary-button" type="submit">Save changes</button>
-      </form>
+      </ActionForm>
     </EditPanel>
   );
 }
@@ -163,7 +164,7 @@ export function EditMotForm({ record, motLabel = "MOT" }: { record: MotRecord; m
   const deleteAction = deleteMotAction.bind(null, record.vehicleId, record.id);
   return (
     <EditPanel deleteAction={deleteAction} title={`Edit ${motLabel}`}>
-      <form action={updateAction} className="record-form">
+      <ActionForm action={updateAction} className="record-form">
         <Field label="Test date"><input name="testDate" type="date" defaultValue={record.testDate} required /></Field>
         <Field label="Expiry date"><input name="expiryDate" type="date" defaultValue={record.expiryDate} required /></Field>
         <Field label="Odometer"><input name="odometer" type="number" min="0" defaultValue={record.odometer ?? ""} /></Field>
@@ -176,7 +177,7 @@ export function EditMotForm({ record, motLabel = "MOT" }: { record: MotRecord; m
         <Field label="Certificate/reference"><input name="certificateRef" defaultValue={record.certificateRef ?? ""} /></Field>
         <Field label="Advisories"><textarea name="advisories" defaultValue={record.advisories ?? ""} /></Field>
         <button className="primary-button" type="submit">Save changes</button>
-      </form>
+      </ActionForm>
     </EditPanel>
   );
 }
@@ -186,7 +187,7 @@ export function EditReminderForm({ record, isLinked = false, motLabel = "MOT" }:
   const deleteAction = deleteReminderAction.bind(null, record.vehicleId, record.id);
   const isMotReminder = record.title.toLowerCase() === `${motLabel} due`.toLowerCase();
   const editForm = (
-    <form action={updateAction} className="record-form">
+    <ActionForm action={updateAction} className="record-form">
       <Field label="Title"><input name="title" defaultValue={record.title} required /></Field>
       <Field label="Due date"><input name="dueDate" type="date" defaultValue={record.dueDate ?? ""} /></Field>
       {!isMotReminder ? (
@@ -200,7 +201,7 @@ export function EditReminderForm({ record, isLinked = false, motLabel = "MOT" }:
           {!isMotReminder ? <option value="5000 miles">Every 5,000 miles</option> : null}
         </select></Field>
       <button className="primary-button" type="submit">Save changes</button>
-    </form>
+    </ActionForm>
   );
   if (record.renewalType) {
     return (
@@ -233,10 +234,10 @@ export function EditPlannedPurchaseForm({ record }: { record: PlannedPurchase })
   const deleteAction = deletePlannedPurchaseAction.bind(null, record.vehicleId, record.id);
   return (
     <EditPanel deleteAction={deleteAction} title="Edit To Buy Item">
-      <form action={updateAction} className="record-form">
+      <ActionForm action={updateAction} className="record-form">
         <PlannedPurchaseFields record={record} disabled={Boolean(record.purchasedDate)} />
         <button className="primary-button" type="submit" disabled={Boolean(record.purchasedDate)}>Save changes</button>
-      </form>
+      </ActionForm>
     </EditPanel>
   );
 }
@@ -245,7 +246,7 @@ export function MaintenanceForm({ vehicleId, categories, workshops, autoOpenKey 
   const action = createMaintenanceAction.bind(null, vehicleId);
   return (
     <ModalPanel trigger={<><Wrench size={17} /> Add maintenance</>} title="Add maintenance" autoOpenKey={autoOpenKey}>
-      <form action={action} className="record-form">
+      <ActionForm action={action} className="record-form">
         <Field label="Date"><input name="date" type="date" defaultValue={todayIso()} required /></Field>
         <Field label="Odometer"><input name="odometer" type="number" min="0" /></Field>
         <Field label="Category">
@@ -264,7 +265,7 @@ export function MaintenanceForm({ vehicleId, categories, workshops, autoOpenKey 
         </Field>
         <Field label="Notes"><textarea name="notes" /></Field>
         <button className="primary-button" type="submit">Save maintenance</button>
-      </form>
+      </ActionForm>
     </ModalPanel>
   );
 }
@@ -273,7 +274,7 @@ export function RepairForm({ vehicleId, workshops, autoOpenKey }: { vehicleId: n
   const action = createRepairAction.bind(null, vehicleId);
   return (
     <ModalPanel trigger={<><Hammer size={17} /> Add repair</>} title="Add repair" autoOpenKey={autoOpenKey}>
-      <form action={action} className="record-form">
+      <ActionForm action={action} className="record-form">
         <Field label="Date"><input name="date" type="date" defaultValue={todayIso()} required /></Field>
         <Field label="Odometer"><input name="odometer" type="number" min="0" /></Field>
         <Field label="Fault or repair"><input name="fault" required /></Field>
@@ -286,7 +287,7 @@ export function RepairForm({ vehicleId, workshops, autoOpenKey }: { vehicleId: n
         <Field label="Cost"><input name="cost" type="number" min="0" step="0.01" /></Field>
         <Field label="Notes"><textarea name="notes" /></Field>
         <button className="primary-button" type="submit">Save repair</button>
-      </form>
+      </ActionForm>
     </ModalPanel>
   );
 }
@@ -313,7 +314,7 @@ export function CompleteMotReminderButton({ vehicleId, motLabel = "MOT", default
 function MotFields({ vehicleId, motLabel, defaultExpiryDate }: { vehicleId: number; motLabel: string; defaultExpiryDate?: string }) {
   const action = createMotAction.bind(null, vehicleId);
   return (
-    <form action={action} className="record-form">
+    <ActionForm action={action} className="record-form">
       <Field label="Test date"><input name="testDate" type="date" defaultValue={todayIso()} required /></Field>
       <Field label="Expiry date"><input name="expiryDate" type="date" defaultValue={defaultExpiryDate} required /></Field>
       <Field label="Odometer"><input name="odometer" type="number" min="0" /></Field>
@@ -326,7 +327,7 @@ function MotFields({ vehicleId, motLabel, defaultExpiryDate }: { vehicleId: numb
       <Field label="Certificate/reference"><input name="certificateRef" /></Field>
       <Field label="Advisories"><textarea name="advisories" /></Field>
       <button className="primary-button" type="submit">Save {motLabel}</button>
-    </form>
+    </ActionForm>
   );
 }
 
@@ -334,7 +335,7 @@ export function ReminderForm({ vehicleId, autoOpenKey }: { vehicleId: number; au
   const action = createReminderAction.bind(null, vehicleId);
   return (
     <ModalPanel trigger={<><CalendarDays size={17} /> Add reminder</>} title="Add reminder" autoOpenKey={autoOpenKey}>
-      <form action={action} className="record-form">
+      <ActionForm action={action} className="record-form">
         <Field label="Title"><input name="title" required /></Field>
         <Field label="Due date"><input name="dueDate" type="date" /></Field>
         <Field label="Due odometer"><input name="dueOdometer" type="number" min="0" /></Field>
@@ -346,7 +347,7 @@ export function ReminderForm({ vehicleId, autoOpenKey }: { vehicleId: number; au
             <option value="5000 miles">Every 5,000 miles</option>
           </select></Field>
         <button className="primary-button" type="submit">Save reminder</button>
-      </form>
+      </ActionForm>
     </ModalPanel>
   );
 }
@@ -355,10 +356,10 @@ export function PlannedPurchaseForm({ vehicleId, autoOpenKey }: { vehicleId: num
   const action = createPlannedPurchaseAction.bind(null, vehicleId);
   return (
     <ModalPanel trigger={<><PackagePlus size={17} /> Add item</>} title="Add To Buy Item" autoOpenKey={autoOpenKey}>
-      <form action={action} className="record-form">
+      <ActionForm action={action} className="record-form">
         <PlannedPurchaseFields />
         <button className="primary-button" type="submit">Save item</button>
-      </form>
+      </ActionForm>
     </ModalPanel>
   );
 }
@@ -367,11 +368,11 @@ export function MarkPlannedPurchaseBoughtForm({ record }: { record: PlannedPurch
   const action = markPlannedPurchaseBoughtAction.bind(null, record.vehicleId, record.id);
   return (
     <ModalPanel trigger={<><ShoppingCart size={17} /> Bought</>} title="Mark item bought">
-      <form action={action} className="record-form">
+      <ActionForm action={action} className="record-form">
         <Field label="Purchase date"><input name="purchasedDate" type="date" defaultValue={todayIso()} required /></Field>
         <Field label="Actual cost"><input name="actualCost" type="number" min="0" step="0.01" defaultValue={record.actualCost ?? record.estimatedCost} /></Field>
         <button className="primary-button" type="submit">Mark bought</button>
-      </form>
+      </ActionForm>
     </ModalPanel>
   );
 }
@@ -380,10 +381,10 @@ export function EditPlannedPurchaseBoughtDateForm({ record }: { record: PlannedP
   const action = updatePlannedPurchasePurchasedDateAction.bind(null, record.vehicleId, record.id);
   return (
     <ModalPanel trigger={<><CalendarDays size={17} /> Edit bought date</>} title="Edit bought date">
-      <form action={action} className="record-form">
+      <ActionForm action={action} className="record-form">
         <Field label="Bought date"><input name="purchasedDate" type="date" defaultValue={record.purchasedDate ?? todayIso()} required /></Field>
         <button className="primary-button" type="submit">Save bought date</button>
-      </form>
+      </ActionForm>
     </ModalPanel>
   );
 }
@@ -392,7 +393,7 @@ export function CreateMaintenanceFromPurchaseForm({ record, categories, workshop
   const action = createMaintenanceFromPurchaseAction.bind(null, record.vehicleId, record.id);
   return (
     <ModalPanel trigger={<><Wrench size={17} /> Add to maintenance</>} title="Add purchase to maintenance">
-      <form action={action} className="record-form">
+      <ActionForm action={action} className="record-form">
         <Field label="Date"><input name="date" type="date" defaultValue={todayIso()} required /></Field>
         <Field label="Odometer"><input name="odometer" type="number" min="0" /></Field>
         <Field label="Category">
@@ -411,7 +412,7 @@ export function CreateMaintenanceFromPurchaseForm({ record, categories, workshop
         </Field>
         <Field label="Notes"><textarea name="notes" defaultValue={purchaseRecordNotes(record)} /></Field>
         <button className="primary-button" type="submit">Save maintenance</button>
-      </form>
+      </ActionForm>
     </ModalPanel>
   );
 }
@@ -420,7 +421,7 @@ export function CreateRepairFromPurchaseForm({ record, workshops }: { record: Pl
   const action = createRepairFromPurchaseAction.bind(null, record.vehicleId, record.id);
   return (
     <ModalPanel trigger={<><Hammer size={17} /> Add to repairs</>} title="Add purchase to repairs">
-      <form action={action} className="record-form">
+      <ActionForm action={action} className="record-form">
         <Field label="Date"><input name="date" type="date" defaultValue={todayIso()} required /></Field>
         <Field label="Odometer"><input name="odometer" type="number" min="0" /></Field>
         <Field label="Fault or repair"><input name="fault" defaultValue={record.itemName} required /></Field>
@@ -433,7 +434,7 @@ export function CreateRepairFromPurchaseForm({ record, workshops }: { record: Pl
         <Field label="Cost"><input name="cost" type="number" min="0" step="0.01" defaultValue={record.actualCost ?? record.estimatedCost} /></Field>
         <Field label="Notes"><textarea name="notes" defaultValue={purchaseRecordNotes(record)} /></Field>
         <button className="primary-button" type="submit">Save repair</button>
-      </form>
+      </ActionForm>
     </ModalPanel>
   );
 }
@@ -456,7 +457,7 @@ export function FuelRecordForm({ vehicleId, settings, autoOpenKey }: { vehicleId
   const volumeLabel = isGallons ? "Gallons" : "Litres";
   return (
     <ModalPanel trigger={<><Fuel size={17} /> Add fill-up</>} title="Log fuel" autoOpenKey={autoOpenKey}>
-      <form action={action} className="record-form">
+      <ActionForm action={action} className="record-form">
         <Field label="Date"><input name="date" type="date" defaultValue={todayIso()} required /></Field>
         <Field label={isKm ? "Odometer (km)" : "Mileage"}><input name="odometer" type="number" min="0" required /></Field>
         <Field label="Fuel type">
@@ -476,7 +477,7 @@ export function FuelRecordForm({ vehicleId, settings, autoOpenKey }: { vehicleId
         <Field label="Station"><input name="station" /></Field>
         <Field label="Notes"><textarea name="notes" /></Field>
         <button className="primary-button" type="submit">Save fill-up</button>
-      </form>
+      </ActionForm>
     </ModalPanel>
   );
 }
@@ -493,7 +494,7 @@ export function EditFuelRecordForm({ record, settings }: { record: FuelRecord; s
     : record.volumeLitres.toFixed(2);
   return (
     <EditPanel deleteAction={deleteAction} title="Edit fill-up">
-      <form action={updateAction} className="record-form">
+      <ActionForm action={updateAction} className="record-form">
         <Field label="Date"><input name="date" type="date" defaultValue={record.date} required /></Field>
         <Field label={isKm ? "Odometer (km)" : "Mileage"}><input name="odometer" type="number" min="0" defaultValue={record.odometer} required /></Field>
         <Field label="Fuel type">
@@ -513,7 +514,7 @@ export function EditFuelRecordForm({ record, settings }: { record: FuelRecord; s
         <Field label="Station"><input name="station" defaultValue={record.station ?? ""} /></Field>
         <Field label="Notes"><textarea name="notes" defaultValue={record.notes ?? ""} /></Field>
         <button className="primary-button" type="submit">Save fill-up</button>
-      </form>
+      </ActionForm>
     </EditPanel>
   );
 }
@@ -521,12 +522,12 @@ export function EditFuelRecordForm({ record, settings }: { record: FuelRecord; s
 export function CompleteReminderButton({ vehicleId, id }: { vehicleId: number; id: number }) {
   const action = completeReminderAction.bind(null, vehicleId);
   return (
-    <form action={action}>
+    <ActionForm action={action}>
       <input type="hidden" name="id" value={id} />
       <button className="icon-button" type="submit" title="Mark complete" aria-label="Mark complete">
         <Check size={17} />
       </button>
-    </form>
+    </ActionForm>
   );
 }
 
@@ -644,10 +645,10 @@ export function RenewalForm({ vehicleId, autoOpenKey }: { vehicleId: number; aut
   const action = createRenewalAction.bind(null, vehicleId);
   return (
     <ModalPanel trigger={<><FileBadge size={17} /> Add renewal</>} title="Add renewal" autoOpenKey={autoOpenKey}>
-      <form action={action} className="record-form">
+      <ActionForm action={action} className="record-form">
         <RenewalFields />
         <button className="primary-button" type="submit">Save renewal</button>
-      </form>
+      </ActionForm>
     </ModalPanel>
   );
 }
@@ -657,10 +658,10 @@ export function EditRenewalForm({ record }: { record: Renewal }) {
   const deleteAction = deleteRenewalAction.bind(null, record.vehicleId, record.id);
   return (
     <EditPanel deleteAction={deleteAction} title={`Edit ${renewalTypeLabels[record.type].toLowerCase()}`}>
-      <form action={updateAction} className="record-form">
+      <ActionForm action={updateAction} className="record-form">
         <RenewalFields record={record} />
         <button className="primary-button" type="submit">Save changes</button>
-      </form>
+      </ActionForm>
     </EditPanel>
   );
 }
@@ -674,15 +675,15 @@ export function CompleteRenewalReminderButton({ reminder, previous }: { reminder
   return (
     <ModalPanel trigger={<Check size={17} />} triggerClassName="icon-button" triggerLabel={`Renew ${renewalTypeLabels[type].toLowerCase()}`} title={`Renew ${renewalTypeLabels[type].toLowerCase()}`}>
       <p className="muted sheet-intro">Log the renewed cover and the reminder moves to its new end date.</p>
-      <form action={action} className="record-form">
+      <ActionForm action={action} className="record-form">
         <RenewalFields defaults={{ type, startDate, endDate: addMonths(startDate, 12), provider: previous?.provider }} />
         <button className="primary-button" type="submit">Save renewal</button>
-      </form>
+      </ActionForm>
       <hr className="modal-divider" />
-      <form action={dismissAction} className="record-form">
+      <ActionForm action={dismissAction} className="record-form">
         <p className="muted">Not renewing? Mark the reminder done instead.</p>
         <button className="secondary-button" type="submit">Not renewing</button>
-      </form>
+      </ActionForm>
     </ModalPanel>
   );
 }

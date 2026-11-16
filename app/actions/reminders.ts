@@ -1,36 +1,39 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { z } from "zod";
 import { assignServiceInterval, completeOrRepeatReminder, completeReminder, createReminder, deleteReminder, recordServiceDone, removeVehicleServiceInterval, updateReminder } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
-import { isoDate, money, nullableInt, nullableIsoDate, nullableStr, revalidateVehicle, str, syncCurrentDemoAfterMutation } from "./shared";
+import { type FormResult, formResult, isoDate, money, nullableInt, nullableIsoDate, nullableStr, requiredText, revalidateVehicle, str, syncCurrentDemoAfterMutation } from "./shared";
 
-export async function createReminderAction(vehicleId: number, formData: FormData) {
-  await requireUser();
-  createReminder({
-    vehicleId,
-    title: z.string().min(1).parse(str(formData, "title")),
-    dueDate: nullableIsoDate(formData, "dueDate"),
-    dueOdometer: nullableInt(formData, "dueOdometer"),
-    recurrence: nullableStr(formData, "recurrence")
+export async function createReminderAction(vehicleId: number, formData: FormData): Promise<FormResult> {
+  return formResult(async () => {
+    await requireUser();
+    createReminder({
+      vehicleId,
+      title: requiredText(formData, "title"),
+      dueDate: nullableIsoDate(formData, "dueDate"),
+      dueOdometer: nullableInt(formData, "dueOdometer"),
+      recurrence: nullableStr(formData, "recurrence")
+    });
+    await syncCurrentDemoAfterMutation();
+    revalidatePath("/garage");
+    revalidatePath(`/vehicles/${vehicleId}`);
   });
-  await syncCurrentDemoAfterMutation();
-  revalidatePath("/garage");
-  revalidatePath(`/vehicles/${vehicleId}`);
 }
 
-export async function updateReminderAction(vehicleId: number, id: number, formData: FormData) {
-  await requireUser();
-  updateReminder(id, vehicleId, {
-    title: z.string().min(1).parse(str(formData, "title")),
-    dueDate: nullableIsoDate(formData, "dueDate"),
-    dueOdometer: nullableInt(formData, "dueOdometer"),
-    recurrence: nullableStr(formData, "recurrence"),
-    completedAt: null
+export async function updateReminderAction(vehicleId: number, id: number, formData: FormData): Promise<FormResult> {
+  return formResult(async () => {
+    await requireUser();
+    updateReminder(id, vehicleId, {
+      title: requiredText(formData, "title"),
+      dueDate: nullableIsoDate(formData, "dueDate"),
+      dueOdometer: nullableInt(formData, "dueOdometer"),
+      recurrence: nullableStr(formData, "recurrence"),
+      completedAt: null
+    });
+    await syncCurrentDemoAfterMutation();
+    revalidateVehicle(vehicleId);
   });
-  await syncCurrentDemoAfterMutation();
-  revalidateVehicle(vehicleId);
 }
 
 export async function deleteReminderAction(vehicleId: number, id: number) {
@@ -40,22 +43,26 @@ export async function deleteReminderAction(vehicleId: number, id: number) {
   revalidateVehicle(vehicleId);
 }
 
-export async function completeReminderAction(vehicleId: number, formData: FormData) {
-  await requireUser();
-  const id = Number.parseInt(str(formData, "id"), 10);
-  completeOrRepeatReminder(id, vehicleId);
-  await syncCurrentDemoAfterMutation();
-  revalidatePath("/garage");
-  revalidatePath(`/vehicles/${vehicleId}`);
+export async function completeReminderAction(vehicleId: number, formData: FormData): Promise<FormResult> {
+  return formResult(async () => {
+    await requireUser();
+    const id = Number.parseInt(str(formData, "id"), 10);
+    completeOrRepeatReminder(id, vehicleId);
+    await syncCurrentDemoAfterMutation();
+    revalidatePath("/garage");
+    revalidatePath(`/vehicles/${vehicleId}`);
+  });
 }
 
-export async function assignServiceIntervalAction(vehicleId: number, formData: FormData) {
-  await requireUser();
-  const serviceIntervalId = nullableInt(formData, "serviceIntervalId");
-  if (!serviceIntervalId) return;
-  assignServiceInterval(vehicleId, serviceIntervalId);
-  await syncCurrentDemoAfterMutation();
-  revalidatePath(`/vehicles/${vehicleId}`);
+export async function assignServiceIntervalAction(vehicleId: number, formData: FormData): Promise<FormResult> {
+  return formResult(async () => {
+    await requireUser();
+    const serviceIntervalId = nullableInt(formData, "serviceIntervalId");
+    if (!serviceIntervalId) return;
+    assignServiceInterval(vehicleId, serviceIntervalId);
+    await syncCurrentDemoAfterMutation();
+    revalidatePath(`/vehicles/${vehicleId}`);
+  });
 }
 
 export async function removeVehicleServiceIntervalAction(vehicleId: number, id: number) {
@@ -65,16 +72,18 @@ export async function removeVehicleServiceIntervalAction(vehicleId: number, id: 
   revalidatePath(`/vehicles/${vehicleId}`);
 }
 
-export async function recordServiceDoneAction(vehicleId: number, id: number, formData: FormData) {
-  await requireUser();
-  recordServiceDone(id, vehicleId, {
-    serviceDate: isoDate(formData, "serviceDate"),
-    serviceOdometer: nullableInt(formData, "serviceOdometer"),
-    cost: money(formData, "cost")
+export async function recordServiceDoneAction(vehicleId: number, id: number, formData: FormData): Promise<FormResult> {
+  return formResult(async () => {
+    await requireUser();
+    recordServiceDone(id, vehicleId, {
+      serviceDate: isoDate(formData, "serviceDate"),
+      serviceOdometer: nullableInt(formData, "serviceOdometer"),
+      cost: money(formData, "cost")
+    });
+    await syncCurrentDemoAfterMutation();
+    revalidatePath("/garage");
+    revalidatePath(`/vehicles/${vehicleId}`);
   });
-  await syncCurrentDemoAfterMutation();
-  revalidatePath("/garage");
-  revalidatePath(`/vehicles/${vehicleId}`);
 }
 
 /** Marks a reminder done without rolling it forward (e.g. a renewal you are not renewing). */

@@ -7,7 +7,7 @@ export function ConfirmDelete({
   action,
   label = "Delete"
 }: {
-  action: (formData: FormData) => void | Promise<void>;
+  action: (formData: FormData) => unknown;
   label?: string;
 }) {
   const [confirming, setConfirming] = useState(false);
@@ -16,7 +16,7 @@ export function ConfirmDelete({
     return (
       <div className="confirm-delete-prompt">
         <span>Are you sure?</span>
-        <form action={action}>
+        <form action={async (formData) => { await action(formData); }}>
           <input type="hidden" name="confirmed" value="on" />
           <button className="danger-button" type="submit">Yes</button>
         </form>

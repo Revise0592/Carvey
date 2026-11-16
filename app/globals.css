@@ -3950,3 +3950,12 @@ details.field-hint ul,
   font-size: 0.9rem;
   text-align: center;
 }
+
+/* ActionForm wraps its fields in a fieldset so they can be disabled while saving. */
+.action-form-fields {
+  display: contents;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}

@@ -22,6 +22,10 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("next/navigation", () => ({
   redirect: vi.fn((to: string) => {
     throw Object.assign(new Error(`NEXT_REDIRECT ${to}`), { digest: `NEXT_REDIRECT;${to}` });
+  }),
+  // Like Next's: lets its own control-flow errors (redirects) escape a catch block.
+  unstable_rethrow: vi.fn((error: unknown) => {
+    if (String((error as { digest?: string })?.digest ?? "").startsWith("NEXT_REDIRECT")) throw error;
   })
 }));
 
@@ -678,5 +682,39 @@ describe("gallery thumbnails", () => {
     deleteForm.set("photoId", String(photo.id));
     await deleteGalleryPhotoAction(vehicleId, deleteForm);
     await expect(fs.access(thumbDisk)).rejects.toThrow();
+  });
+});
+
+describe("form errors", () => {
+  it("returns a readable message for a bad field instead of throwing, and saves nothing", async () => {
+    await freshDataDir("carvey-audit-form-errors-");
+    vi.doMock("@/lib/auth", () => ({ requireUser: vi.fn(async () => ({ id: 1 })) }));
+    const db = await import("@/lib/db");
+    const { createMaintenanceAction } = await import("@/app/actions/records");
+    const { createReminderAction } = await import("@/app/actions/reminders");
+    const vehicleId = Number(db.createVehicle(vehicleInput()).lastInsertRowid);
+    const form = (values: Record<string, string>) => {
+      const data = new FormData();
+      for (const [key, value] of Object.entries(values)) data.set(key, value);
+      return data;
+    };
+
+    await expect(createMaintenanceAction(vehicleId, form({ date: "31/02/2026", category: "Service", description: "Oil" }))).resolves.toEqual({ error: "Date must be a date (YYYY-MM-DD)" });
+    await expect(createMaintenanceAction(vehicleId, form({ date: "2026-02-01", category: "Service", description: "" }))).resolves.toEqual({ error: "Description is required" });
+    await expect(createMaintenanceAction(vehicleId, form({ date: "2026-02-01", category: "Service", description: "Oil", odometer: "-4" }))).resolves.toEqual({ error: "Odometer can't be negative" });
+    await expect(createReminderAction(vehicleId, form({ title: "Tyres", dueOdometer: "lots" }))).resolves.toEqual({ error: "Due odometer must be a number" });
+    expect(db.listMaintenance(vehicleId)).toHaveLength(0);
+
+    await expect(createMaintenanceAction(vehicleId, form({ date: "2026-02-01", category: "Service", description: "Oil" }))).resolves.toBeUndefined();
+    expect(db.listMaintenance(vehicleId)).toHaveLength(1);
+  });
+
+  it("still lets redirects through", async () => {
+    await freshDataDir("carvey-audit-form-redirect-");
+    vi.doMock("@/lib/auth", () => ({ requireUser: vi.fn(async () => ({ id: 1 })) }));
+    const { createVehicleAction } = await import("@/app/actions/vehicles");
+    const data = new FormData();
+    for (const [key, value] of Object.entries({ make: "Ford", model: "Ka", registration: "ab12 cde" })) data.set(key, value);
+    await expect(createVehicleAction(data)).rejects.toThrow(/NEXT_REDIRECT \/vehicles\/1/);
   });
 });

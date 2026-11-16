@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createRenewal, deleteRenewal, listAndDeleteAttachmentsForRecord, updateRenewal, RENEWAL_TYPES } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
-import { isoDate, money, nullableIsoDate, nullableStr, removeUploadFile, revalidateVehicle, str, syncCurrentDemoAfterMutation } from "./shared";
+import { type FormResult, formResult, isoDate, money, nullableIsoDate, nullableStr, removeUploadFile, revalidateVehicle, str, syncCurrentDemoAfterMutation } from "./shared";
 
 function renewalInput(formData: FormData) {
   return {
@@ -24,18 +24,22 @@ function revalidateRenewals(vehicleId: number) {
   revalidatePath("/costs");
 }
 
-export async function createRenewalAction(vehicleId: number, formData: FormData) {
-  await requireUser();
-  createRenewal({ vehicleId, ...renewalInput(formData) });
-  await syncCurrentDemoAfterMutation();
-  revalidateRenewals(vehicleId);
+export async function createRenewalAction(vehicleId: number, formData: FormData): Promise<FormResult> {
+  return formResult(async () => {
+    await requireUser();
+    createRenewal({ vehicleId, ...renewalInput(formData) });
+    await syncCurrentDemoAfterMutation();
+    revalidateRenewals(vehicleId);
+  });
 }
 
-export async function updateRenewalAction(vehicleId: number, id: number, formData: FormData) {
-  await requireUser();
-  updateRenewal(id, vehicleId, renewalInput(formData));
-  await syncCurrentDemoAfterMutation();
-  revalidateRenewals(vehicleId);
+export async function updateRenewalAction(vehicleId: number, id: number, formData: FormData): Promise<FormResult> {
+  return formResult(async () => {
+    await requireUser();
+    updateRenewal(id, vehicleId, renewalInput(formData));
+    await syncCurrentDemoAfterMutation();
+    revalidateRenewals(vehicleId);
+  });
 }
 
 export async function deleteRenewalAction(vehicleId: number, id: number) {
