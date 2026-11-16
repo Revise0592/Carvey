@@ -11,12 +11,12 @@
   <Support/>
   <Project>https://github.com/Revise0592/Carvey</Project>
   <ReadMe>https://github.com/Revise0592/Carvey#readme</ReadMe>
-  <Overview>Self-hosted car maintenance dashboard for tracking vehicles, maintenance, repairs, MOTs, reminders, costs, photos, printable seller sheets, and backups.</Overview>
+  <Overview>Self-hosted car maintenance dashboard for tracking vehicles, maintenance, repairs, MOTs, reminders, costs, photos, printable seller sheets, and backups. Tip: change :latest in Repository to a release version tag (listed under Releases on GitHub) for predictable upgrades.</Overview>
   <Category>Productivity: Tools:</Category>
   <WebUI>http://[IP]:[PORT:3000]</WebUI>
   <TemplateURL/>
   <Icon>https://raw.githubusercontent.com/Revise0592/Carvey/refs/heads/main/public/icons/icon.svg</Icon>
-  <ExtraParams/>
+  <ExtraParams>--init --security-opt=no-new-privileges:true --cap-drop=ALL --memory=1g --pids-limit=200</ExtraParams>
   <PostArgs/>
   <CPUset/>
   <DateInstalled/>

@@ -1,9 +1,13 @@
 services:
   carvey:
+    # Pin a release version tag (see Releases on GitHub) for predictable upgrades and easy rollback. To build from source
+    # instead, replace this line with `build: .`.
     image: ghcr.io/revise0592/carvey:latest
-    build: .
     container_name: carvey
     ports:
+      # Reachable from your LAN. Behind a reverse proxy on the same host, prefer
+      # "127.0.0.1:3000:3000" (or no ports at all and a shared Docker network) so the proxy's
+      # sign-in can't be bypassed by going to the port directly.
       - "3000:3000"
     environment:
       TZ: Europe/London
@@ -15,6 +19,14 @@ services:
     volumes:
       - ./data:/app/data
     restart: unless-stopped
+    # Hardening: Carvey needs no Linux capabilities and never escalates privileges.
+    init: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    mem_limit: 1g
+    pids_limit: 200
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then((response) => { if (!response.ok) process.exit(1); }).catch(() => process.exit(1));"]
       interval: 30s
