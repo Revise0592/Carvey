@@ -1,12 +1,19 @@
 /** Date helpers for ISO `YYYY-MM-DD` strings. Pure, so they are safe in client and server code. */
 
-export function todayIso() {
-  return new Date().toISOString().slice(0, 10);
+/**
+ * Today's date on the local calendar (the container's TZ on the server, the device's in the
+ * browser). Not UTC: the notification scheduler compares it with the local hour, and "overdue"
+ * should flip at local midnight.
+ */
+export function todayIso(now = new Date()) {
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 }
 
+/** Calendar arithmetic in UTC so the result never shifts a day with the local time zone. */
 export function addMonths(isoDate: string, months: number): string {
-  const d = new Date(`${isoDate}T12:00:00`);
-  d.setMonth(d.getMonth() + months);
+  const d = new Date(`${isoDate.slice(0, 10)}T00:00:00Z`);
+  d.setUTCMonth(d.getUTCMonth() + months);
   return d.toISOString().slice(0, 10);
 }
 

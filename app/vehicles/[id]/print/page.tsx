@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { PrintButton } from "@/components/PrintButton";
 import { RegistrationPlate } from "@/components/RegistrationPlate";
 import { requireUser } from "@/lib/auth";
-import { formatCurrency, formatDate, formatMiles, formatMotResult } from "@/lib/format";
+import { formatCurrency, formatDate, formatMiles, formatMotResult, todayIso } from "@/lib/format";
 import { getMotLabel, getRegionalSettings } from "@/lib/regional-settings";
 import { getSellerSheetData } from "@/lib/seller-sheet";
 
@@ -19,7 +19,7 @@ export default async function VehiclePrintPage({ params }: { params: Promise<{ i
   const motLabel = getMotLabel(settings);
   const regMode = settings.plateStyle;
   const generatedAt = settings.dateFormat === "iso"
-    ? new Date().toISOString().slice(0, 10)
+    ? todayIso()
     : new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" }).format(new Date());
 
   return (
