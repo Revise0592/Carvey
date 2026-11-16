@@ -3911,3 +3911,21 @@ details.field-hint ul,
   list-style: none;
   overflow-wrap: anywhere;
 }
+
+.audit-list {
+  display: grid;
+  gap: 10px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  overflow-wrap: anywhere;
+}
+
+.audit-list small {
+  display: block;
+  color: var(--muted);
+}
+
+.audit-list .audit-warning strong {
+  color: var(--danger, #b42318);
+}

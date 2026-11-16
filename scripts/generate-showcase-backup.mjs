@@ -73,7 +73,7 @@ async function walkUploads(root, relativeDir, files) {
 function scrubShowcaseCopy(filePath) {
   const copy = new Database(filePath);
   try {
-    for (const table of ["admin_users", "notification_log", "auth_sessions", "auth_challenges", "auth_throttle"]) {
+    for (const table of ["admin_users", "notification_log", "auth_sessions", "auth_challenges", "auth_throttle", "audit_log"]) {
       const exists = copy.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?").get(table);
       if (exists) copy.exec(`DELETE FROM "${table}"`);
     }

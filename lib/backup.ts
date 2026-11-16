@@ -279,7 +279,9 @@ export async function syncShowcaseDemoBackupIfActive() {
 }
 
 /** Tables that are never copied from a backup: sign-in state belongs to this server, not the data. */
-const tablesNotRestored = new Set(["auth_sessions", "auth_challenges", "auth_throttle"]);
+const tablesNotRestored = new Set(["auth_sessions", "auth_challenges", "auth_throttle", "audit_log"]);
+/** Tables whose rows on this server survive a restore untouched (and are never in a backup). */
+const serverLocalTables = ["audit_log"];
 
 /**
  * Settings that stay as they are on this server when restoring. Otherwise a backup taken with
@@ -321,7 +323,7 @@ function restoreDatabaseContents(backupDbPath: string, showcase = false) {
     const liveTables = listTables("main");
     const backupTables = new Set(listTables("restore_backup"));
 
-    const keptTables = new Set<string>(showcase ? showcaseTablesKept : []);
+    const keptTables = new Set<string>([...(showcase ? showcaseTablesKept : []), ...serverLocalTables]);
     // A backup with no admin account (the packaged showcase backup, or one taken before setup)
     // must not delete this server's account: that would send Carvey back to /setup, where anyone
     // who can reach it could create a new admin and take over the data.

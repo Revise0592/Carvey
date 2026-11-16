@@ -1,4 +1,4 @@
-import { KeyRound, LaptopMinimal, LogOut, ShieldCheck, ShieldAlert, UserRound } from "lucide-react";
+import { History, KeyRound, LaptopMinimal, LogOut, ShieldCheck, ShieldAlert, UserRound } from "lucide-react";
 import {
   disableTwoFactorAction,
   revokeSessionAction,
@@ -9,7 +9,8 @@ import {
 } from "@/app/actions";
 import { RegenerateRecoveryCodes, TwoFactorSetup } from "@/components/TwoFactorSetup";
 import { getAuthConfig, type AuthenticatedUser } from "@/lib/auth";
-import { getAdminById, listActiveAuthSessions } from "@/lib/db";
+import { getAdminById, listActiveAuthSessions, listAuditEntries } from "@/lib/db";
+import { auditEventLabels, type AuditEvent } from "@/lib/audit";
 import { formatDate } from "@/lib/format";
 import { describeUserAgent } from "@/lib/security/request";
 import { isTwoFactorEnabled, recoveryCodesLeft } from "@/lib/two-factor";
@@ -68,6 +69,7 @@ export function AdminPanel({ user, account, app, recoveryLeft }: { user: Authent
   const admin = user.id ? getAdminById(user.id) : undefined;
   const twoFactor = admin ? isTwoFactorEnabled(admin) : false;
   const sessions = admin ? listActiveAuthSessions(admin.id) : [];
+  const activity = listAuditEntries(30);
   const accountMessage = accountMessages[account ?? ""];
 
   return (
@@ -178,6 +180,26 @@ export function AdminPanel({ user, account, app, recoveryLeft }: { user: Authent
           <p className="muted">Account settings appear here once sign-in is turned on.</p>
         </article>
       )}
+
+      <article className="settings-panel settings-panel-col2-span2">
+        <h2><History size={19} /> Recent activity</h2>
+        <p className="muted">Sign-ins, account changes, restores and imports on this server, newest first. Unfamiliar failed sign-ins are worth a stronger password and two-factor.</p>
+        {activity.length ? (
+          <ul className="audit-list">
+            {activity.map((entry) => (
+              <li key={entry.id} className={entry.event.endsWith("failed") || entry.event.endsWith("throttled") ? "audit-warning" : undefined}>
+                <strong>{auditEventLabels[entry.event as AuditEvent] ?? entry.event}</strong>
+                {entry.detail ? <span> · {entry.detail}</span> : null}
+                <small>
+                  {entry.at.replace("T", " ").slice(0, 16)} UTC
+                  {entry.client && entry.client !== "direct" ? ` · ${entry.client}` : ""}
+                  {entry.userAgent ? ` · ${describeUserAgent(entry.userAgent)}` : ""}
+                </small>
+              </li>
+            ))}
+          </ul>
+        ) : <p className="muted">Nothing recorded yet.</p>}
+      </article>
 
       <article className="settings-panel settings-panel-col2-span2">
         <h2>{config.mode === "none" ? <ShieldAlert size={19} /> : <ShieldCheck size={19} />} Sign-in mode</h2>

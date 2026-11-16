@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import { Readable } from "node:stream";
+import { audit } from "@/lib/audit";
 import { requireUser } from "@/lib/auth";
 import { createBackupStream } from "@/lib/backup";
 import { scheduledBackupPath } from "@/lib/scheduled-backups";
@@ -13,6 +14,7 @@ export async function GET(request: Request) {
     const filePath = scheduledBackupPath(fileName);
     const stat = filePath ? await fs.promises.stat(filePath).catch(() => null) : null;
     if (!filePath || !stat?.isFile()) return new Response("Not found", { status: 404 });
+    await audit("backup.downloaded", fileName);
     return new Response(Readable.toWeb(fs.createReadStream(filePath)) as ReadableStream<Uint8Array>, {
       headers: {
         "content-type": "application/zip",
@@ -26,6 +28,7 @@ export async function GET(request: Request) {
   // Otherwise a fresh backup, streamed: photos and documents are read from disk as the download
   // proceeds, so a large uploads folder never has to fit in memory.
   const { stream, manifest } = await createBackupStream();
+  await audit("backup.downloaded", "new backup");
   const date = manifest.createdAt.slice(0, 10);
 
   return new Response(Readable.toWeb(stream) as ReadableStream<Uint8Array>, {

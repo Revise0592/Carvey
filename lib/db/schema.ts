@@ -233,6 +233,17 @@ export function migrate(database: Database.Database) {
       locked_until TEXT
     );
 
+    -- Security and data events (sign-ins, account changes, restores, imports). Kept on this
+    -- server: never included in backups and never replaced by a restore.
+    CREATE TABLE IF NOT EXISTS audit_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      event TEXT NOT NULL,
+      detail TEXT,
+      client TEXT,
+      user_agent TEXT
+    );
+
     -- One row per notification already sent, so the daily check never repeats itself.
     CREATE TABLE IF NOT EXISTS notification_log (
       key TEXT PRIMARY KEY,

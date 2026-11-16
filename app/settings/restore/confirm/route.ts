@@ -1,4 +1,5 @@
 import { requireUser } from "@/lib/auth";
+import { audit } from "@/lib/audit";
 import { confirmRestore } from "@/lib/backup";
 import { rejectCrossOrigin } from "@/lib/security/request";
 
@@ -20,6 +21,7 @@ export async function POST(request: Request) {
 
   const result = await confirmRestore(token, { keepSessionId: user.sessionId });
   if (result.ok) {
+    await audit("backup.restored");
     return redirect("/settings?tab=backup&restore=success");
   }
   const params = new URLSearchParams({ tab: "backup", restore: "restore-error", message: result.message });

@@ -15,3 +15,4 @@ export * from "./renewals";
 export * from "./media";
 export * from "./overview";
 export * from "./notifications";
+export * from "./audit";

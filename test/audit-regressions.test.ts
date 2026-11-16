@@ -602,3 +602,31 @@ describe("restoring while signed in", () => {
     expect(db.getAuthSession("b".repeat(48))).toBeUndefined();
   });
 });
+
+describe("audit log", () => {
+  it("records events with the client and keeps them out of backups and restores", async () => {
+    await freshDataDir("carvey-audit-log-");
+    headerMock.get.mockImplementation((name: string) => (name === "x-forwarded-for" ? "198.51.100.4" : name === "user-agent" ? "Mozilla/5.0 (iPhone) Safari/605" : null));
+    const db = await import("@/lib/db");
+    const backup = await import("@/lib/backup");
+    const { audit } = await import("@/lib/audit");
+    db.createVehicle(vehicleInput());
+    await audit("login.failed", "admin");
+    expect(db.listAuditEntries()).toMatchObject([{ event: "login.failed", detail: "admin", client: "198.51.100.4", userAgent: "Mozilla/5.0 (iPhone) Safari/605" }]);
+
+    const { buffer } = await backup.createBackupZip();
+    const AdmZip = (await import("adm-zip")).default;
+    const extractDir = await fs.mkdtemp(path.join(os.tmpdir(), "carvey-audit-log-zip-"));
+    new AdmZip(buffer).extractAllTo(extractDir);
+    const Database = (await import("better-sqlite3")).default;
+    const copy = new Database(path.join(extractDir, "carvey.sqlite"), { readonly: true });
+    expect(copy.prepare("SELECT COUNT(*) AS n FROM audit_log").get()).toEqual({ n: 0 });
+    copy.close();
+
+    await audit("login.ok", "admin");
+    const staged = await backup.stageRestorePreview(new File([new Uint8Array(buffer)], "b.zip", { type: "application/zip" }));
+    if (!staged.ok) throw new Error(staged.message);
+    await backup.confirmRestore(staged.summary.token);
+    expect(db.listAuditEntries().map((entry) => entry.event)).toEqual(["login.ok", "login.failed"]);
+  });
+});
