@@ -718,3 +718,29 @@ describe("form errors", () => {
     await expect(createVehicleAction(data)).rejects.toThrow(/NEXT_REDIRECT \/vehicles\/1/);
   });
 });
+
+describe("reported version (issue 17)", () => {
+  it("uses the release tag baked into the image, falling back to package.json", async () => {
+    const { appVersion, appCommit } = await import("@/lib/version");
+    const { version } = (await import("../package.json")).default;
+    expect(appVersion({})).toBe(version);
+    expect(appVersion({ CARVEY_VERSION: "" })).toBe(version);
+    expect(appVersion({ CARVEY_VERSION: "1.8.0" })).toBe("1.8.0");
+    expect(appVersion({ CARVEY_VERSION: "V1.8.0" })).toBe("1.8.0");
+    expect(appCommit({ CARVEY_COMMIT: "6f80208c1a2b3c4d5e6f" })).toBe("6f80208");
+    expect(appCommit({ CARVEY_COMMIT: "not-a-sha" })).toBeNull();
+    expect(appCommit({})).toBeNull();
+  });
+
+  it("writes the same version into backup manifests", async () => {
+    await freshDataDir("carvey-audit-version-");
+    process.env.CARVEY_VERSION = "V9.9.9";
+    try {
+      const backup = await import("@/lib/backup");
+      const { manifest } = await backup.createBackupZip();
+      expect(manifest.appVersion).toBe("9.9.9");
+    } finally {
+      delete process.env.CARVEY_VERSION;
+    }
+  });
+});

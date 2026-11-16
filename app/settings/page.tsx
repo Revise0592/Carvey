@@ -7,12 +7,12 @@ import { InstallAppPanel } from "@/components/InstallAppPanel";
 import { CategoryCard, ServiceIntervalCard, WorkshopCard } from "@/components/SettingsCards";
 import { createMaintenanceCategoryAction, createServiceIntervalAction, createWorkshopAction, loadShowcaseDemoDataAction, restorePreviousDemoDataAction, saveCurrentShowcaseDemoDataAction, updateCollectionNameAction, updateRegionalSettingsAction } from "@/app/actions";
 import { requireUser } from "@/lib/auth";
+import { appCommit, appVersion } from "@/lib/version";
 import { getShowcaseDemoStatus, readRestoreSummary } from "@/lib/backup";
 import { debugEasterEggsEnabled } from "@/lib/debug";
 import { getCollectionName, listMaintenanceCategories, listServiceIntervals, listWorkshops, type ServiceInterval } from "@/lib/db";
 import { formatDate } from "@/lib/format";
 import { CURRENCY_CODES, getRegionalSettings } from "@/lib/regional-settings";
-import packageJson from "@/package.json";
 import { AdminPanel } from "./_panels/admin";
 import { BackupSchedulePanel } from "./_panels/backup-schedule";
 import { DataPanel } from "./_panels/data";
@@ -260,7 +260,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
               <span>Region defaults</span>
               <strong>{regionalSettings.currency}, {regionalSettings.distanceUnit}, {regionalSettings.dateFormat === "iso" ? "ISO dates" : "UK dates"}</strong>
               <span>Version</span>
-              <strong>{packageJson.version}</strong>
+              <strong>{appVersion()}{appCommit() ? ` (${appCommit()})` : ""}</strong>
             </dl>
           </article>
 

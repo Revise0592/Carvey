@@ -7,13 +7,13 @@ import type { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import yazl from "yazl";
 import Database from "better-sqlite3";
-import packageJson from "../package.json";
+import { appVersion as currentAppVersion } from "./version";
 import { dbFileName, getAuthSessionById, getDb, getFirstAdmin, reinstateAuthSession } from "./db";
 import { dataDir, ensureDataDirs, restoreRollbackDir, restoreStagingDir, tempDir, uploadDir } from "./paths";
 
 const backupFormatVersion = 1;
 // Recorded in each backup manifest so a restore can tell which release wrote it.
-const appVersion: string = packageJson.version;
+const appVersion: string = currentAppVersion();
 /** Largest backup file accepted for restore through the browser (CARVEY_MAX_RESTORE_MB, default 256). */
 const maxRestoreBytes = Math.max(1, Number.parseInt(process.env.CARVEY_MAX_RESTORE_MB ?? "", 10) || 256) * 1024 * 1024;
 /** Uploads are stored uncompressed, so a real backup expands very little; anything far beyond this is a zip bomb. */

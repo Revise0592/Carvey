@@ -13,6 +13,12 @@ RUN npm run build
 
 FROM node:24-bookworm-slim@sha256:dc26ae92c9fb15cf6b1d63e20f0944b2efe0f115b20e00be48fb23fceb061c54 AS runner
 WORKDIR /app
+# Set by the release workflow from the Git tag (e.g. V1.7.0 -> 1.7.0), so the app reports the version
+# it was released as. Left empty for local builds, which fall back to package.json.
+ARG CARVEY_VERSION=""
+ARG CARVEY_COMMIT=""
+ENV CARVEY_VERSION=${CARVEY_VERSION}
+ENV CARVEY_COMMIT=${CARVEY_COMMIT}
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV CARVEY_DATA_DIR=/app/data
