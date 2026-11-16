@@ -322,7 +322,9 @@ async function validateAndSummariseZip(buffer: Buffer, token: string, extractDir
   if (!entries.length) throw new Error("Backup zip is empty.");
 
   for (const entry of entries) {
-    if (!isSafeZipPath(entry.entryName)) {
+    // Zips made by Finder, 7-Zip and most tools also list folders ("uploads/"); those are fine.
+    const name = entry.isDirectory ? entry.entryName.replace(/\/$/, "") : entry.entryName;
+    if (!isSafeZipPath(name)) {
       throw new Error("Backup contains an unsafe file path.");
     }
   }

@@ -287,3 +287,23 @@ describe("test name in sentences", () => {
     expect(motLabelInSentence("Inspection")).toBe("inspection");
   });
 });
+
+describe("restoring a re-zipped backup", () => {
+  // Traversal in entry names is covered by backup.test.ts, which hand-builds the zip: adm-zip
+  // strips "../" when creating one, so it can't be used to make a malicious archive here.
+  it("accepts folder entries", async () => {
+    await freshDataDir("carvey-audit-rezip-");
+    const AdmZip = (await import("adm-zip")).default;
+    const db = await import("@/lib/db");
+    const backup = await import("@/lib/backup");
+    db.createVehicle(vehicleInput());
+    const original = new AdmZip((await backup.createBackupZip()).buffer);
+    const rezip = (extra: string) => {
+      const zip = new AdmZip();
+      zip.addFile(extra, Buffer.alloc(0));
+      for (const entry of original.getEntries()) zip.addFile(entry.entryName, entry.getData());
+      return new File([new Uint8Array(zip.toBuffer())], "backup.zip", { type: "application/zip" });
+    };
+    await expect(backup.stageRestorePreview(rezip("uploads/"))).resolves.toMatchObject({ ok: true });
+  });
+});
