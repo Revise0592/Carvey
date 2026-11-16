@@ -4,11 +4,21 @@ name: Build and publish image
 # full release, and each release also gets its own version tag (v1.5.0 / V1.5.0 -> :1.5.0).
 # Pre-releases get only their version tag. Pull requests are built to check they still build,
 # but nothing is pushed. Run it by hand on a tag to rebuild that release's image.
+# PRs that only touch docs, screenshots, issue templates or the Unraid template skip the run:
+# none of those files reach the image or the tests. Releases always run in full.
 on:
   release:
     types: [published]
   pull_request:
     branches: [main]
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - "screenshot/**"
+      - "unraid/**"
+      - "LICENSE"
+      - ".github/ISSUE_TEMPLATE/**"
+      - ".github/dependabot.yml"
   workflow_dispatch:
 
 # Two releases published close together must not race each other for :latest.
