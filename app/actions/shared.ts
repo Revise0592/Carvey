@@ -140,6 +140,8 @@ export async function removeUploadFile(uploadPath: string | null) {
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
   }
+  // An image's gallery thumbnail, if it has one.
+  await fs.rm(`${safeUploadPath(parts)}.thumb.webp`, { force: true });
   const dir = path.dirname(safeUploadPath(parts));
   try {
     await fs.rmdir(dir);

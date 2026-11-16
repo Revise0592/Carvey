@@ -9,6 +9,8 @@ import type { MaintenanceRecord, RepairRecord } from "@/lib/db/types";
 export type GalleryItem = {
   id: string;
   filePath: string;
+  /** Small WebP for the grid; the lightbox always shows the original. */
+  thumbnailPath: string | null;
   originalFilename: string;
   caption: string | null;
   recordType: string | null;
@@ -93,7 +95,7 @@ export function GalleryGrid({
               aria-label={`View ${item.caption || item.recordDescription || item.originalFilename}`}
             >
               <img
-                src={item.filePath}
+                src={item.thumbnailPath ?? item.filePath}
                 alt={item.caption || item.recordDescription || item.originalFilename}
                 className="gallery-thumb"
                 loading="lazy"

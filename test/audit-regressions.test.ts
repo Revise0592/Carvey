@@ -643,3 +643,40 @@ describe("record tab paging", () => {
     expect(paginate(rows.slice(0, 10), {}).shown).toBe(10);
   });
 });
+
+describe("gallery thumbnails", () => {
+  it("makes a small thumbnail on upload, backfills old photos and deletes it with the photo", async () => {
+    const dir = await freshDataDir("carvey-audit-thumbs-");
+    vi.doMock("@/lib/auth", () => ({ requireUser: vi.fn(async () => ({ id: 1 })) }));
+    const sharp = (await import("sharp")).default;
+    const db = await import("@/lib/db");
+    const paths = await import("@/lib/paths");
+    const uploads = await import("@/lib/uploads");
+    const { POST } = await import("@/app/api/gallery-photos/route");
+    const { deleteGalleryPhotoAction } = await import("@/app/actions/media");
+    const vehicleId = Number(db.createVehicle(vehicleInput()).lastInsertRowid);
+    const jpeg = await sharp({ create: { width: 2400, height: 1600, channels: 3, background: "#3366aa" } }).jpeg({ quality: 95 }).toBuffer();
+
+    const form = new FormData();
+    form.set("vehicleId", String(vehicleId));
+    form.set("file", new File([new Uint8Array(jpeg)], "car.jpg", { type: "image/jpeg" }));
+    const response = await POST(new Request("http://carvey.test/api/gallery-photos", { method: "POST", headers: { host: "carvey.test", origin: "http://carvey.test" }, body: form }));
+    expect(response.status).toBe(303);
+    const [photo] = db.listVehicleGalleryPhotos(vehicleId);
+    expect(uploads.hasThumbnail(photo.filePath)).toBe(true);
+    const thumbDisk = path.join(dir, uploads.thumbnailPathFor(photo.filePath).replace(/^\//, ""));
+    const meta = await sharp(thumbDisk).metadata();
+    expect(Math.max(meta.width ?? 0, meta.height ?? 0)).toBe(480);
+
+    // An image uploaded before thumbnails existed gets one from the daily clean-up.
+    const legacy = path.join(paths.attachmentDir, String(vehicleId), "legacy.png");
+    await fs.writeFile(legacy, await sharp({ create: { width: 900, height: 900, channels: 3, background: "#aa3333" } }).png().toBuffer());
+    await expect(uploads.backfillThumbnails()).resolves.toBe(1);
+    await expect(fs.access(`${legacy}.thumb.webp`)).resolves.toBeUndefined();
+
+    const deleteForm = new FormData();
+    deleteForm.set("photoId", String(photo.id));
+    await deleteGalleryPhotoAction(vehicleId, deleteForm);
+    await expect(fs.access(thumbDisk)).rejects.toThrow();
+  });
+});

@@ -288,6 +288,12 @@ export function migrate(database: Database.Database) {
     CREATE INDEX IF NOT EXISTS idx_vehicle_service_intervals_reminder ON vehicle_service_intervals(reminder_id);
     CREATE INDEX IF NOT EXISTS idx_fuel_vehicle ON fuel_records(vehicle_id);
     CREATE INDEX IF NOT EXISTS idx_renewals_vehicle ON renewals(vehicle_id, type);
+    -- Index-only lookups for each vehicle's highest odometer reading (see lib/db/vehicles.ts).
+    CREATE INDEX IF NOT EXISTS idx_maintenance_vehicle_odometer ON maintenance_records(vehicle_id, odometer);
+    CREATE INDEX IF NOT EXISTS idx_repairs_vehicle_odometer ON repair_records(vehicle_id, odometer);
+    CREATE INDEX IF NOT EXISTS idx_mot_vehicle_odometer ON mot_records(vehicle_id, odometer);
+    CREATE INDEX IF NOT EXISTS idx_fuel_vehicle_odometer ON fuel_records(vehicle_id, odometer);
+    CREATE INDEX IF NOT EXISTS idx_reminders_open ON reminders(completed_at, vehicle_id);
   `);
 }
 

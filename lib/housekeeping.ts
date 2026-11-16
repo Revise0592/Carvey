@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { restoreRollbackDir, restoreStagingDir, tempDir } from "./paths";
+import { backfillThumbnails } from "./uploads";
 
 /**
  * Removes leftovers that nothing else cleans up: abandoned restore previews and CSV imports,
@@ -42,5 +43,7 @@ export async function cleanUpDataDirectory(now = Date.now()) {
   const rollbacks = (await entries(restoreRollbackDir)).filter((entry) => entry.isDirectory()).map((entry) => entry.name).sort().reverse();
   for (const name of rollbacks.slice(rollbackSnapshotsKept)) await fs.rm(path.join(restoreRollbackDir, name), { recursive: true, force: true });
 
-  return { staging, imports, work, rollbacks: Math.max(0, rollbacks.length - rollbackSnapshotsKept) };
+  const thumbnails = await backfillThumbnails();
+
+  return { staging, imports, work, rollbacks: Math.max(0, rollbacks.length - rollbackSnapshotsKept), thumbnails };
 }

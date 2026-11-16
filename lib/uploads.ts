@@ -1,7 +1,8 @@
 import crypto from "node:crypto";
+import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { attachmentDir } from "./paths";
+import { attachmentDir, safeUploadPath } from "./paths";
 
 /** The only file types accepted for record attachments and gallery photos, with their stored extension. */
 const extensions: Record<string, string> = {
@@ -51,10 +52,78 @@ export async function storeVehicleUpload<T>(vehicleId: number, mime: string, byt
   const diskPath = path.join(directory, filename);
   await fs.mkdir(directory, { recursive: true });
   await fs.writeFile(diskPath, bytes);
+  let saved: T;
   try {
-    return save({ filename, filePath: `/uploads/attachments/${vehicleId}/${filename}` });
+    saved = save({ filename, filePath: `/uploads/attachments/${vehicleId}/${filename}` });
   } catch (error) {
     await fs.rm(diskPath, { force: true });
     throw error;
+  }
+  if (mime.startsWith("image/")) await createThumbnail(diskPath);
+  return saved;
+}
+
+// ─── Thumbnails ─────────────────────────────────────────────────────────────
+
+const thumbnailSuffix = ".thumb.webp";
+const thumbnailSource = /\.(jpe?g|png|webp)$/i;
+
+/** The public path of an image upload's thumbnail (it may not exist yet). */
+export function thumbnailPathFor(filePath: string) {
+  return `${filePath}${thumbnailSuffix}`;
+}
+
+export function isThumbnail(name: string) {
+  return name.endsWith(thumbnailSuffix);
+}
+
+/**
+ * Writes a ~480 px WebP next to an uploaded image, for gallery grids. Phone photos are often 3-8 MB;
+ * the thumbnail is usually 20-60 KB. Failures are ignored: the grid falls back to the original.
+ */
+export async function createThumbnail(diskPath: string) {
+  if (!thumbnailSource.test(diskPath) || isThumbnail(diskPath)) return false;
+  try {
+    const { default: sharp } = await import("sharp");
+    await sharp(diskPath, { failOn: "none" })
+      .rotate()
+      .resize({ width: 480, height: 480, fit: "inside", withoutEnlargement: true })
+      .webp({ quality: 76 })
+      .toFile(`${diskPath}${thumbnailSuffix}`);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Thumbnails for images uploaded before thumbnails existed. A bounded batch per call. */
+export async function backfillThumbnails(limit = 100) {
+  let made = 0;
+  let vehicleDirs: string[];
+  try {
+    vehicleDirs = await fs.readdir(attachmentDir);
+  } catch {
+    return 0;
+  }
+  for (const vehicleDir of vehicleDirs) {
+    const dir = path.join(attachmentDir, vehicleDir);
+    const names = await fs.readdir(dir).catch(() => [] as string[]);
+    const existing = new Set(names);
+    for (const name of names) {
+      if (made >= limit) return made;
+      if (!thumbnailSource.test(name) || isThumbnail(name) || existing.has(`${name}${thumbnailSuffix}`)) continue;
+      if (await createThumbnail(path.join(dir, name))) made++;
+    }
+  }
+  return made;
+}
+
+/** True when an upload (by its /uploads/... path) already has a thumbnail on disk. */
+export function hasThumbnail(filePath: string) {
+  if (!filePath.startsWith("/uploads/")) return false;
+  try {
+    return existsSync(safeUploadPath(thumbnailPathFor(filePath).replace(/^\/uploads\//, "").split("/")));
+  } catch {
+    return false;
   }
 }
