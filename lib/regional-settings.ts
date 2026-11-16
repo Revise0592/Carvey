@@ -54,3 +54,8 @@ export function getMotLabel(settings: Pick<RegionalSettings, "motFeature" | "mot
   if (settings.motFeature === "custom") return settings.motCustomLabel.trim() || "Inspection";
   return "MOT";
 }
+
+/** The test name for use mid-sentence: "Inspection" becomes "inspection", but an acronym such as MOT or TÜV stays as written. */
+export function motLabelInSentence(label: string) {
+  return label === label.toUpperCase() ? label : label.toLowerCase();
+}

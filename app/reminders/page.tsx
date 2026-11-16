@@ -6,7 +6,7 @@ import { requireUser } from "@/lib/auth";
 import { daysUntil } from "@/lib/dates";
 import { listCurrentRenewals, listLatestMotExpiries } from "@/lib/db";
 import { formatDate, formatMiles } from "@/lib/format";
-import { getMotLabel, getRegionalSettings, type RegionalSettings } from "@/lib/regional-settings";
+import { getMotLabel, getRegionalSettings, motLabelInSentence, type RegionalSettings } from "@/lib/regional-settings";
 import { renewalTypeLabels } from "@/lib/renewals";
 
 export const dynamic = "force-dynamic";
@@ -66,7 +66,7 @@ export default async function RemindersPage() {
                 );
               })}
             </div>
-          ) : <p className="inset-empty">No {motLabel.toLowerCase()}s logged yet.</p>}
+          ) : <p className="inset-empty">No {motLabelInSentence(motLabel)}s logged yet.</p>}
         </section>
       ) : null}
 

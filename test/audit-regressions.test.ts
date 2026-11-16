@@ -278,3 +278,12 @@ describe("server-side form validation", () => {
     expect(formatDate("2026-03-14")).toBe("14 Mar 2026");
   });
 });
+
+describe("test name in sentences", () => {
+  it("keeps acronyms upper case and lower-cases ordinary words", async () => {
+    const { motLabelInSentence } = await import("@/lib/regional-settings");
+    expect(motLabelInSentence("MOT")).toBe("MOT");
+    expect(motLabelInSentence("TÜV")).toBe("TÜV");
+    expect(motLabelInSentence("Inspection")).toBe("inspection");
+  });
+});

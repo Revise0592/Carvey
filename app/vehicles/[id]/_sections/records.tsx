@@ -6,6 +6,7 @@ import { RecordItem } from "@/components/RecordItem";
 import { groupAttachmentsByRecord, listFuelRecords, listMaintenance, listMaintenanceCategories, listMots, listRepairs, listWorkshops, type AttachmentRecordType } from "@/lib/db";
 import { computeAverageFuelEconomy, computeFuelEconomies, formatCurrency, formatDate, formatMiles, formatMotResult, formatVolume } from "@/lib/format";
 import { byNumber, byText, EmptyRecords, motResultTone, SortBar, sortBy, sortState, type SectionProps } from "./shared";
+import { motLabelInSentence } from "@/lib/regional-settings";
 
 function attachmentRenderer(vehicleId: number, recordType: AttachmentRecordType) {
   const grouped = groupAttachmentsByRecord(vehicleId, recordType);
@@ -139,8 +140,8 @@ export function MotsSection({ vehicle, settings, motLabel, query }: SectionProps
           </div>
         </>
       ) : (
-        <EmptyRecords title={`No ${motLabel.toLowerCase()} history yet`}>
-          Add the latest {motLabel.toLowerCase()} result to start building this vehicle&apos;s test record.
+        <EmptyRecords title={`No ${motLabelInSentence(motLabel)} history yet`}>
+          Add the latest {motLabelInSentence(motLabel)} result to start building this vehicle&apos;s test record.
         </EmptyRecords>
       )}
     </section>

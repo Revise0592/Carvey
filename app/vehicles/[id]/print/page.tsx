@@ -4,7 +4,7 @@ import { PrintButton } from "@/components/PrintButton";
 import { RegistrationPlate } from "@/components/RegistrationPlate";
 import { requireUser } from "@/lib/auth";
 import { formatCurrency, formatDate, formatMiles, formatMotResult, todayIso } from "@/lib/format";
-import { getMotLabel, getRegionalSettings } from "@/lib/regional-settings";
+import { getMotLabel, getRegionalSettings, motLabelInSentence } from "@/lib/regional-settings";
 import { getSellerSheetData } from "@/lib/seller-sheet";
 
 export default async function VehiclePrintPage({ params }: { params: Promise<{ id: string }> }) {
@@ -118,7 +118,7 @@ export default async function VehiclePrintPage({ params }: { params: Promise<{ i
                 </tbody>
               </table>
             </div>
-          ) : <p className="print-empty">No {motLabel.toLowerCase()}s have been logged.</p>}
+          ) : <p className="print-empty">No {motLabelInSentence(motLabel)}s have been logged.</p>}
         </section>
       ) : null}
 

@@ -8,7 +8,7 @@ import { buildAgenda } from "@/lib/agenda";
 import { getCollectionName, getDashboardStats } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { formatCurrency, formatDate, formatMiles } from "@/lib/format";
-import { getMotLabel, getRegionalSettings } from "@/lib/regional-settings";
+import { getMotLabel, getRegionalSettings, motLabelInSentence } from "@/lib/regional-settings";
 
 export default async function GaragePage({ searchParams }: { searchParams: Promise<{ new?: string }> }) {
   await requireUser();
@@ -77,7 +77,7 @@ export default async function GaragePage({ searchParams }: { searchParams: Promi
         {stats.vehicles.length === 0 ? (
           <div className="empty-state">
             <h2>No cars yet</h2>
-            <p>Add your first vehicle to start logging {settings.motFeature === "disabled" ? "repairs and maintenance" : `${motLabel.toLowerCase()}s, repairs, and maintenance`}.</p>
+            <p>Add your first vehicle to start logging {settings.motFeature === "disabled" ? "repairs and maintenance" : `${motLabelInSentence(motLabel)}s, repairs, and maintenance`}.</p>
           </div>
         ) : null}
       </section>
@@ -91,7 +91,7 @@ export default async function GaragePage({ searchParams }: { searchParams: Promi
                 <span className="list-row-text"><span>{mot.make} {mot.model}</span><small>{mot.registration.toUpperCase()}</small></span>
                 <strong>{formatDate(mot.expiryDate, settings)}</strong>
               </Link>
-            )) : <p className="muted">No {motLabel.toLowerCase()}s due in the next 45 days.</p>}
+            )) : <p className="muted">No {motLabelInSentence(motLabel)}s due in the next 45 days.</p>}
           </div>
         ) : null}
         <div className="list-panel">
