@@ -556,3 +556,28 @@ describe("data directory clean-up", () => {
     expect((await fs.readdir(paths.restoreRollbackDir)).sort()).toEqual(["2026-03-01T10-00-00-000Z", "2026-04-01T10-00-00-000Z", "2026-05-01T10-00-00-000Z"]);
   });
 });
+
+describe("health check", () => {
+  it("reports healthy when the database answers and the data folder is writable", async () => {
+    await freshDataDir("carvey-audit-health-");
+    const { GET } = await import("@/app/api/health/route");
+    const response = await GET();
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ ok: true, app: "carvey" });
+  });
+
+  it("reports unhealthy (503, no detail) when the database can't be read", async () => {
+    await freshDataDir("carvey-audit-health-down-");
+    vi.doMock("@/lib/db", () => ({ getDb: () => { throw new Error("SQLITE_CANTOPEN"); } }));
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const { GET } = await import("@/app/api/health/route");
+      const response = await GET();
+      expect(response.status).toBe(503);
+      await expect(response.json()).resolves.toEqual({ ok: false, app: "carvey" });
+    } finally {
+      errorSpy.mockRestore();
+      vi.doUnmock("@/lib/db");
+    }
+  });
+});
