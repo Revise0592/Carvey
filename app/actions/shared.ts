@@ -62,6 +62,15 @@ export function workshopInput(formData: FormData) {
   };
 }
 
+/** An optional web link. Only http(s) is accepted, so a stored link can never be a javascript: or data: URL. */
+export function optionalHttpUrl(formData: FormData, key: string) {
+  const value = nullableStr(formData, key);
+  if (!value) return null;
+  const url = z.string().max(2000).url().parse(/^[a-z][a-z0-9+.-]*:/i.test(value) ? value : `https://${value}`);
+  if (!/^https?:$/i.test(new URL(url).protocol)) throw new z.ZodError([{ code: "custom", path: [key], message: "Use an http:// or https:// link", input: value }]);
+  return url;
+}
+
 /** Required single-line text, trimmed, with a sensible length cap. */
 export function requiredText(formData: FormData, key: string, max = 200) {
   return z.string().min(1).max(max).parse(str(formData, key));

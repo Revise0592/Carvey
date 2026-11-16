@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { convertPlannedPurchaseToMaintenance, convertPlannedPurchaseToRepair, createPlannedPurchase, deletePlannedPurchase, markPlannedPurchaseBought, updatePlannedPurchase, updatePlannedPurchasePurchasedDate } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
-import { isoDate, maintenanceInput, money, nullableInt, nullableIsoDate, nullableStr, repairInput, revalidateVehicle, str, syncCurrentDemoAfterMutation } from "./shared";
+import { isoDate, maintenanceInput, money, nullableInt, nullableIsoDate, nullableStr, optionalHttpUrl, repairInput, revalidateVehicle, str, syncCurrentDemoAfterMutation } from "./shared";
 
 export async function createPlannedPurchaseAction(vehicleId: number, formData: FormData) {
   await requireUser();
@@ -14,7 +14,7 @@ export async function createPlannedPurchaseAction(vehicleId: number, formData: F
     quantity: nullableInt(formData, "quantity") ?? 1,
     estimatedCost: money(formData, "estimatedCost"),
     supplier: nullableStr(formData, "supplier"),
-    url: nullableStr(formData, "url"),
+    url: optionalHttpUrl(formData, "url"),
     dueDate: nullableIsoDate(formData, "dueDate"),
     dueOdometer: nullableInt(formData, "dueOdometer"),
     notes: nullableStr(formData, "notes")
@@ -31,7 +31,7 @@ export async function updatePlannedPurchaseAction(vehicleId: number, id: number,
     quantity: nullableInt(formData, "quantity") ?? 1,
     estimatedCost: money(formData, "estimatedCost"),
     supplier: nullableStr(formData, "supplier"),
-    url: nullableStr(formData, "url"),
+    url: optionalHttpUrl(formData, "url"),
     dueDate: nullableIsoDate(formData, "dueDate"),
     dueOdometer: nullableInt(formData, "dueOdometer"),
     notes: nullableStr(formData, "notes")

@@ -10,7 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
  */
 
 const cookieMock = vi.hoisted(() => ({ set: vi.fn(), delete: vi.fn(), get: vi.fn() }));
-const headerMock = vi.hoisted(() => ({ get: vi.fn((): string | null => null) }));
+const headerMock = vi.hoisted(() => ({ get: vi.fn((name: string): string | null => (name ? null : null)) }));
 
 vi.mock("server-only", () => ({}));
 vi.mock("next/headers", () => ({
@@ -404,5 +404,22 @@ describe("re-authentication before account changes", () => {
     expect(guesses.filter((r) => !r.ok && r.reason === "password")).toHaveLength(5);
     expect(guesses.filter((r) => !r.ok && r.reason === "throttled")).toHaveLength(3);
     await expect(twoFactor.verifyReauthentication(userId, "correct-horse", null)).resolves.toEqual({ ok: false, reason: "throttled" });
+  });
+});
+
+describe("To Buy links", () => {
+  it("accepts web links, adds https:// to bare domains, and refuses other schemes", async () => {
+    const { optionalHttpUrl } = await import("@/app/actions/shared");
+    const form = (url: string) => {
+      const data = new FormData();
+      data.set("url", url);
+      return data;
+    };
+    expect(optionalHttpUrl(form(""), "url")).toBeNull();
+    expect(optionalHttpUrl(form("https://example.com/part?id=1"), "url")).toBe("https://example.com/part?id=1");
+    expect(optionalHttpUrl(form("example.com/part"), "url")).toBe("https://example.com/part");
+    for (const bad of ["javascript:alert(1)", "data:text/html,<script>", "ftp://example.com/x"]) {
+      expect(() => optionalHttpUrl(form(bad), "url")).toThrow();
+    }
   });
 });
