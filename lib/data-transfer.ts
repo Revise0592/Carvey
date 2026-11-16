@@ -195,9 +195,31 @@ export async function discardImport(token: string) {
 }
 
 /** Inserts the staged rows in one transaction. Duplicates are skipped unless `includeDuplicates`. */
+/**
+ * Takes the staged preview out of the queue by renaming it, which only one caller can do. A double
+ * click on "Import" (two requests at once) therefore imports the rows once, not twice.
+ */
+async function claimImportPreview(token: string): Promise<{ preview: ImportPreview; claimedPath: string } | null> {
+  if (!isSafeToken(token)) return null;
+  const stagedPath = path.join(importDir(), `${token}.json`);
+  const claimedPath = path.join(importDir(), `${token}.${crypto.randomUUID()}.claimed`);
+  try {
+    await fs.rename(stagedPath, claimedPath);
+  } catch {
+    return null;
+  }
+  try {
+    return { preview: JSON.parse(await fs.readFile(claimedPath, "utf8")) as ImportPreview, claimedPath };
+  } catch {
+    await fs.rm(claimedPath, { force: true });
+    return null;
+  }
+}
+
 export async function commitCsvImport(token: string, includeDuplicates = false) {
-  const preview = await readImportPreview(token);
-  if (!preview) return { ok: false as const, message: "This import preview has expired. Upload the file again." };
+  const claimed = await claimImportPreview(token);
+  if (!claimed) return { ok: false as const, message: "This import preview has expired or was already imported. Upload the file again." };
+  const { preview, claimedPath } = claimed;
   const settings = getRegionalSettings();
   const rows = preview.rows.filter((row) => includeDuplicates || !row.duplicate);
   const touched = new Set<number>();
@@ -210,7 +232,7 @@ export async function commitCsvImport(token: string, includeDuplicates = false) 
   const num = (value: unknown) => (typeof value === "number" ? value : null);
   const text = (value: unknown) => (typeof value === "string" && value ? value : null);
 
-  getDb().transaction(() => {
+  const insertRows = getDb().transaction(() => {
     for (const { vehicleId, values: v } of rows) {
       touched.add(vehicleId);
       switch (preview.kind) {
@@ -249,8 +271,12 @@ export async function commitCsvImport(token: string, includeDuplicates = false) 
         if (latest) upsertMotReminder(vehicleId, latest.expiryDate, getMotLabel(settings));
       }
     }
-  })();
+  });
 
-  await discardImport(token);
+  try {
+    insertRows();
+  } finally {
+    await fs.rm(claimedPath, { force: true });
+  }
   return { ok: true as const, imported: rows.length, skipped: preview.rows.length - rows.length, vehicleIds: [...touched], kind: preview.kind, label: csvKindLabels[preview.kind] };
 }
