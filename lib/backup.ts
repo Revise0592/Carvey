@@ -237,6 +237,11 @@ const settingsNotRestored = ["authDisabled"];
 const showcaseTablesKept = new Set(["admin_users", "notification_log", ...tablesNotRestored]);
 const showcaseSettingsKeptWhere = `key LIKE 'notify.%' OR key LIKE 'calendar.%' OR key IN (${settingsNotRestored.map((key) => `'${key}'`).join(", ")})`;
 
+function backupHasAdmin(database: Database.Database) {
+  const exists = database.prepare("SELECT 1 FROM restore_backup.sqlite_master WHERE type = 'table' AND name = 'admin_users'").get();
+  return Boolean(exists && database.prepare("SELECT 1 FROM restore_backup.admin_users LIMIT 1").get());
+}
+
 function tableColumns(database: Database.Database, schema: "main" | "restore_backup", table: string) {
   return (database.prepare(`PRAGMA ${schema}.table_info("${table}")`).all() as Array<{ name: string }>).map((column) => column.name);
 }
@@ -257,7 +262,11 @@ function restoreDatabaseContents(backupDbPath: string, showcase = false) {
     const liveTables = listTables("main");
     const backupTables = new Set(listTables("restore_backup"));
 
-    const keptTables = showcase ? showcaseTablesKept : new Set<string>();
+    const keptTables = new Set<string>(showcase ? showcaseTablesKept : []);
+    // A backup with no admin account (the packaged showcase backup, or one taken before setup)
+    // must not delete this server's account: that would send Carvey back to /setup, where anyone
+    // who can reach it could create a new admin and take over the data.
+    if (!backupHasAdmin(database)) keptTables.add("admin_users");
     const keptSettingsWhere = showcase ? showcaseSettingsKeptWhere : `key IN (${settingsNotRestored.map((key) => `'${key}'`).join(", ")})`;
     const keptSettings = database
       .prepare(`SELECT key, value, updated_at FROM app_settings WHERE ${keptSettingsWhere}`)
