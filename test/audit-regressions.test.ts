@@ -317,3 +317,28 @@ describe("backup manifest", () => {
     expect(manifest.appVersion).toBe(version);
   });
 });
+
+describe("record form input", () => {
+  it("validates every field before creating a new workshop", async () => {
+    await freshDataDir("carvey-audit-workshop-");
+    const db = await import("@/lib/db");
+    const { maintenanceInput } = await import("@/app/actions/shared");
+    const form = new FormData();
+    form.set("date", "not a date");
+    form.set("category", "Service");
+    form.set("description", "Oil");
+    form.set("garage", "Brand New Garage");
+    expect(() => maintenanceInput(form)).toThrow();
+    expect(db.listWorkshops().map((workshop) => workshop.name)).not.toContain("Brand New Garage");
+
+    form.set("date", "2026-04-01");
+    expect(maintenanceInput(form)).toMatchObject({ date: "2026-04-01", garage: "Brand New Garage", cost: 0, notes: null });
+  });
+
+  it("caps very long notes", async () => {
+    const { optionalText } = await import("@/app/actions/shared");
+    const form = new FormData();
+    form.set("notes", "x".repeat(10_001));
+    expect(() => optionalText(form, "notes")).toThrow();
+  });
+});

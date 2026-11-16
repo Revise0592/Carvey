@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { convertPlannedPurchaseToMaintenance, convertPlannedPurchaseToRepair, createPlannedPurchase, deletePlannedPurchase, markPlannedPurchaseBought, updatePlannedPurchase, updatePlannedPurchasePurchasedDate } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
-import { isoDate, money, nullableInt, nullableIsoDate, nullableStr, recordWorkshopInput, revalidateVehicle, str, syncCurrentDemoAfterMutation } from "./shared";
+import { isoDate, maintenanceInput, money, nullableInt, nullableIsoDate, nullableStr, repairInput, revalidateVehicle, str, syncCurrentDemoAfterMutation } from "./shared";
 
 export async function createPlannedPurchaseAction(vehicleId: number, formData: FormData) {
   await requireUser();
@@ -68,33 +68,14 @@ export async function markPlannedPurchaseBoughtAction(vehicleId: number, id: num
 
 export async function createMaintenanceFromPurchaseAction(vehicleId: number, purchaseId: number, formData: FormData) {
   await requireUser();
-  const workshop = recordWorkshopInput(formData);
-  convertPlannedPurchaseToMaintenance(purchaseId, vehicleId, {
-    date: isoDate(formData, "date"),
-    odometer: nullableInt(formData, "odometer"),
-    category: z.string().min(1).parse(str(formData, "category")),
-    description: z.string().min(1).parse(str(formData, "description")),
-    garage: workshop.garage,
-    workshopId: workshop.workshopId,
-    cost: money(formData, "cost"),
-    notes: nullableStr(formData, "notes")
-  });
+  convertPlannedPurchaseToMaintenance(purchaseId, vehicleId, maintenanceInput(formData));
   await syncCurrentDemoAfterMutation();
   revalidateVehicle(vehicleId);
 }
 
 export async function createRepairFromPurchaseAction(vehicleId: number, purchaseId: number, formData: FormData) {
   await requireUser();
-  const workshop = recordWorkshopInput(formData);
-  convertPlannedPurchaseToRepair(purchaseId, vehicleId, {
-    date: isoDate(formData, "date"),
-    odometer: nullableInt(formData, "odometer"),
-    fault: z.string().min(1).parse(str(formData, "fault")),
-    garage: workshop.garage,
-    workshopId: workshop.workshopId,
-    cost: money(formData, "cost"),
-    notes: nullableStr(formData, "notes")
-  });
+  convertPlannedPurchaseToRepair(purchaseId, vehicleId, repairInput(formData));
   await syncCurrentDemoAfterMutation();
   revalidateVehicle(vehicleId);
 }

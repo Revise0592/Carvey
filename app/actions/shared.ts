@@ -62,6 +62,40 @@ export function workshopInput(formData: FormData) {
   };
 }
 
+/** Required single-line text, trimmed, with a sensible length cap. */
+export function requiredText(formData: FormData, key: string, max = 200) {
+  return z.string().min(1).max(max).parse(str(formData, key));
+}
+
+/** Optional free text (notes, advisories), capped so one field can't bloat every page that shows it. */
+export function optionalText(formData: FormData, key: string, max = 10_000) {
+  return z.string().max(max).nullable().parse(nullableStr(formData, key));
+}
+
+/**
+ * The fields shared by maintenance and repair records. Everything is validated before the garage
+ * is looked up, because that lookup creates a workshop when the name is new: a rejected form must
+ * not leave one behind.
+ */
+function serviceRecordFields(formData: FormData) {
+  return {
+    date: isoDate(formData, "date"),
+    odometer: nullableInt(formData, "odometer"),
+    cost: money(formData, "cost"),
+    notes: optionalText(formData, "notes")
+  };
+}
+
+export function maintenanceInput(formData: FormData) {
+  const fields = { ...serviceRecordFields(formData), category: requiredText(formData, "category", 100), description: requiredText(formData, "description") };
+  return { ...fields, ...recordWorkshopInput(formData) };
+}
+
+export function repairInput(formData: FormData) {
+  const fields = { ...serviceRecordFields(formData), fault: requiredText(formData, "fault") };
+  return { ...fields, ...recordWorkshopInput(formData) };
+}
+
 export function recordWorkshopInput(formData: FormData) {
   const raw = nullableStr(formData, "garage");
   if (!raw) return { garage: null, workshopId: null };

@@ -5,39 +5,18 @@ import { z } from "zod";
 import { createFuelRecord, createMaintenance, createMot, createRepair, deleteFuelRecord, deleteMaintenance, deleteMot, deleteRepair, listAndDeleteAttachmentsForRecord, listMots, updateFuelRecord, updateMaintenance, updateMot, updateRepair, upsertMotReminder } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { getMotLabel, getRegionalSettings } from "@/lib/regional-settings";
-import { fuelInput, isoDate, money, nullableInt, nullableStr, recordWorkshopInput, removeUploadFile, revalidateVehicle, str, syncCurrentDemoAfterMutation } from "./shared";
+import { fuelInput, isoDate, maintenanceInput, money, nullableInt, nullableStr, removeUploadFile, repairInput, revalidateVehicle, str, syncCurrentDemoAfterMutation } from "./shared";
 
 export async function createMaintenanceAction(vehicleId: number, formData: FormData) {
   await requireUser();
-  const workshop = recordWorkshopInput(formData);
-  createMaintenance({
-    vehicleId,
-    date: isoDate(formData, "date"),
-    odometer: nullableInt(formData, "odometer"),
-    category: z.string().min(1).parse(str(formData, "category")),
-    description: z.string().min(1).parse(str(formData, "description")),
-    garage: workshop.garage,
-    workshopId: workshop.workshopId,
-    cost: money(formData, "cost"),
-    notes: nullableStr(formData, "notes")
-  });
+  createMaintenance({ vehicleId, ...maintenanceInput(formData) });
   await syncCurrentDemoAfterMutation();
   revalidatePath(`/vehicles/${vehicleId}`);
 }
 
 export async function updateMaintenanceAction(vehicleId: number, id: number, formData: FormData) {
   await requireUser();
-  const workshop = recordWorkshopInput(formData);
-  updateMaintenance(id, vehicleId, {
-    date: isoDate(formData, "date"),
-    odometer: nullableInt(formData, "odometer"),
-    category: z.string().min(1).parse(str(formData, "category")),
-    description: z.string().min(1).parse(str(formData, "description")),
-    garage: workshop.garage,
-    workshopId: workshop.workshopId,
-    cost: money(formData, "cost"),
-    notes: nullableStr(formData, "notes")
-  });
+  updateMaintenance(id, vehicleId, maintenanceInput(formData));
   await syncCurrentDemoAfterMutation();
   revalidateVehicle(vehicleId);
 }
@@ -53,33 +32,14 @@ export async function deleteMaintenanceAction(vehicleId: number, id: number) {
 
 export async function createRepairAction(vehicleId: number, formData: FormData) {
   await requireUser();
-  const workshop = recordWorkshopInput(formData);
-  createRepair({
-    vehicleId,
-    date: isoDate(formData, "date"),
-    odometer: nullableInt(formData, "odometer"),
-    fault: z.string().min(1).parse(str(formData, "fault")),
-    garage: workshop.garage,
-    workshopId: workshop.workshopId,
-    cost: money(formData, "cost"),
-    notes: nullableStr(formData, "notes")
-  });
+  createRepair({ vehicleId, ...repairInput(formData) });
   await syncCurrentDemoAfterMutation();
   revalidatePath(`/vehicles/${vehicleId}`);
 }
 
 export async function updateRepairAction(vehicleId: number, id: number, formData: FormData) {
   await requireUser();
-  const workshop = recordWorkshopInput(formData);
-  updateRepair(id, vehicleId, {
-    date: isoDate(formData, "date"),
-    odometer: nullableInt(formData, "odometer"),
-    fault: z.string().min(1).parse(str(formData, "fault")),
-    garage: workshop.garage,
-    workshopId: workshop.workshopId,
-    cost: money(formData, "cost"),
-    notes: nullableStr(formData, "notes")
-  });
+  updateRepair(id, vehicleId, repairInput(formData));
   await syncCurrentDemoAfterMutation();
   revalidateVehicle(vehicleId);
 }
