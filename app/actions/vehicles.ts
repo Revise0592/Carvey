@@ -1,11 +1,14 @@
 "use server";
 
+import fs from "node:fs/promises";
+import path from "node:path";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createVehicle, deleteVehicle, getVehicle, setVehicleDebugDestroyed, updateVehicle } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { debugEasterEggsEnabled } from "@/lib/debug";
+import { attachmentDir } from "@/lib/paths";
 import { nullableInt, nullableMoney, nullableStr, removeUploadFile, revalidateVehicle, str, syncCurrentDemoAfterMutation } from "./shared";
 
 export async function createVehicleAction(formData: FormData) {
@@ -53,6 +56,12 @@ export async function deleteVehicleAction(vehicleId: number, formData: FormData)
   await removeUploadFile(vehicle.photoPath);
   await removeUploadFile(vehicle.thumbnailPath);
   deleteVehicle(vehicleId);
+  // Attachments and gallery photos live in uploads/attachments/<vehicleId>/. The rows go with the
+  // vehicle (ON DELETE CASCADE), so remove the files too, or receipts and insurance documents for
+  // a deleted car would stay on disk and in every future backup.
+  if (Number.isSafeInteger(vehicle.id) && vehicle.id > 0) {
+    await fs.rm(path.join(attachmentDir, String(vehicle.id)), { recursive: true, force: true });
+  }
   await syncCurrentDemoAfterMutation();
   revalidatePath("/garage");
   redirect("/garage");
