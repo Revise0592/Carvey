@@ -93,6 +93,8 @@ npm install
 CARVEY_DATA_DIR=./data npm run dev
 ```
 
+To open the dev server from another device (a phone on your LAN), list its address: `CARVEY_DEV_ORIGINS=192.168.1.20 npm run dev`.
+
 ## Environment variables
 
 | Variable | Purpose |

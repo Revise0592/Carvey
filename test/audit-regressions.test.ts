@@ -307,3 +307,13 @@ describe("restoring a re-zipped backup", () => {
     await expect(backup.stageRestorePreview(rezip("uploads/"))).resolves.toMatchObject({ ok: true });
   });
 });
+
+describe("backup manifest", () => {
+  it("records the running Carvey version", async () => {
+    await freshDataDir("carvey-audit-manifest-");
+    const backup = await import("@/lib/backup");
+    const { version } = (await import("../package.json")).default;
+    const { manifest } = await backup.createBackupZip();
+    expect(manifest.appVersion).toBe(version);
+  });
+});

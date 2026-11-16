@@ -4,11 +4,13 @@ import fs from "node:fs";
 import fsp from "node:fs/promises";
 import path from "node:path";
 import Database from "better-sqlite3";
+import packageJson from "../package.json";
 import { dbFileName, getDb } from "./db";
 import { dataDir, ensureDataDirs, restoreRollbackDir, restoreStagingDir, tempDir, uploadDir } from "./paths";
 
 const backupFormatVersion = 1;
-const appVersion = "0.1.0";
+// Recorded in each backup manifest so a restore can tell which release wrote it.
+const appVersion: string = packageJson.version;
 const maxRestoreBytes = 256 * 1024 * 1024;
 const showcaseDemoBackupPath = process.env.CARVEY_SHOWCASE_DEMO_BACKUP ?? path.resolve(process.cwd(), "data/demo/showcase-backup.zip");
 const debugDemoDir = path.join(dataDir, "debug-demo");
