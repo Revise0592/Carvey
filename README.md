@@ -60,6 +60,7 @@ Carvey is a self-hosted car maintenance tracker. It keeps the service history, M
 - Installable as a PWA, with mobile tab navigation and bottom-sheet forms
 - Light and dark mode, ten colour palettes, rounded or boxy shapes
 - One-click backup and restore (database and uploads in one zip, with a preview before restore)
+- Automatic nightly backups to `data/backups/` (keeps the newest 3 by default)
 - CSV export (per record type or everything as a zip) and CSV import with column matching, duplicate detection and a preview before saving
 - Sign-in with optional two-factor authentication (authenticator app + recovery codes), a signed-in devices list, and a reverse-proxy mode for Authelia, Authentik and similar
 
@@ -111,7 +112,7 @@ To open the dev server from another device (a phone on your LAN), list its addre
 | `CARVEY_SECURE_COOKIES` | `true` or `false` to force the session cookie's Secure flag. Default: on when the request arrived over HTTPS |
 | `CARVEY_RESET_2FA` | Set to `true` to turn off two-factor on startup (see below) |
 | `CARVEY_MAX_RESTORE_MB` | Largest backup file you can restore from the browser, in MB (default `256`). The file is held in memory while it uploads, so leave headroom in the container's memory limit |
-| `CARVEY_DISABLE_SCHEDULER` | Set to `true` to stop the built-in daily notification check (for example, when running several replicas) |
+| `CARVEY_DISABLE_SCHEDULER` | Set to `true` to stop the built-in scheduler: the daily notification check, nightly backups and data-folder clean-up (for example, when running several replicas) |
 
 ## Notifications and calendar
 
@@ -126,6 +127,12 @@ To open the dev server from another device (a phone on your LAN), list its addre
 | Webhook | Any URL. Carvey POSTs JSON with `title`, `body` and an `items` array |
 
 **Calendar feed:** select **Create calendar link** and subscribe to it from your calendar app. The link works without a login, so treat it like a password; **Reset link** invalidates the old one.
+
+## Backups
+
+**Settings → Backup & Restore.** *Download backup* gives you a zip of the database and every photo and document. Every night after 03:00 Carvey also saves one to the `backups` folder in its data directory and keeps the newest 3 (change it, or turn it off, on the same page). Those files sit on the same disk as the data, so copy the folder elsewhere with your usual backup tool. Any of them can be restored from the same page.
+
+Carvey also tidies its data folder daily: unfinished restore previews and imports older than a day are removed, and only the 3 most recent pre-restore snapshots (`restore-rollback/`) are kept.
 
 ## Importing from CSV
 

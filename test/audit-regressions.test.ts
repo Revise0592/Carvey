@@ -475,3 +475,84 @@ describe("backup streaming and restore limits", () => {
     expect(result).toEqual({ ok: false, message: "Backup expands to more data than Carvey will restore at once." });
   });
 });
+
+describe("daily notification digest", () => {
+  it("sends once when 'Check now' overlaps a scheduler tick", async () => {
+    await freshDataDir("carvey-audit-digest-");
+    const db = await import("@/lib/db");
+    const notifications = await import("@/lib/notifications");
+    const vehicleId = Number(db.createVehicle(vehicleInput()).lastInsertRowid);
+    db.createReminder({ vehicleId, title: "Tax", dueDate: "2020-01-01", dueOdometer: null, recurrence: null });
+    notifications.updateNotificationSettings({ enabled: true, provider: "webhook", url: "https://hooks.example.com/x", leadDays: 14, hour: 0 });
+    const originalFetch = globalThis.fetch;
+    const fetchMock = vi.fn(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      return new Response("ok");
+    });
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+    try {
+      const [tick, button] = await Promise.all([notifications.runDailyNotifications(), notifications.runDailyNotifications({ force: true })]);
+      expect(tick.status).toBe("sent");
+      expect(button.status).toBe("sent");
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+});
+
+describe("automatic backups", () => {
+  it("runs once a night after 03:00, keeps the newest N and can be turned off", async () => {
+    await freshDataDir("carvey-audit-nightly-");
+    const db = await import("@/lib/db");
+    const scheduled = await import("@/lib/scheduled-backups");
+    db.createVehicle(vehicleInput());
+    expect(scheduled.getScheduledBackupSettings()).toMatchObject({ enabled: true, keep: 3 });
+
+    const at = (date: string, hour: number) => {
+      const value = new Date(`${date}T00:00:00`);
+      value.setHours(hour);
+      return value;
+    };
+    await expect(scheduled.runScheduledBackup({ now: at("2026-01-01", 2) })).resolves.toEqual({ status: "not-yet" });
+    for (const day of ["2026-01-01", "2026-01-02", "2026-01-03", "2026-01-04"]) {
+      await expect(scheduled.runScheduledBackup({ now: at(day, 4) })).resolves.toEqual({ status: "done" });
+    }
+    await expect(scheduled.runScheduledBackup({ now: at("2026-01-04", 5) })).resolves.toEqual({ status: "already-ran" });
+    expect((await scheduled.listScheduledBackups()).map((file) => file.name)).toEqual([
+      "carvey-backup-2026-01-04.zip", "carvey-backup-2026-01-03.zip", "carvey-backup-2026-01-02.zip"
+    ]);
+
+    scheduled.updateScheduledBackupSettings({ enabled: false, keep: 7 });
+    await expect(scheduled.runScheduledBackup({ now: at("2026-01-05", 4) })).resolves.toEqual({ status: "disabled" });
+  });
+
+  it("only serves file names it created", async () => {
+    const { scheduledBackupPath } = await import("@/lib/scheduled-backups");
+    expect(scheduledBackupPath("carvey-backup-2026-01-04.zip")).toMatch(/backups[/\\]carvey-backup-2026-01-04\.zip$/);
+    for (const bad of ["../carvey.sqlite", "carvey-backup-2026-01-04.zip/../../x", "other.zip", ""]) expect(scheduledBackupPath(bad)).toBeNull();
+  });
+});
+
+describe("data directory clean-up", () => {
+  it("removes stale staging and work files and keeps the newest 3 rollbacks", async () => {
+    await freshDataDir("carvey-audit-cleanup-");
+    const paths = await import("@/lib/paths");
+    const { cleanUpDataDirectory } = await import("@/lib/housekeeping");
+    paths.ensureDataDirs();
+    const old = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+    const make = async (dir: string, age: Date | null) => {
+      await fs.mkdir(dir, { recursive: true });
+      if (age) await fs.utimes(dir, age, age);
+    };
+    await make(path.join(paths.restoreStagingDir, "old-preview"), old);
+    await make(path.join(paths.restoreStagingDir, "fresh-preview"), null);
+    await make(path.join(paths.tempDir, "backup-abandoned"), old);
+    for (const stamp of ["2026-01-01", "2026-02-01", "2026-03-01", "2026-04-01", "2026-05-01"]) await make(path.join(paths.restoreRollbackDir, `${stamp}T10-00-00-000Z`), null);
+
+    await cleanUpDataDirectory();
+    expect(await fs.readdir(paths.restoreStagingDir)).toEqual(["fresh-preview"]);
+    expect((await fs.readdir(paths.tempDir)).filter((name) => name.startsWith("backup-"))).toEqual([]);
+    expect((await fs.readdir(paths.restoreRollbackDir)).sort()).toEqual(["2026-03-01T10-00-00-000Z", "2026-04-01T10-00-00-000Z", "2026-05-01T10-00-00-000Z"]);
+  });
+});

@@ -14,6 +14,7 @@ import { formatDate } from "@/lib/format";
 import { CURRENCY_CODES, getRegionalSettings } from "@/lib/regional-settings";
 import packageJson from "@/package.json";
 import { AdminPanel } from "./_panels/admin";
+import { BackupSchedulePanel } from "./_panels/backup-schedule";
 import { DataPanel } from "./_panels/data";
 import { NotificationsPanel } from "./_panels/notifications";
 
@@ -44,7 +45,7 @@ function currencyOptionLabel(code: string) {
   return `${code} — ${currencyDisplayNames.of(code)}`;
 }
 
-export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ tab?: string; account?: string; app?: string; workshop?: string; category?: string; interval?: string; restore?: string; token?: string; debug?: string; message?: string; notify?: string; import?: string; count?: string; skipped?: string; label?: string; left?: string }> }) {
+export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ tab?: string; account?: string; app?: string; workshop?: string; category?: string; interval?: string; restore?: string; token?: string; debug?: string; message?: string; notify?: string; import?: string; count?: string; skipped?: string; label?: string; left?: string; auto?: string }> }) {
   const user = await requireUser();
   const params = await searchParams;
   const hasExplicitTab = settingsTabs.includes(params.tab as SettingsTab);
@@ -268,6 +269,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             <p className="muted">Download a complete backup of the database and vehicle images.</p>
             <a className="primary-button" href="/settings/backup">Download backup</a>
           </article>
+
+          <BackupSchedulePanel status={params.auto} message={params.message} />
 
           <article className="settings-panel">
             <h2><Upload size={19} /> Restore</h2>

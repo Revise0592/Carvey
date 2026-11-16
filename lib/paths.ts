@@ -8,6 +8,7 @@ export const attachmentDir = path.join(uploadDir, "attachments");
 export const restoreStagingDir = path.join(dataDir, "restore-staging");
 export const restoreRollbackDir = path.join(dataDir, "restore-rollback");
 export const tempDir = path.join(dataDir, "tmp");
+export const scheduledBackupDir = path.join(dataDir, "backups");
 
 export function ensureDataDirs() {
   fs.mkdirSync(vehiclePhotoDir, { recursive: true });
@@ -15,6 +16,7 @@ export function ensureDataDirs() {
   fs.mkdirSync(restoreStagingDir, { recursive: true });
   fs.mkdirSync(restoreRollbackDir, { recursive: true });
   fs.mkdirSync(tempDir, { recursive: true });
+  fs.mkdirSync(scheduledBackupDir, { recursive: true });
 }
 
 export function safeUploadPath(parts: string[]) {

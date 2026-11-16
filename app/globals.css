@@ -3902,3 +3902,12 @@ details.field-hint ul,
   color: var(--danger);
   font-weight: 600;
 }
+
+.backup-file-list {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0 4px;
+  padding: 0;
+  list-style: none;
+  overflow-wrap: anywhere;
+}
