@@ -5,14 +5,14 @@ import { z } from "zod";
 import { createFuelRecord, createMaintenance, createMot, createRepair, deleteFuelRecord, deleteMaintenance, deleteMot, deleteRepair, listAndDeleteAttachmentsForRecord, listMots, updateFuelRecord, updateMaintenance, updateMot, updateRepair, upsertMotReminder } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { getMotLabel, getRegionalSettings } from "@/lib/regional-settings";
-import { fuelInput, money, nullableInt, nullableStr, recordWorkshopInput, removeUploadFile, revalidateVehicle, str, syncCurrentDemoAfterMutation } from "./shared";
+import { fuelInput, isoDate, money, nullableInt, nullableStr, recordWorkshopInput, removeUploadFile, revalidateVehicle, str, syncCurrentDemoAfterMutation } from "./shared";
 
 export async function createMaintenanceAction(vehicleId: number, formData: FormData) {
   await requireUser();
   const workshop = recordWorkshopInput(formData);
   createMaintenance({
     vehicleId,
-    date: z.string().min(1).parse(str(formData, "date")),
+    date: isoDate(formData, "date"),
     odometer: nullableInt(formData, "odometer"),
     category: z.string().min(1).parse(str(formData, "category")),
     description: z.string().min(1).parse(str(formData, "description")),
@@ -29,7 +29,7 @@ export async function updateMaintenanceAction(vehicleId: number, id: number, for
   await requireUser();
   const workshop = recordWorkshopInput(formData);
   updateMaintenance(id, vehicleId, {
-    date: z.string().min(1).parse(str(formData, "date")),
+    date: isoDate(formData, "date"),
     odometer: nullableInt(formData, "odometer"),
     category: z.string().min(1).parse(str(formData, "category")),
     description: z.string().min(1).parse(str(formData, "description")),
@@ -56,7 +56,7 @@ export async function createRepairAction(vehicleId: number, formData: FormData) 
   const workshop = recordWorkshopInput(formData);
   createRepair({
     vehicleId,
-    date: z.string().min(1).parse(str(formData, "date")),
+    date: isoDate(formData, "date"),
     odometer: nullableInt(formData, "odometer"),
     fault: z.string().min(1).parse(str(formData, "fault")),
     garage: workshop.garage,
@@ -72,7 +72,7 @@ export async function updateRepairAction(vehicleId: number, id: number, formData
   await requireUser();
   const workshop = recordWorkshopInput(formData);
   updateRepair(id, vehicleId, {
-    date: z.string().min(1).parse(str(formData, "date")),
+    date: isoDate(formData, "date"),
     odometer: nullableInt(formData, "odometer"),
     fault: z.string().min(1).parse(str(formData, "fault")),
     garage: workshop.garage,
@@ -95,10 +95,10 @@ export async function deleteRepairAction(vehicleId: number, id: number) {
 
 export async function createMotAction(vehicleId: number, formData: FormData) {
   await requireUser();
-  const expiryDate = z.string().min(1).parse(str(formData, "expiryDate"));
+  const expiryDate = isoDate(formData, "expiryDate");
   createMot({
     vehicleId,
-    testDate: z.string().min(1).parse(str(formData, "testDate")),
+    testDate: isoDate(formData, "testDate"),
     expiryDate,
     odometer: nullableInt(formData, "odometer"),
     result: z.enum(["pass", "fail", "advisory"]).parse(str(formData, "result")),
@@ -114,9 +114,9 @@ export async function createMotAction(vehicleId: number, formData: FormData) {
 
 export async function updateMotAction(vehicleId: number, id: number, formData: FormData) {
   await requireUser();
-  const expiryDate = z.string().min(1).parse(str(formData, "expiryDate"));
+  const expiryDate = isoDate(formData, "expiryDate");
   updateMot(id, vehicleId, {
-    testDate: z.string().min(1).parse(str(formData, "testDate")),
+    testDate: isoDate(formData, "testDate"),
     expiryDate,
     odometer: nullableInt(formData, "odometer"),
     result: z.enum(["pass", "fail", "advisory"]).parse(str(formData, "result")),

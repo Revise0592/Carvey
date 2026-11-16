@@ -27,10 +27,14 @@ import {
 import { credentialsSchema, str } from "./shared";
 
 export async function setupAction(formData: FormData) {
-  const parsed = credentialsSchema.parse({
+  const result = credentialsSchema.safeParse({
     username: str(formData, "username"),
     password: str(formData, "password")
   });
+  // The form enforces these lengths too; this covers browsers or scripts that skip it, which
+  // used to get a server error page instead of a message.
+  if (!result.success) redirect("/setup?error=invalid");
+  const parsed = result.data;
   try {
     await createFirstAdmin(parsed.username, parsed.password);
   } catch {

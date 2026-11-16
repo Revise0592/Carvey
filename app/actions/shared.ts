@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { syncShowcaseDemoBackupIfActive } from "@/lib/backup";
 import { getOrCreateWorkshopByName } from "@/lib/db";
+import { isIsoDate } from "@/lib/dates";
 import { safeUploadPath } from "@/lib/paths";
 
 export function str(formData: FormData, key: string) {
@@ -17,19 +18,36 @@ export function nullableStr(formData: FormData, key: string) {
   return value.length ? value : null;
 }
 
+/**
+ * Number and date fields are validated here as well as in the browser: a client without a native
+ * date picker, or a script, could otherwise store "next tuesday" as a date, which then crashed
+ * every page that formats it.
+ */
 export function nullableInt(formData: FormData, key: string) {
   const value = str(formData, key);
-  return value.length ? Number.parseInt(value, 10) : null;
+  if (!value.length) return null;
+  return z.coerce.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).parse(Math.trunc(Number(value)));
 }
 
 export function money(formData: FormData, key: string) {
-  const value = str(formData, key);
-  return value.length ? Number.parseFloat(value) : 0;
+  return nullableMoney(formData, key) ?? 0;
 }
 
 export function nullableMoney(formData: FormData, key: string) {
   const value = str(formData, key);
-  return value.length ? Number.parseFloat(value) : null;
+  if (!value.length) return null;
+  return z.number().finite().min(-1e9).max(1e9).parse(Number(value));
+}
+
+const isoDateSchema = z.string().refine(isIsoDate, "Enter a date as YYYY-MM-DD");
+
+export function isoDate(formData: FormData, key: string) {
+  return isoDateSchema.parse(str(formData, key));
+}
+
+export function nullableIsoDate(formData: FormData, key: string) {
+  const value = str(formData, key);
+  return value.length ? isoDateSchema.parse(value) : null;
 }
 
 export function workshopInput(formData: FormData) {
@@ -93,7 +111,7 @@ export function fuelInput(formData: FormData, settings: { fuelVolumeUnit?: strin
   const rawVolume = z.coerce.number().positive().parse(str(formData, "volume"));
   const volumeLitres = settings.fuelVolumeUnit === "gallons" ? rawVolume * 3.78541 : rawVolume;
   return {
-    date: z.string().min(1).parse(str(formData, "date")),
+    date: isoDate(formData, "date"),
     odometer: z.coerce.number().int().nonnegative().parse(str(formData, "odometer")),
     volumeLitres,
     totalCost: nullableMoney(formData, "totalCost"),

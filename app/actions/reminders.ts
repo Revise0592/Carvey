@@ -4,14 +4,14 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { assignServiceInterval, completeOrRepeatReminder, completeReminder, createReminder, deleteReminder, recordServiceDone, removeVehicleServiceInterval, updateReminder } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
-import { money, nullableInt, nullableStr, revalidateVehicle, str, syncCurrentDemoAfterMutation } from "./shared";
+import { isoDate, money, nullableInt, nullableIsoDate, nullableStr, revalidateVehicle, str, syncCurrentDemoAfterMutation } from "./shared";
 
 export async function createReminderAction(vehicleId: number, formData: FormData) {
   await requireUser();
   createReminder({
     vehicleId,
     title: z.string().min(1).parse(str(formData, "title")),
-    dueDate: nullableStr(formData, "dueDate"),
+    dueDate: nullableIsoDate(formData, "dueDate"),
     dueOdometer: nullableInt(formData, "dueOdometer"),
     recurrence: nullableStr(formData, "recurrence")
   });
@@ -24,7 +24,7 @@ export async function updateReminderAction(vehicleId: number, id: number, formDa
   await requireUser();
   updateReminder(id, vehicleId, {
     title: z.string().min(1).parse(str(formData, "title")),
-    dueDate: nullableStr(formData, "dueDate"),
+    dueDate: nullableIsoDate(formData, "dueDate"),
     dueOdometer: nullableInt(formData, "dueOdometer"),
     recurrence: nullableStr(formData, "recurrence"),
     completedAt: null
@@ -68,7 +68,7 @@ export async function removeVehicleServiceIntervalAction(vehicleId: number, id: 
 export async function recordServiceDoneAction(vehicleId: number, id: number, formData: FormData) {
   await requireUser();
   recordServiceDone(id, vehicleId, {
-    serviceDate: z.string().min(1).parse(str(formData, "serviceDate")),
+    serviceDate: isoDate(formData, "serviceDate"),
     serviceOdometer: nullableInt(formData, "serviceOdometer"),
     cost: money(formData, "cost")
   });

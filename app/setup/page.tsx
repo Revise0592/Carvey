@@ -5,8 +5,9 @@ import { hasAdminUser } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-export default function SetupPage() {
+export default async function SetupPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   if (hasAdminUser()) redirect("/login");
+  const { error } = await searchParams;
   return (
     <main className="auth-shell">
       <section className="auth-card">
@@ -17,6 +18,7 @@ export default function SetupPage() {
             <p>Create your admin account.</p>
           </div>
         </div>
+        {error ? <p className="error">Use a username of 2 to 48 characters and a password of at least 8 characters.</p> : null}
         <form action={setupAction} className="form-stack">
           <label>
             Username

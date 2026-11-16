@@ -9,7 +9,7 @@ import { createVehicle, deleteVehicle, getVehicle, setVehicleDebugDestroyed, upd
 import { requireUser } from "@/lib/auth";
 import { debugEasterEggsEnabled } from "@/lib/debug";
 import { attachmentDir } from "@/lib/paths";
-import { nullableInt, nullableMoney, nullableStr, removeUploadFile, revalidateVehicle, str, syncCurrentDemoAfterMutation } from "./shared";
+import { nullableInt, nullableIsoDate, nullableMoney, nullableStr, removeUploadFile, revalidateVehicle, str, syncCurrentDemoAfterMutation } from "./shared";
 
 export async function createVehicleAction(formData: FormData) {
   await requireUser();
@@ -21,7 +21,7 @@ export async function createVehicleAction(formData: FormData) {
     vin: nullableStr(formData, "vin"),
     currentOdometer: nullableInt(formData, "currentOdometer"),
     purchasePrice: nullableMoney(formData, "purchasePrice"),
-    purchaseDate: nullableStr(formData, "purchaseDate"),
+    purchaseDate: nullableIsoDate(formData, "purchaseDate"),
     notes: nullableStr(formData, "notes")
   };
   const result = createVehicle(input);
@@ -40,7 +40,7 @@ export async function updateVehicleAction(vehicleId: number, formData: FormData)
     vin: nullableStr(formData, "vin"),
     currentOdometer: nullableInt(formData, "currentOdometer"),
     purchasePrice: nullableMoney(formData, "purchasePrice"),
-    purchaseDate: nullableStr(formData, "purchaseDate"),
+    purchaseDate: nullableIsoDate(formData, "purchaseDate"),
     notes: nullableStr(formData, "notes"),
     sold: str(formData, "sold") === "on"
   });

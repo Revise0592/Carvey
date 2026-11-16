@@ -244,3 +244,37 @@ describe("upload content checks", () => {
     expect(contentMatchesMime(new TextEncoder().encode("anything"), "image/svg+xml")).toBe(false);
   });
 });
+
+describe("server-side form validation", () => {
+  const form = (values: Record<string, string>) => {
+    const data = new FormData();
+    for (const [key, value] of Object.entries(values)) data.set(key, value);
+    return data;
+  };
+
+  it("rejects dates that aren't real calendar dates", async () => {
+    const { isoDate, nullableIsoDate } = await import("@/app/actions/shared");
+    expect(isoDate(form({ date: "2026-02-28" }), "date")).toBe("2026-02-28");
+    expect(nullableIsoDate(form({ date: "" }), "date")).toBeNull();
+    for (const bad of ["next tuesday", "31/02/2026", "2026-02-31", "2026-13-01"]) {
+      expect(() => isoDate(form({ date: bad }), "date")).toThrow();
+    }
+  });
+
+  it("rejects numbers that aren't numbers, and negative odometers", async () => {
+    const { money, nullableInt, nullableMoney } = await import("@/app/actions/shared");
+    expect(money(form({ cost: "" }), "cost")).toBe(0);
+    expect(money(form({ cost: "12.50" }), "cost")).toBe(12.5);
+    expect(nullableInt(form({ odometer: "12000" }), "odometer")).toBe(12000);
+    expect(() => money(form({ cost: "abc" }), "cost")).toThrow();
+    expect(() => nullableMoney(form({ cost: "Infinity" }), "cost")).toThrow();
+    expect(() => nullableInt(form({ odometer: "-500" }), "odometer")).toThrow();
+    expect(() => nullableInt(form({ year: "nineteen" }), "year")).toThrow();
+  });
+
+  it("formats a stored non-date as-is instead of crashing the page", async () => {
+    const { formatDate } = await import("@/lib/format");
+    expect(formatDate("next tuesday")).toBe("next tuesday");
+    expect(formatDate("2026-03-14")).toBe("14 Mar 2026");
+  });
+});

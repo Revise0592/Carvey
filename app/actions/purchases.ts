@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { convertPlannedPurchaseToMaintenance, convertPlannedPurchaseToRepair, createPlannedPurchase, deletePlannedPurchase, markPlannedPurchaseBought, updatePlannedPurchase, updatePlannedPurchasePurchasedDate } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
-import { money, nullableInt, nullableStr, recordWorkshopInput, revalidateVehicle, str, syncCurrentDemoAfterMutation } from "./shared";
+import { isoDate, money, nullableInt, nullableIsoDate, nullableStr, recordWorkshopInput, revalidateVehicle, str, syncCurrentDemoAfterMutation } from "./shared";
 
 export async function createPlannedPurchaseAction(vehicleId: number, formData: FormData) {
   await requireUser();
@@ -15,7 +15,7 @@ export async function createPlannedPurchaseAction(vehicleId: number, formData: F
     estimatedCost: money(formData, "estimatedCost"),
     supplier: nullableStr(formData, "supplier"),
     url: nullableStr(formData, "url"),
-    dueDate: nullableStr(formData, "dueDate"),
+    dueDate: nullableIsoDate(formData, "dueDate"),
     dueOdometer: nullableInt(formData, "dueOdometer"),
     notes: nullableStr(formData, "notes")
   });
@@ -32,7 +32,7 @@ export async function updatePlannedPurchaseAction(vehicleId: number, id: number,
     estimatedCost: money(formData, "estimatedCost"),
     supplier: nullableStr(formData, "supplier"),
     url: nullableStr(formData, "url"),
-    dueDate: nullableStr(formData, "dueDate"),
+    dueDate: nullableIsoDate(formData, "dueDate"),
     dueOdometer: nullableInt(formData, "dueOdometer"),
     notes: nullableStr(formData, "notes")
   });
@@ -42,7 +42,7 @@ export async function updatePlannedPurchaseAction(vehicleId: number, id: number,
 
 export async function updatePlannedPurchasePurchasedDateAction(vehicleId: number, id: number, formData: FormData) {
   await requireUser();
-  updatePlannedPurchasePurchasedDate(id, vehicleId, z.string().min(1).parse(str(formData, "purchasedDate")));
+  updatePlannedPurchasePurchasedDate(id, vehicleId, isoDate(formData, "purchasedDate"));
   await syncCurrentDemoAfterMutation();
   revalidatePath("/garage");
   revalidatePath(`/vehicles/${vehicleId}`);
@@ -58,7 +58,7 @@ export async function deletePlannedPurchaseAction(vehicleId: number, id: number)
 export async function markPlannedPurchaseBoughtAction(vehicleId: number, id: number, formData: FormData) {
   await requireUser();
   markPlannedPurchaseBought(id, vehicleId, {
-    purchasedDate: z.string().min(1).parse(str(formData, "purchasedDate")),
+    purchasedDate: isoDate(formData, "purchasedDate"),
     actualCost: money(formData, "actualCost")
   });
   await syncCurrentDemoAfterMutation();
@@ -70,7 +70,7 @@ export async function createMaintenanceFromPurchaseAction(vehicleId: number, pur
   await requireUser();
   const workshop = recordWorkshopInput(formData);
   convertPlannedPurchaseToMaintenance(purchaseId, vehicleId, {
-    date: z.string().min(1).parse(str(formData, "date")),
+    date: isoDate(formData, "date"),
     odometer: nullableInt(formData, "odometer"),
     category: z.string().min(1).parse(str(formData, "category")),
     description: z.string().min(1).parse(str(formData, "description")),
@@ -87,7 +87,7 @@ export async function createRepairFromPurchaseAction(vehicleId: number, purchase
   await requireUser();
   const workshop = recordWorkshopInput(formData);
   convertPlannedPurchaseToRepair(purchaseId, vehicleId, {
-    date: z.string().min(1).parse(str(formData, "date")),
+    date: isoDate(formData, "date"),
     odometer: nullableInt(formData, "odometer"),
     fault: z.string().min(1).parse(str(formData, "fault")),
     garage: workshop.garage,

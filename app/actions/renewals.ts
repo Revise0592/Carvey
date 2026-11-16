@@ -4,17 +4,15 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createRenewal, deleteRenewal, listAndDeleteAttachmentsForRecord, updateRenewal, RENEWAL_TYPES } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
-import { money, nullableStr, removeUploadFile, revalidateVehicle, str, syncCurrentDemoAfterMutation } from "./shared";
-
-const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+import { isoDate, money, nullableIsoDate, nullableStr, removeUploadFile, revalidateVehicle, str, syncCurrentDemoAfterMutation } from "./shared";
 
 function renewalInput(formData: FormData) {
   return {
     type: z.enum(RENEWAL_TYPES).parse(str(formData, "type")),
     provider: nullableStr(formData, "provider"),
     reference: nullableStr(formData, "reference"),
-    startDate: isoDate.nullable().parse(nullableStr(formData, "startDate")),
-    endDate: isoDate.parse(str(formData, "endDate")),
+    startDate: nullableIsoDate(formData, "startDate"),
+    endDate: isoDate(formData, "endDate"),
     cost: money(formData, "cost"),
     notes: nullableStr(formData, "notes")
   };

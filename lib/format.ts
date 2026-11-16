@@ -24,11 +24,15 @@ export function formatDate(value: string | null | undefined, settings?: { dateFo
     return value.slice(0, 10);
   }
   const dateValue = value.includes("T") || value.includes(" ") ? value : `${value}T12:00:00`;
+  const date = new Date(dateValue);
+  // A value that isn't a date (old data, a restored backup, a hand-edited database) is shown as
+  // stored rather than throwing "Invalid time value" and taking the whole page down.
+  if (Number.isNaN(date.getTime())) return value;
   return new Intl.DateTimeFormat("en-GB", {
     day: "2-digit",
     month: "short",
     year: "numeric"
-  }).format(new Date(dateValue));
+  }).format(date);
 }
 
 export { todayIso } from "./dates";
