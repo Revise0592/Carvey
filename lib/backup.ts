@@ -3,6 +3,9 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import fsp from "node:fs/promises";
 import path from "node:path";
+import type { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
+import yazl from "yazl";
 import Database from "better-sqlite3";
 import packageJson from "../package.json";
 import { dbFileName, getDb } from "./db";
@@ -11,7 +14,11 @@ import { dataDir, ensureDataDirs, restoreRollbackDir, restoreStagingDir, tempDir
 const backupFormatVersion = 1;
 // Recorded in each backup manifest so a restore can tell which release wrote it.
 const appVersion: string = packageJson.version;
-const maxRestoreBytes = 256 * 1024 * 1024;
+/** Largest backup file accepted for restore through the browser (CARVEY_MAX_RESTORE_MB, default 256). */
+const maxRestoreBytes = Math.max(1, Number.parseInt(process.env.CARVEY_MAX_RESTORE_MB ?? "", 10) || 256) * 1024 * 1024;
+/** Uploads are stored uncompressed, so a real backup expands very little; anything far beyond this is a zip bomb. */
+const maxExtractedBytes = maxRestoreBytes * 4;
+const maxEntries = 100_000;
 const showcaseDemoBackupPath = process.env.CARVEY_SHOWCASE_DEMO_BACKUP ?? path.resolve(process.cwd(), "data/demo/showcase-backup.zip");
 const debugDemoDir = path.join(dataDir, "debug-demo");
 const debugDemoRollbackZipPath = path.join(debugDemoDir, "previous-live-data.zip");
@@ -58,36 +65,79 @@ export type ShowcaseDemoStatus = {
   summary: RestoreSummary | null;
 };
 
-export async function createBackupZip(options: { showcase?: boolean } = {}) {
+export type BackupStream = {
+  manifest: BackupManifest;
+  /** The zip, produced while it is read. Files are streamed from disk, never held in memory. */
+  stream: Readable;
+};
+
+/**
+ * Starts writing a backup zip: a scrubbed, consistent copy of the database plus every upload.
+ * The temporary database copy is removed once the stream ends or is abandoned.
+ */
+export async function createBackupStream(options: { showcase?: boolean } = {}): Promise<BackupStream> {
   ensureDataDirs();
-  const token = crypto.randomUUID();
-  const workDir = path.join(tempDir, `backup-${token}`);
+  const workDir = path.join(tempDir, `backup-${crypto.randomUUID()}`);
   await fsp.mkdir(workDir, { recursive: true });
-  const dbCopyPath = path.join(workDir, dbFileName);
+  try {
+    const dbCopyPath = path.join(workDir, dbFileName);
+    await getDb().backup(dbCopyPath);
+    scrubBackupCopy(dbCopyPath, options.showcase === true);
 
-  await getDb().backup(dbCopyPath);
-  scrubBackupCopy(dbCopyPath, options.showcase === true);
+    const uploads = await listUploadFiles();
+    const manifest: BackupManifest = {
+      app: "Carvey",
+      appVersion,
+      formatVersion: backupFormatVersion,
+      createdAt: new Date().toISOString(),
+      database: dbFileName,
+      uploads
+    };
 
-  const uploads = await listUploadFiles();
-  const manifest: BackupManifest = {
-    app: "Carvey",
-    appVersion,
-    formatVersion: backupFormatVersion,
-    createdAt: new Date().toISOString(),
-    database: dbFileName,
-    uploads
-  };
+    const zip = new yazl.ZipFile();
+    zip.addFile(dbCopyPath, dbFileName);
+    zip.addBuffer(Buffer.from(JSON.stringify(manifest, null, 2)), "manifest.json");
+    // Photos and PDFs are already compressed; storing them as-is saves CPU for no loss.
+    for (const relativePath of uploads) zip.addFile(path.join(uploadDir, relativePath), `uploads/${relativePath}`, { compress: false });
+    zip.end();
 
-  const zip = new AdmZip();
-  zip.addLocalFile(dbCopyPath, "", dbFileName);
-  zip.addFile("manifest.json", Buffer.from(JSON.stringify(manifest, null, 2)));
-  for (const relativePath of uploads) {
-    zip.addLocalFile(path.join(uploadDir, relativePath), "uploads", relativePath);
+    const stream = zip.outputStream as Readable;
+    let cleaned = false;
+    const cleanUp = () => {
+      if (cleaned) return;
+      cleaned = true;
+      void fsp.rm(workDir, { recursive: true, force: true });
+    };
+    stream.once("end", cleanUp);
+    stream.once("close", cleanUp);
+    stream.once("error", cleanUp);
+    return { manifest, stream };
+  } catch (error) {
+    await fsp.rm(workDir, { recursive: true, force: true });
+    throw error;
   }
+}
 
-  const buffer = zip.toBuffer();
-  await fsp.rm(workDir, { recursive: true, force: true });
-  return { buffer, manifest };
+/** Writes a backup to `filePath` (via a temporary file, so a partial backup never has the final name). */
+export async function writeBackupFile(filePath: string, options: { showcase?: boolean } = {}) {
+  const { manifest, stream } = await createBackupStream(options);
+  const partial = `${filePath}.partial`;
+  try {
+    await pipeline(stream, fs.createWriteStream(partial));
+    await fsp.rename(partial, filePath);
+  } catch (error) {
+    await fsp.rm(partial, { force: true });
+    throw error;
+  }
+  return manifest;
+}
+
+/** The whole backup in memory. Only for small backups (tests, the showcase demo); downloads stream. */
+export async function createBackupZip(options: { showcase?: boolean } = {}) {
+  const { manifest, stream } = await createBackupStream(options);
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) chunks.push(chunk as Buffer);
+  return { buffer: Buffer.concat(chunks), manifest };
 }
 
 /**
@@ -112,7 +162,7 @@ function scrubBackupCopy(dbPath: string, showcase = false) {
 export async function stageRestorePreview(file: File): Promise<PreviewResult> {
   ensureDataDirs();
   if (file.size <= 0) return { ok: false, message: "Choose a backup file to restore." };
-  if (file.size > maxRestoreBytes) return { ok: false, message: "Backup file is larger than 256 MB." };
+  if (file.size > maxRestoreBytes) return { ok: false, message: `Backup file is larger than ${Math.round(maxRestoreBytes / 1024 / 1024)} MB. Set CARVEY_MAX_RESTORE_MB to allow bigger ones.` };
 
   const buffer = Buffer.from(await file.arrayBuffer());
   const token = crypto.randomUUID();
@@ -188,8 +238,7 @@ export async function activateShowcaseDemoData(): Promise<MutationResult> {
 
   // Preserve the original live data snapshot while demo mode is active.
   if (!state.active || !rollbackExists) {
-    const liveBackup = await createBackupZip();
-    await fsp.writeFile(debugDemoRollbackZipPath, liveBackup.buffer);
+    await writeBackupFile(debugDemoRollbackZipPath);
   }
 
   const extractDir = path.join(debugDemoDir, "showcase-extract");
@@ -323,6 +372,10 @@ async function validateAndSummariseZip(buffer: Buffer, token: string, extractDir
   const entries = zip.getEntries();
   if (!entries.length) throw new Error("Backup zip is empty.");
 
+  if (entries.length > maxEntries) throw new Error("Backup contains too many files.");
+  const declaredSize = entries.reduce((total, entry) => total + (entry.header.size ?? 0), 0);
+  if (declaredSize > maxExtractedBytes) throw new Error("Backup expands to more data than Carvey will restore at once.");
+
   for (const entry of entries) {
     // Zips made by Finder, 7-Zip and most tools also list folders ("uploads/"); those are fine.
     const name = entry.isDirectory ? entry.entryName.replace(/\/$/, "") : entry.entryName;
@@ -390,10 +443,7 @@ async function createRollbackSnapshot() {
 async function writeCurrentDataToShowcaseDemoBackup() {
   ensureDataDirs();
   await fsp.mkdir(path.dirname(showcaseDemoBackupPath), { recursive: true });
-  const { buffer } = await createBackupZip({ showcase: true });
-  const tempPath = `${showcaseDemoBackupPath}.tmp`;
-  await fsp.writeFile(tempPath, buffer);
-  await fsp.rename(tempPath, showcaseDemoBackupPath);
+  await writeBackupFile(showcaseDemoBackupPath, { showcase: true });
 }
 
 async function restoreExtractedBackup(extractDir: string, showcase = false) {

@@ -110,6 +110,7 @@ To open the dev server from another device (a phone on your LAN), list its addre
 | `CARVEY_TRUSTED_PROXY_HOPS` | How many proxies sit in front of Carvey (default `1`). Used to read the real client address from `X-Forwarded-For` for sign-in rate limits. `0` ignores the header (no proxy) |
 | `CARVEY_SECURE_COOKIES` | `true` or `false` to force the session cookie's Secure flag. Default: on when the request arrived over HTTPS |
 | `CARVEY_RESET_2FA` | Set to `true` to turn off two-factor on startup (see below) |
+| `CARVEY_MAX_RESTORE_MB` | Largest backup file you can restore from the browser, in MB (default `256`). The file is held in memory while it uploads, so leave headroom in the container's memory limit |
 | `CARVEY_DISABLE_SCHEDULER` | Set to `true` to stop the built-in daily notification check (for example, when running several replicas) |
 
 ## Notifications and calendar

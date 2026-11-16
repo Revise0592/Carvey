@@ -439,3 +439,39 @@ describe("content security policy", () => {
     expect(buildContentSecurityPolicy(nonce, { development: true })).toContain("'unsafe-eval'");
   });
 });
+
+describe("backup streaming and restore limits", () => {
+  afterEach(() => {
+    delete process.env.CARVEY_MAX_RESTORE_MB;
+  });
+
+  it("writes a backup straight to a file that restores", async () => {
+    const dir = await freshDataDir("carvey-audit-stream-");
+    const db = await import("@/lib/db");
+    const backup = await import("@/lib/backup");
+    const paths = await import("@/lib/paths");
+    db.createVehicle(vehicleInput());
+    paths.ensureDataDirs();
+    await fs.writeFile(path.join(paths.vehiclePhotoDir, "car.webp"), "image-bytes");
+    const target = path.join(dir, "backup.zip");
+    const manifest = await backup.writeBackupFile(target);
+    expect(manifest.uploads).toEqual(["vehicles/car.webp"]);
+    const staged = await backup.stageRestorePreview(new File([new Uint8Array(await fs.readFile(target))], "b.zip", { type: "application/zip" }));
+    expect(staged).toMatchObject({ ok: true, summary: { counts: { vehicles: 1 }, uploadCount: 1 } });
+    // No temporary database copies are left behind.
+    expect((await fs.readdir(paths.tempDir)).filter((name) => name.startsWith("backup-"))).toEqual([]);
+  });
+
+  it("refuses a small zip that would expand far beyond the restore limit", async () => {
+    await freshDataDir("carvey-audit-bomb-");
+    process.env.CARVEY_MAX_RESTORE_MB = "1";
+    const AdmZip = (await import("adm-zip")).default;
+    const backup = await import("@/lib/backup");
+    const zip = new AdmZip((await backup.createBackupZip()).buffer);
+    zip.addFile("uploads/zeros.bin", Buffer.alloc(5 * 1024 * 1024));
+    const buffer = zip.toBuffer();
+    expect(buffer.length).toBeLessThan(1024 * 1024);
+    const result = await backup.stageRestorePreview(new File([new Uint8Array(buffer)], "b.zip", { type: "application/zip" }));
+    expect(result).toEqual({ ok: false, message: "Backup expands to more data than Carvey will restore at once." });
+  });
+});
