@@ -187,6 +187,14 @@ function recordThrottleFailure(keys: Array<{ key: string; limit: number }>, now 
   }
 }
 
+/** Gives back an attempt that was charged up front but turned out to be a correct password. */
+function refundThrottleAttempt(key: string) {
+  const state = getThrottle(key);
+  if (!state) return;
+  if (state.failures <= 1) clearThrottle(key);
+  else saveThrottle(key, { ...state, failures: state.failures - 1, lockedUntil: null });
+}
+
 // ─── Sign-in ────────────────────────────────────────────────────────────────
 
 export async function createFirstAdmin(username: string, password: string) {
@@ -207,13 +215,15 @@ export async function login(username: string, password: string): Promise<LoginRe
   const retryAfterSeconds = throttleRetryAfter(keys);
   if (retryAfterSeconds > 0) return { status: "throttled", retryAfterSeconds };
 
+  // Charge the attempt before the (async) bcrypt check. Checking and charging happen in the same
+  // synchronous step, so a burst of parallel requests can't all pass the check before any failure
+  // is recorded. A correct password gets its attempt back below.
+  recordThrottleFailure(keys);
   const user = getAdminByUsername(username);
   const ok = await bcrypt.compare(password, user?.passwordHash ?? timingDummyHash);
-  if (!user || !ok) {
-    recordThrottleFailure(keys);
-    return { status: "invalid" };
-  }
+  if (!user || !ok) return { status: "invalid" };
   clearThrottle(keys[0].key);
+  refundThrottleAttempt(keys[1].key);
 
   if (user.totpEnabledAt && user.totpSecret) {
     const token = createSessionToken();
