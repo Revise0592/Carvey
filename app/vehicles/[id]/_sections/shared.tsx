@@ -3,7 +3,7 @@ import type { Vehicle } from "@/lib/db";
 import type { MotResult, PlannedPurchaseStatus, ReminderStatusLabel } from "@/lib/format";
 import type { RegionalSettings } from "@/lib/regional-settings";
 
-export type VehicleQuery = { tab?: string; sort?: string; dir?: string; new?: string };
+export type VehicleQuery = { tab?: string; sort?: string; dir?: string; new?: string; show?: string };
 
 export type SectionProps = {
   vehicle: Vehicle;
@@ -23,6 +23,31 @@ export function sortBy<T>(items: T[], sort: string, dir: SortDir, comparators: R
   const compare = comparators[sort] ?? Object.values(comparators)[0];
   const m = dir === "asc" ? 1 : -1;
   return [...items].sort((a, b) => m * compare(a, b));
+}
+
+/** Rows rendered per record tab before "Show more". Keeps long histories light on phones. */
+export const recordPageSize = 50;
+
+export type RecordPage<T> = { items: T[]; shown: number; total: number };
+
+/** The first `?show=` rows (default recordPageSize), after sorting, so every sort order pages the same way. */
+export function paginate<T>(items: T[], query: VehicleQuery): RecordPage<T> {
+  const requested = Number.parseInt(query.show ?? "", 10);
+  const shown = Math.min(items.length, Number.isFinite(requested) && requested > recordPageSize ? requested : recordPageSize);
+  return { items: items.slice(0, shown), shown, total: items.length };
+}
+
+export function ShowMore<T>({ vehicleId, tab, query, page }: { vehicleId: number; tab: string; query: VehicleQuery; page: RecordPage<T> }) {
+  if (page.shown >= page.total) return null;
+  const params = new URLSearchParams({ tab, show: String(page.shown + recordPageSize) });
+  if (query.sort) params.set("sort", query.sort);
+  if (query.dir) params.set("dir", query.dir);
+  return (
+    <div className="show-more">
+      <span className="muted">Showing {page.shown} of {page.total}</span>
+      <Link className="secondary-button" href={`/vehicles/${vehicleId}?${params}`} scroll={false}>Show {Math.min(recordPageSize, page.total - page.shown)} more</Link>
+    </div>
+  );
 }
 
 export const byText = <T,>(pick: (item: T) => string | null | undefined, missing = "9999") => (a: T, b: T) => (pick(a) ?? missing).localeCompare(pick(b) ?? missing);

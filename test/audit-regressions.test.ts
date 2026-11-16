@@ -630,3 +630,16 @@ describe("audit log", () => {
     expect(db.listAuditEntries().map((entry) => entry.event)).toEqual(["login.ok", "login.failed"]);
   });
 });
+
+describe("record tab paging", () => {
+  it("shows 50 rows, then 50 more per step, never more than exist", async () => {
+    const { paginate, recordPageSize } = await import("@/app/vehicles/[id]/_sections/shared");
+    const rows = Array.from({ length: 120 }, (_, index) => index);
+    expect(recordPageSize).toBe(50);
+    expect(paginate(rows, {})).toMatchObject({ shown: 50, total: 120 });
+    expect(paginate(rows, { show: "100" }).items).toHaveLength(100);
+    expect(paginate(rows, { show: "500" })).toMatchObject({ shown: 120 });
+    expect(paginate(rows, { show: "-3" }).shown).toBe(50);
+    expect(paginate(rows.slice(0, 10), {}).shown).toBe(10);
+  });
+});
