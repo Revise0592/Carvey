@@ -1,8 +1,21 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export function PwaRegistration() {
+  const [offline, setOffline] = useState(false);
+
+  useEffect(() => {
+    const update = () => setOffline(!navigator.onLine);
+    update();
+    window.addEventListener("online", update);
+    window.addEventListener("offline", update);
+    return () => {
+      window.removeEventListener("online", update);
+      window.removeEventListener("offline", update);
+    };
+  }, []);
+
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return;
 
@@ -22,5 +35,9 @@ export function PwaRegistration() {
     return () => window.removeEventListener("beforeinstallprompt", handler);
   }, []);
 
-  return null;
+  return offline ? (
+    <div className="offline-banner" role="status">
+      You&apos;re offline. This is the last saved copy; changes can&apos;t be saved until you&apos;re back online.
+    </div>
+  ) : null;
 }

@@ -1,21 +1,10 @@
-import crypto from "node:crypto";
-import fs from "node:fs/promises";
-import path from "node:path";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
-import { createAttachment } from "@/lib/db";
-import { attachmentDir } from "@/lib/paths";
+import { createAttachment, recordBelongsToVehicle } from "@/lib/db";
 import { z } from "zod";
 import { rejectCrossOrigin } from "@/lib/security/request";
-
-const allowedMimeTypes = new Set([
-  "application/pdf",
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "text/plain"
-]);
+import { contentMatchesMime, extensionForMime, storeVehicleUpload } from "@/lib/uploads";
 
 const maxFileBytes = 25 * 1024 * 1024;
 
@@ -41,34 +30,35 @@ export async function POST(request: Request) {
   if (!vehicleId || !recordType.success || !recordId) {
     return new NextResponse("Invalid parameters", { status: 400 });
   }
+  if (!recordBelongsToVehicle(recordType.data, recordId, vehicleId)) {
+    return new NextResponse("Record not found", { status: 404 });
+  }
   if (!(file instanceof File) || !file.size) {
     return new NextResponse("Choose a file to attach", { status: 400 });
   }
-  if (!allowedMimeTypes.has(file.type)) {
+  if (!extensionForMime(file.type)) {
     return new NextResponse("File type not allowed. Use PDF, JPEG, PNG, WebP, or plain text.", { status: 400 });
   }
   if (file.size > maxFileBytes) {
     return new NextResponse("File must be smaller than 25 MB.", { status: 400 });
   }
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  if (!contentMatchesMime(bytes, file.type)) {
+    return new NextResponse("The file's contents don't match its type.", { status: 400 });
+  }
 
-  const ext = path.extname(file.name).toLowerCase() || extensionFromMime(file.type);
-  const storedFilename = `${vehicleId}-${crypto.randomUUID()}${ext}`;
-  const vehicleAttachmentDir = path.join(attachmentDir, String(vehicleId));
-
-  await fs.mkdir(vehicleAttachmentDir, { recursive: true });
-  const diskPath = path.join(vehicleAttachmentDir, storedFilename);
-  await fs.writeFile(diskPath, Buffer.from(await file.arrayBuffer()));
-
-  createAttachment({
-    recordType: recordType.data,
-    recordId,
-    vehicleId,
-    filename: storedFilename,
-    originalFilename: file.name,
-    mimeType: file.type,
-    fileSize: file.size,
-    filePath: `/uploads/attachments/${vehicleId}/${storedFilename}`
-  });
+  await storeVehicleUpload(vehicleId, file.type, bytes, ({ filename, filePath }) =>
+    createAttachment({
+      recordType: recordType.data,
+      recordId,
+      vehicleId,
+      filename,
+      originalFilename: file.name.slice(0, 255),
+      mimeType: file.type,
+      fileSize: file.size,
+      filePath
+    })
+  );
 
   revalidatePath(`/vehicles/${vehicleId}`);
   const tab = tabForRecordType(recordType.data);
@@ -79,15 +69,4 @@ export async function POST(request: Request) {
 function tabForRecordType(recordType: z.infer<typeof recordTypeSchema>) {
   const map = { maintenance: "maintenance", repair: "repairs", mot: "mots", renewal: "renewals" } as const;
   return map[recordType];
-}
-
-function extensionFromMime(mime: string) {
-  const map: Record<string, string> = {
-    "application/pdf": ".pdf",
-    "image/jpeg": ".jpg",
-    "image/png": ".png",
-    "image/webp": ".webp",
-    "text/plain": ".txt"
-  };
-  return map[mime] ?? "";
 }

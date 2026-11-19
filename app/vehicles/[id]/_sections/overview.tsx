@@ -3,6 +3,7 @@ import { computeAverageFuelEconomy, formatCurrency, formatDate, formatMiles } fr
 import { annualDistance, estimateMileageRate, estimateOdometerOn } from "@/lib/mileage";
 import { renewalTypeLabels } from "@/lib/renewals";
 import type { SectionProps } from "./shared";
+import { motLabelInSentence } from "@/lib/regional-settings";
 
 /** Counts and recent work in a handful of small queries rather than loading every record. */
 function overviewStats(vehicleId: number) {
@@ -43,7 +44,7 @@ export function OverviewSection({ vehicle, settings, motLabel }: SectionProps) {
           {settings.motFeature !== "disabled" ? (
             <>
               <span>Latest {motLabel}</span>
-              <strong>{stats.latestMotExpiry ? formatDate(stats.latestMotExpiry, settings) : `No ${motLabel.toLowerCase()} logged`}</strong>
+              <strong>{stats.latestMotExpiry ? formatDate(stats.latestMotExpiry, settings) : `No ${motLabelInSentence(motLabel)} logged`}</strong>
             </>
           ) : null}
           {nextRenewal ? (

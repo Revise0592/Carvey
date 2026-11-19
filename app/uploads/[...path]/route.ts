@@ -38,7 +38,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ pat
     return new NextResponse(new Uint8Array(file), {
       headers: {
         "content-type": contentType,
-        "content-disposition": `${disposition}; filename="${encodeURIComponent(originalName)}"`,
+        "content-disposition": contentDisposition(disposition, originalName),
         "cache-control": "private, max-age=31536000, immutable",
         ...uploadSecurityHeaders
       }
@@ -52,6 +52,17 @@ export async function GET(_request: Request, { params }: { params: Promise<{ pat
       ...uploadSecurityHeaders
     }
   });
+}
+
+/**
+ * RFC 6266: an ASCII fallback for old clients plus the real UTF-8 name in filename*. The previous
+ * header put a percent-encoded name inside the quoted filename, so downloads were saved as
+ * "Facture%20%C3%A9t%C3%A9.pdf".
+ */
+function contentDisposition(disposition: "inline" | "attachment", name: string) {
+  const fallback = name.replace(/[^\x20-\x7e]|["\\]/g, "_") || "download";
+  const encoded = encodeURIComponent(name).replace(/['()*]/g, (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`);
+  return `${disposition}; filename="${fallback}"; filename*=UTF-8''${encoded}`;
 }
 
 function contentTypeFromExt(ext: string) {

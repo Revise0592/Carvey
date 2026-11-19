@@ -17,10 +17,10 @@ describe("account helpers", () => {
     const hash = await bcrypt.hash("old-password", 4);
     const userId = Number(db.createAdminUser("admin", hash).lastInsertRowid);
 
-    await expect(changePasswordForAdmin(userId, "wrong-password", "new-password")).resolves.toBe(false);
+    await expect(changePasswordForAdmin(userId, "wrong-password", "new-password")).resolves.toBe("invalid");
     await expect(bcrypt.compare("old-password", db.getAdminById(userId)!.passwordHash)).resolves.toBe(true);
 
-    await expect(changePasswordForAdmin(userId, "old-password", "new-password")).resolves.toBe(true);
+    await expect(changePasswordForAdmin(userId, "old-password", "new-password")).resolves.toBe("ok");
     await expect(bcrypt.compare("new-password", db.getAdminById(userId)!.passwordHash)).resolves.toBe(true);
     db.closeDbForTests();
   });

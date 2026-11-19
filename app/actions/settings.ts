@@ -8,6 +8,7 @@ import { createMaintenanceCategory, createServiceInterval, createWorkshop, delet
 import { requireUser } from "@/lib/auth";
 import { CURRENCY_CODES, updateRegionalSettings } from "@/lib/regional-settings";
 import { debugEasterEggsEnabled } from "@/lib/debug";
+import { BACKUP_KEEP_OPTIONS, runScheduledBackup, updateScheduledBackupSettings } from "@/lib/scheduled-backups";
 import { debugSettingsUrl, nullableInt, nullableStr, str, syncCurrentDemoAfterMutation, workshopInput } from "./shared";
 
 export async function updateCollectionNameAction(formData: FormData) {
@@ -163,3 +164,20 @@ export async function updateRegionalSettingsAction(formData: FormData) {
   redirect("/settings?tab=regional&app=regional-updated");
 }
 
+
+export async function updateScheduledBackupSettingsAction(formData: FormData) {
+  await requireUser();
+  updateScheduledBackupSettings({
+    enabled: str(formData, "enabled") === "on",
+    keep: z.coerce.number().refine((value) => (BACKUP_KEEP_OPTIONS as readonly number[]).includes(value)).parse(str(formData, "keep"))
+  });
+  revalidatePath("/settings");
+  redirect("/settings?tab=backup&auto=saved");
+}
+
+export async function runScheduledBackupNowAction() {
+  await requireUser();
+  const result = await runScheduledBackup({ force: true });
+  revalidatePath("/settings");
+  redirect(result.status === "failed" ? `/settings?${new URLSearchParams({ tab: "backup", auto: "failed", message: result.detail ?? "" })}` : "/settings?tab=backup&auto=done");
+}

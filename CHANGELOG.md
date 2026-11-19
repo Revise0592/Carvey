@@ -4,6 +4,55 @@ All notable changes to Carvey will be documented here.
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-11-16
+
+### Added
+
+- **Automatic backups**: every night after 03:00 Carvey saves a full backup to `data/backups/` and keeps the newest 3. Change how many to keep, turn it off, run one now or download any of them in **Settings → Backup & Restore**
+- **Offline viewing**: pages you've opened in the installed app stay readable with no signal, with an "offline" banner. Saved pages are cleared when you sign out
+- **Recent activity** in **Settings → Admin**: sign-ins (including failed and blocked ones), account changes, restores and imports, with the address and browser for each. Kept on the server only, never in backups
+- Gallery thumbnails: photos load as small previews in the grid, full size in the viewer. Existing photos get thumbnails automatically
+- Long record lists show 50 entries at a time with **Show more**; the Reminders page folds reminders due more than 90 days out behind **Show all**
+
+### Changed
+
+- Form mistakes now show a message in the form (for example "Date must be a date (YYYY-MM-DD)") and keep what you typed, instead of an error page. Saving is disabled while a save is running, so a double tap can't add a record twice
+- Backups are streamed from disk, so a large photo library no longer has to fit in memory to download or create a backup
+- Carvey tidies its data folder daily: abandoned restore and import previews are removed and only the 3 newest pre-restore snapshots are kept
+- The health check now confirms the database opens and the data folder is writable
+- Restoring a backup keeps you signed in
+- A Maintenance tab with 500 entries went from 1.3 MB to 162 KB
+
+### Fixed
+
+- **A date typed as text (for example on a browser without a date picker) was saved and then broke that vehicle's page permanently.** Dates and numbers are now checked on the server, and pages holding an invalid date from before show it as text instead of failing
+- **Restoring a backup without an admin account (such as the demo backup) deleted yours**, leaving Carvey open to whoever loaded the setup page next
+- `docker exec … node scripts/reset-password.mjs` failed in the Docker image because the script wasn't included
+- The daily summary could run on the wrong day (or twice) outside UTC, and reminders turned overdue at UTC midnight instead of local midnight
+- Pressing Import twice imported every CSV row twice
+- Deleting a vehicle left its attachments and gallery photos on disk and in later backups
+- The daily summary could be sent twice if **Check now** ran at the same moment as the scheduled check
+- Downloaded attachments were saved with names like `My%20receipt.pdf`
+- Backups re-zipped with Finder or 7-Zip were refused as unsafe
+- Setup with a too-short password showed a server error
+- A rejected maintenance or repair form could still add a new garage
+- "No mots logged yet": MOT is now written in capitals mid-sentence
+
+### Security
+
+- **Sign-in rate limiting could be bypassed with parallel requests**: many simultaneous wrong passwords were all checked before any failure was counted. Attempts are now counted before checking
+- Devices you've signed in from before are remembered for a year and can't be locked out by someone else guessing your password
+- Re-entering your password or two-factor code in Settings is limited to 5 wrong tries per 15 minutes
+- The client address used for rate limiting can no longer be faked with an `X-Forwarded-For` header. With more than one proxy in front of Carvey, set `CARVEY_TRUSTED_PROXY_HOPS`
+- A Content-Security-Policy with per-request nonces stops injected scripts from running on any page
+- Uploads are stored with an extension chosen from their checked type and must match it; uploads for a missing vehicle or record are refused
+- Restore refuses archives that would expand to far more data than they contain (zip bombs); the limit follows `CARVEY_MAX_RESTORE_MB`
+- To Buy links must be http(s) web addresses
+- Upgraded Next.js to 16.4.6, React to 19.3.1, better-sqlite3 to 12.11.1 and zod to 4.6.7 (GHSA-mrhx-c7xc-m3w5). `npm audit` reports 0 vulnerabilities, including development tools
+- The Docker image pins its Node base image by digest, the example Compose file and Unraid template drop all Linux capabilities and set memory limits, and images are only published after tests pass
+
+## [1.6.0] - 2026-11-10
+
 ### Added
 
 - **Notifications**: a daily summary of reminders that are coming up or due, sent to ntfy, Gotify, Apprise, Discord or a generic webhook. Set the warning window and send time in **Settings → Notifications**, with **Send test** and **Check now** buttons
@@ -15,11 +64,6 @@ All notable changes to Carvey will be documented here.
 - **Reverse-proxy sign-in** (`CARVEY_AUTH_MODE=proxy`): trust Authelia, Authentik and similar via a shared secret header, while direct access to the port still requires a password
 - **Signed-in devices**: see active sessions and sign any of them out
 - **CSV import**: import maintenance, repairs, MOTs, fuel or renewals from a spreadsheet or another app. Columns are matched by name or common alias. Day-first and month-first dates and most number formats work, and rows can be matched to vehicles by registration. A preview shows exactly what will be imported, skipped or treated as a duplicate
-- App-style navigation: on phones and tablets, a compact top bar (back button and page title on sub-pages) and a bottom tab bar for Garage, Reminders, Costs and Settings
-- Quick-add button (centre of the bottom bar, or **Add** on desktop) to log maintenance, repairs, MOTs, fuel, reminders, To Buy items or photos for any vehicle, or add a new vehicle
-- **Reminders** page listing open reminders and MOT expiry across all vehicles, grouped by overdue / upcoming
-- **Costs** page with spend by month, by type and by vehicle, per year or all time, plus recent spending
-- Settings is now a menu on mobile that drills into each section, and a sidebar on desktop
 
 ### Changed
 
@@ -27,23 +71,12 @@ All notable changes to Carvey will be documented here.
 - Fuel fill-ups now count as odometer readings for a vehicle's current mileage
 - Regional settings load in one query instead of nine
 - Internal: the data layer and server actions are split into modules by area, and the vehicle page into one file per tab
-- Refreshed design: flatter cards, a native system font, a sticky translucent top bar and sticky vehicle section tabs that keep the active tab in view
-- Forms open as bottom sheets on mobile with a fixed header and a scrolling body
-- Vehicle page header is more compact on mobile, with Photo / Print / Edit side by side
-- Garage vehicles show as a compact list on mobile
 
 ### Fixed
 
 - **Restoring a backup lost fuel records, service plans, attachments and gallery photos.** Restore now copies every table, so nothing is left out, including anything added in future
 - The garage "Open reminders" count stopped at 8
 - A lint error in the Install App panel
-- Long forms in pop-ups could be cut off on mobile, hiding the save button
-- Record rows on mobile stranded the Edit button on its own line and squeezed titles beside the badge
-- Badges of different widths misaligned record titles on desktop
-- Edit and Delete buttons on Garages, Categories and Service Intervals cards stacked awkwardly
-- "Spent this year" on the garage left out fuel, so it didn't match the per-vehicle totals
-- Dashboard reminders with only a mileage due were listed before dated ones
-- Assigning a service interval always said "miles", even with kilometres selected
 
 ### Security
 
@@ -55,6 +88,35 @@ All notable changes to Carvey will be documented here.
 - Security headers on every response (no framing, `nosniff`, referrer policy). Uploaded files are served sandboxed so they can never run as a page
 - Setup can only ever create one admin, even if two requests race
 - A password shorter than 8 characters on the login form caused a server error instead of "Those details did not match"
+
+## [1.5.0] - 2026-11-07
+
+### Added
+
+- App-style navigation: on phones and tablets, a compact top bar (back button and page title on sub-pages) and a bottom tab bar for Garage, Reminders, Costs and Settings
+- Quick-add button (centre of the bottom bar, or **Add** on desktop) to log maintenance, repairs, MOTs, fuel, reminders, To Buy items or photos for any vehicle, or add a new vehicle
+- **Reminders** page listing open reminders and MOT expiry across all vehicles, grouped by overdue / upcoming
+- **Costs** page with spend by month, by type and by vehicle, per year or all time, plus recent spending
+- Settings is now a menu on mobile that drills into each section, and a sidebar on desktop
+
+### Changed
+
+- Refreshed design: flatter cards, a native system font, a sticky translucent top bar and sticky vehicle section tabs that keep the active tab in view
+- Forms open as bottom sheets on mobile with a fixed header and a scrolling body
+- Vehicle page header is more compact on mobile, with Photo / Print / Edit side by side
+- Garage vehicles show as a compact list on mobile
+
+### Fixed
+
+- Long forms in pop-ups could be cut off on mobile, hiding the save button
+- Record rows on mobile stranded the Edit button on its own line and squeezed titles beside the badge
+- Badges of different widths misaligned record titles on desktop
+- Edit and Delete buttons on Garages, Categories and Service Intervals cards stacked awkwardly
+- "Spent this year" on the garage left out fuel, so it didn't match the per-vehicle totals
+- Dashboard reminders with only a mileage due were listed before dated ones
+- Assigning a service interval always said "miles", even with kilometres selected
+
+### Security
 
 - Upgraded Next.js to 16.4.3 (fixes critical unauthenticated RCE and SSRF advisories in Image Optimization, plus cache poisoning and Server Actions DoS)
 - Upgraded sharp to 0.35.5 (bundled libvips, libheif and librsvg fixes for crafted image uploads)

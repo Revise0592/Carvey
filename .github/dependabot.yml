@@ -1,0 +1,35 @@
+# Weekly update PRs. Each one runs the test job in docker-publish.yml before anything is built.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      next-react:
+        patterns: ["next", "eslint-config-next", "react", "react-dom", "@types/react", "@types/react-dom"]
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+      # Majors arrive as one PR too. If one of them breaks CI, split it out with
+      # `@dependabot ignore <package> major version` on that PR and merge the rest.
+      major:
+        update-types: ["major"]
+    ignore:
+      # typescript-eslint (used by eslint-config-next) doesn't support TypeScript 7 yet, so lint
+      # fails on it. Remove this once typescript-eslint supports TS 7.
+      - dependency-name: "typescript"
+        versions: [">=7"]
+    open-pull-requests-limit: 5
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    # One PR for all action bumps: they edit neighbouring lines of the same workflow, so separate
+    # PRs conflict with each other as soon as one is merged.
+    groups:
+      actions:
+        patterns: ["*"]

@@ -13,7 +13,8 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   output: "standalone",
   serverExternalPackages: ["better-sqlite3", "sharp"],
-  allowedDevOrigins: ["192.168.86.39"],
+  // Extra hosts allowed to load the dev server (e.g. a phone on your LAN): CARVEY_DEV_ORIGINS=192.168.1.20,laptop.local
+  allowedDevOrigins: (process.env.CARVEY_DEV_ORIGINS ?? "").split(",").map((origin) => origin.trim()).filter(Boolean),
   poweredByHeader: false,
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];

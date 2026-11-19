@@ -127,3 +127,12 @@ export function deleteGalleryPhoto(id: number, vehicleId: number) {
     .prepare("DELETE FROM vehicle_gallery_photos WHERE id = ? AND vehicle_id = ?")
     .run(id, vehicleId);
 }
+
+const recordTables = { maintenance: "maintenance_records", repair: "repair_records", mot: "mot_records", renewal: "renewals" } as const;
+
+/** True when the record exists and belongs to the vehicle, so uploads can't be filed against nothing. */
+export function recordBelongsToVehicle(recordType: AttachmentRecordType, recordId: number, vehicleId: number) {
+  const table = recordTables[recordType];
+  if (!table) return false;
+  return Boolean(getDb().prepare(`SELECT 1 FROM ${table} WHERE id = ? AND vehicle_id = ?`).get(recordId, vehicleId));
+}

@@ -7,21 +7,18 @@ import { InstallAppPanel } from "@/components/InstallAppPanel";
 import { CategoryCard, ServiceIntervalCard, WorkshopCard } from "@/components/SettingsCards";
 import { createMaintenanceCategoryAction, createServiceIntervalAction, createWorkshopAction, loadShowcaseDemoDataAction, restorePreviousDemoDataAction, saveCurrentShowcaseDemoDataAction, updateCollectionNameAction, updateRegionalSettingsAction } from "@/app/actions";
 import { requireUser } from "@/lib/auth";
+import { appCommit, appVersion } from "@/lib/version";
 import { getShowcaseDemoStatus, readRestoreSummary } from "@/lib/backup";
 import { debugEasterEggsEnabled } from "@/lib/debug";
 import { getCollectionName, listMaintenanceCategories, listServiceIntervals, listWorkshops, type ServiceInterval } from "@/lib/db";
 import { formatDate } from "@/lib/format";
 import { CURRENCY_CODES, getRegionalSettings } from "@/lib/regional-settings";
-import packageJson from "@/package.json";
 import { AdminPanel } from "./_panels/admin";
+import { BackupSchedulePanel } from "./_panels/backup-schedule";
 import { DataPanel } from "./_panels/data";
 import { NotificationsPanel } from "./_panels/notifications";
 
 export const dynamic = "force-dynamic";
-
-// Release images get CARVEY_VERSION from the git tag (see docker-publish.yml);
-// local and dev builds fall back to package.json.
-const appVersion = process.env.CARVEY_VERSION?.replace(/^[vV]/, "") || packageJson.version;
 
 const settingsTabs = ["personalisation", "admin", "regional", "notifications", "workshops", "categories", "service-intervals", "data", "backup"] as const;
 type SettingsTab = (typeof settingsTabs)[number];
@@ -48,7 +45,7 @@ function currencyOptionLabel(code: string) {
   return `${code} — ${currencyDisplayNames.of(code)}`;
 }
 
-export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ tab?: string; account?: string; app?: string; workshop?: string; category?: string; interval?: string; restore?: string; token?: string; debug?: string; message?: string; notify?: string; import?: string; count?: string; skipped?: string; label?: string; left?: string }> }) {
+export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ tab?: string; account?: string; app?: string; workshop?: string; category?: string; interval?: string; restore?: string; token?: string; debug?: string; message?: string; notify?: string; import?: string; count?: string; skipped?: string; label?: string; left?: string; auto?: string }> }) {
   const user = await requireUser();
   const params = await searchParams;
   const hasExplicitTab = settingsTabs.includes(params.tab as SettingsTab);
@@ -263,7 +260,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
               <span>Region defaults</span>
               <strong>{regionalSettings.currency}, {regionalSettings.distanceUnit}, {regionalSettings.dateFormat === "iso" ? "ISO dates" : "UK dates"}</strong>
               <span>Version</span>
-              <strong>{appVersion}</strong>
+              <strong>{appVersion()}{appCommit() ? ` (${appCommit()})` : ""}</strong>
             </dl>
           </article>
 
@@ -272,6 +269,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             <p className="muted">Download a complete backup of the database and vehicle images.</p>
             <a className="primary-button" href="/settings/backup">Download backup</a>
           </article>
+
+          <BackupSchedulePanel status={params.auto} message={params.message} />
 
           <article className="settings-panel">
             <h2><Upload size={19} /> Restore</h2>

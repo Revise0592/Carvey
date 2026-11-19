@@ -9,6 +9,8 @@ import type { MaintenanceRecord, RepairRecord } from "@/lib/db/types";
 export type GalleryItem = {
   id: string;
   filePath: string;
+  /** Small WebP for the grid; the lightbox always shows the original. */
+  thumbnailPath: string | null;
   originalFilename: string;
   caption: string | null;
   recordType: string | null;
@@ -92,8 +94,11 @@ export function GalleryGrid({
               onClick={() => setOpen(idx)}
               aria-label={`View ${item.caption || item.recordDescription || item.originalFilename}`}
             >
+              {/* Plain <img> on purpose: uploads are served by an authenticated route and already
+                  resized (gallery thumbnails), so next/image's optimiser would add nothing. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={item.filePath}
+                src={item.thumbnailPath ?? item.filePath}
                 alt={item.caption || item.recordDescription || item.originalFilename}
                 className="gallery-thumb"
                 loading="lazy"
@@ -197,6 +202,7 @@ export function GalleryGrid({
                 </button>
               </>
             ) : null}
+            {/* eslint-disable-next-line @next/next/no-img-element -- the original upload, shown full size */}
             <img
               src={current.filePath}
               alt={current.caption || current.recordDescription || current.originalFilename}

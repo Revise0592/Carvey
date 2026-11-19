@@ -9,7 +9,7 @@ export function EditPanel({
   title = "Edit entry"
 }: {
   children: React.ReactNode;
-  deleteAction: (formData: FormData) => void | Promise<void>;
+  deleteAction: (formData: FormData) => unknown;
   title?: string;
 }) {
   return (

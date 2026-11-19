@@ -55,3 +55,21 @@ export function describeUserAgent(userAgent: string | null) {
   const os = /iPhone|iPad/.test(userAgent) ? "iOS" : /Android/.test(userAgent) ? "Android" : /Mac OS X/.test(userAgent) ? "macOS" : /Windows/.test(userAgent) ? "Windows" : /Linux/.test(userAgent) ? "Linux" : "";
   return os ? `${browser} on ${os}` : browser;
 }
+
+/**
+ * The client's address for rate limiting, from `X-Forwarded-For`.
+ *
+ * Each proxy *appends* the address it received the request from, so only the right-hand entries
+ * were written by your own proxies; the left-hand ones can be anything the client sent. With
+ * CARVEY_TRUSTED_PROXY_HOPS proxies in front of Carvey (default 1, e.g. Traefik), the client is
+ * the entry that many places from the right. Set it to 0 to ignore forwarding headers entirely
+ * (Carvey exposed directly, no proxy).
+ */
+export function clientAddress(headers: HeaderSource, env: Record<string, string | undefined> = process.env) {
+  const parsed = Number.parseInt(env.CARVEY_TRUSTED_PROXY_HOPS ?? "1", 10);
+  const hops = Number.isFinite(parsed) && parsed >= 0 ? parsed : 1;
+  if (hops === 0) return "direct";
+  const chain = (headers.get("x-forwarded-for") ?? "").split(",").map((entry) => entry.trim()).filter(Boolean);
+  if (chain.length) return chain[Math.max(0, chain.length - hops)];
+  return headers.get("x-real-ip")?.trim() || "direct";
+}

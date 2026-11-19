@@ -224,3 +224,14 @@ export function saveThrottle(key: string, state: ThrottleState) {
 export function clearThrottle(key: string) {
   return getDb().prepare("DELETE FROM auth_throttle WHERE key = ?").run(key);
 }
+
+export function getAuthSessionById(sessionId: string) {
+  return getDb().prepare(`SELECT ${sessionSelect} FROM auth_sessions WHERE id = ?`).get(sessionId) as AuthSession | undefined;
+}
+
+/** Puts a session back after a restore emptied auth_sessions, attached to the (possibly restored) admin. */
+export function reinstateAuthSession(session: AuthSession, adminUserId: number) {
+  return getDb()
+    .prepare("INSERT OR REPLACE INTO auth_sessions (id, admin_user_id, created_at, expires_at, revoked_at, user_agent, last_seen_at) VALUES (?, ?, ?, ?, NULL, ?, CURRENT_TIMESTAMP)")
+    .run(session.id, adminUserId, session.createdAt, session.expiresAt, session.userAgent);
+}

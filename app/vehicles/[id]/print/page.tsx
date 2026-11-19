@@ -3,8 +3,8 @@ import { notFound } from "next/navigation";
 import { PrintButton } from "@/components/PrintButton";
 import { RegistrationPlate } from "@/components/RegistrationPlate";
 import { requireUser } from "@/lib/auth";
-import { formatCurrency, formatDate, formatMiles, formatMotResult } from "@/lib/format";
-import { getMotLabel, getRegionalSettings } from "@/lib/regional-settings";
+import { formatCurrency, formatDate, formatMiles, formatMotResult, todayIso } from "@/lib/format";
+import { getMotLabel, getRegionalSettings, motLabelInSentence } from "@/lib/regional-settings";
 import { getSellerSheetData } from "@/lib/seller-sheet";
 
 export default async function VehiclePrintPage({ params }: { params: Promise<{ id: string }> }) {
@@ -19,7 +19,7 @@ export default async function VehiclePrintPage({ params }: { params: Promise<{ i
   const motLabel = getMotLabel(settings);
   const regMode = settings.plateStyle;
   const generatedAt = settings.dateFormat === "iso"
-    ? new Date().toISOString().slice(0, 10)
+    ? todayIso()
     : new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" }).format(new Date());
 
   return (
@@ -118,7 +118,7 @@ export default async function VehiclePrintPage({ params }: { params: Promise<{ i
                 </tbody>
               </table>
             </div>
-          ) : <p className="print-empty">No {motLabel.toLowerCase()}s have been logged.</p>}
+          ) : <p className="print-empty">No {motLabelInSentence(motLabel)}s have been logged.</p>}
         </section>
       ) : null}
 

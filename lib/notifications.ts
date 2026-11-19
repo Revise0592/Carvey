@@ -218,7 +218,21 @@ export type RunResult = { status: "disabled" | "not-yet" | "already-ran" | "noth
  * Runs the daily check if it is enabled, past the configured hour and hasn't run today.
  * `force` skips the time checks (used by the "check now" button).
  */
+let inFlight: Promise<RunResult> | null = null;
+
 export async function runDailyNotifications(options: { now?: Date; force?: boolean } = {}): Promise<RunResult> {
+  // "Check now" and a scheduler tick can overlap. Both would pick the same entries before either
+  // marked them sent, so a second caller waits for the run already in progress instead.
+  if (inFlight) return inFlight;
+  inFlight = runDailyNotificationsOnce(options);
+  try {
+    return await inFlight;
+  } finally {
+    inFlight = null;
+  }
+}
+
+async function runDailyNotificationsOnce(options: { now?: Date; force?: boolean }): Promise<RunResult> {
   const now = options.now ?? new Date();
   const settings = getNotificationSettings();
   if (!settings.enabled || !settings.url) return { status: "disabled" };
@@ -248,17 +262,4 @@ export async function runDailyNotifications(options: { now?: Date; force?: boole
     setAppSetting(keys.lastResult, `${now.toISOString()} failed — ${detail}`);
     return { status: "failed", detail };
   }
-}
-
-let schedulerStarted = false;
-
-/** Starts the in-process scheduler. Called once from instrumentation when the server boots. */
-export function startNotificationScheduler(intervalMs = 15 * 60 * 1000) {
-  if (schedulerStarted) return;
-  schedulerStarted = true;
-  const tick = () => {
-    runDailyNotifications().catch((error) => console.error("[Carvey] Notification check failed:", error));
-  };
-  setTimeout(tick, 30_000).unref?.();
-  setInterval(tick, intervalMs).unref?.();
 }

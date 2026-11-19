@@ -4,6 +4,7 @@ import { GalleryUploadForm } from "@/components/Forms";
 import { GalleryGrid, type GalleryItem } from "@/components/GalleryGrid";
 import { listAllAttachmentsForVehicle, listMaintenance, listMots, listRepairs, listVehicleGalleryPhotos, type GalleryPhoto, type RecordAttachment } from "@/lib/db";
 import { formatDate, formatMotResult } from "@/lib/format";
+import { hasThumbnail, thumbnailPathFor } from "@/lib/uploads";
 import { EmptyRecords, type SectionProps } from "./shared";
 
 const imageTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -48,6 +49,7 @@ export function GallerySection({ vehicle, settings, query }: SectionProps) {
     return {
       id: `${entry.kind}-${entry.data.id}`,
       filePath: entry.data.filePath,
+      thumbnailPath: hasThumbnail(entry.data.filePath) ? thumbnailPathFor(entry.data.filePath) : null,
       originalFilename: entry.data.originalFilename,
       caption: entry.kind === "gallery" ? entry.data.caption : null,
       recordType: entry.data.recordType ?? null,

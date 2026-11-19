@@ -3902,6 +3902,63 @@ details.field-hint ul,
   font-weight: 600;
 }
 
+.backup-file-list {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0 4px;
+  padding: 0;
+  list-style: none;
+  overflow-wrap: anywhere;
+}
+
+.audit-list {
+  display: grid;
+  gap: 10px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  overflow-wrap: anywhere;
+}
+
+.audit-list small {
+  display: block;
+  color: var(--muted);
+}
+
+.audit-list .audit-warning strong {
+  color: var(--danger, #b42318);
+}
+
+.show-more {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.offline-banner {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  padding: 8px 16px;
+  padding-top: max(8px, env(safe-area-inset-top));
+  background: var(--warning-soft);
+  color: var(--warning-strong);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+/* ActionForm wraps its fields in a fieldset so they can be disabled while saving. */
+.action-form-fields {
+  display: contents;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
 /* Touch: small icon buttons keep their look but get a 44px hit area. The
    inset is negative only when the button is smaller than 44px. */
 @media (pointer: coarse) {
