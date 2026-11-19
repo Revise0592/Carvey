@@ -59,6 +59,12 @@ export default async function CostsPage({ searchParams }: { searchParams: Promis
   });
   const monthlyMax = monthly ? Math.max(...monthly.map((m) => m.total), 0) : 0;
   const activeMonths = monthly?.filter((m) => m.total > 0).length ?? 0;
+  // One accent per chart: the latest month with spend, up to this month.
+  const lastMonth = period === currentYear ? Number(todayIso().slice(5, 7)) - 1 : 11;
+  let highlightMonth = -1;
+  monthly?.forEach((m, index) => {
+    if (index <= lastMonth && m.total > 0) highlightMonth = index;
+  });
 
   return (
     <AppFrame>
@@ -92,8 +98,8 @@ export default async function CostsPage({ searchParams }: { searchParams: Promis
               <h2 className="group-label">By month</h2>
               <div className="inset-panel">
                 <div className="month-chart" role="img" aria-label={`Monthly spend for ${period}`}>
-                  {monthly.map((month) => (
-                    <div className="month-col" key={month.label} tabIndex={0} aria-label={`${month.label}: ${formatCurrency(month.total, settings)}`}>
+                  {monthly.map((month, index) => (
+                    <div className={index === highlightMonth ? "month-col current" : "month-col"} key={month.label} tabIndex={0} aria-label={`${month.label}: ${formatCurrency(month.total, settings)}`}>
                       <span className="month-tip">{month.label} · {formatCurrency(month.total, settings)}</span>
                       <span className="month-bar-track">
                         <span className="month-bar" style={{ height: monthlyMax ? `${(month.total / monthlyMax) * 100}%` : "0%" }} />

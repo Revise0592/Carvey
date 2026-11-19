@@ -23,7 +23,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         <div className="auth-header auth-header-wordmark">
           <div className="auth-header-copy">
             <BrandLogo />
-            <h1>Welcome back</h1>
+            <h1>Sign in</h1>
           </div>
         </div>
         {message ? (

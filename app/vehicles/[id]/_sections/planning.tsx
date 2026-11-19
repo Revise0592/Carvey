@@ -193,7 +193,7 @@ export function ToBuySection({ vehicle, settings, query }: SectionProps) {
                   <EditPlannedPurchaseForm record={record} />
                 </>}
               />
-            )) : <p className="record-list-empty">Nothing left to buy.</p>}
+            )) : <p className="record-list-empty">Nothing left to buy</p>}
 
             <p className="record-list-subheading">Purchased</p>
             {sortedPurchased.length ? sortedPurchased.map((record) => (
@@ -270,7 +270,7 @@ function ServicePlanCard({ record, vehicle, settings }: { record: VehicleService
       {record.lastServiceDate ? (
         <p>Last done: {formatDate(record.lastServiceDate, settings)}{record.lastServiceOdometer ? ` · ${formatMiles(record.lastServiceOdometer, settings)}` : ""}</p>
       ) : (
-        <p className="muted">Not yet recorded for this vehicle.</p>
+        <p className="muted">Not yet recorded for this vehicle</p>
       )}
       <div className="record-actions">
         <RecordServiceButton record={record} vehicle={vehicle} />

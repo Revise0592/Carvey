@@ -91,7 +91,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           <article className="settings-panel">
             <h2><Settings2 size={19} /> Personalisation</h2>
             <p className="muted">Name this collection so Carvey feels like yours.</p>
-            {params.app === "collection-updated" ? <p className="success">Collection name updated.</p> : null}
+            {params.app === "collection-updated" ? <p className="success">Collection name updated</p> : null}
             <form action={updateCollectionNameAction} className="record-form">
               <label>
                 Collection name
@@ -112,7 +112,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           <article className="settings-panel">
             <h2><Globe size={19} /> Regional Settings</h2>
             <p className="muted">Customise Carvey for your region.</p>
-            {params.app === "regional-updated" ? <p className="success">Regional settings saved.</p> : null}
+            {params.app === "regional-updated" ? <p className="success">Regional settings saved</p> : null}
             <form action={updateRegionalSettingsAction} className="record-form">
               <label>
                 Currency
@@ -177,9 +177,9 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         <section className="settings-grid">
           <article className="settings-panel">
             <h2><Building2 size={19} /> Add Garage/Workshop</h2>
-            {params.workshop === "created" ? <p className="success">Garage/Workshop saved.</p> : null}
-            {params.workshop === "updated" ? <p className="success">Garage/Workshop updated.</p> : null}
-            {params.workshop === "deleted" ? <p className="success">Garage/Workshop deleted.</p> : null}
+            {params.workshop === "created" ? <p className="success">Garage/Workshop saved</p> : null}
+            {params.workshop === "updated" ? <p className="success">Garage/Workshop updated</p> : null}
+            {params.workshop === "deleted" ? <p className="success">Garage/Workshop deleted</p> : null}
             <WorkshopForm action={createWorkshopAction} button="Save Garage/Workshop" />
           </article>
 
@@ -191,7 +191,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                   <WorkshopCard workshop={workshop} key={workshop.id} />
                 ))}
               </div>
-            ) : <p className="muted">No saved garages or workshops yet.</p>}
+            ) : <p className="muted">No saved garages or workshops yet</p>}
           </article>
         </section>
       ) : null}
@@ -200,9 +200,9 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         <section className="settings-grid">
           <article className="settings-panel">
             <h2><Tag size={19} /> Add Category</h2>
-            {params.category === "created" ? <p className="success">Category saved.</p> : null}
-            {params.category === "updated" ? <p className="success">Category updated.</p> : null}
-            {params.category === "deleted" ? <p className="success">Category deleted.</p> : null}
+            {params.category === "created" ? <p className="success">Category saved</p> : null}
+            {params.category === "updated" ? <p className="success">Category updated</p> : null}
+            {params.category === "deleted" ? <p className="success">Category deleted</p> : null}
             <form action={createMaintenanceCategoryAction} className="record-form">
               <label>
                 Name
@@ -220,7 +220,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                   <CategoryCard category={category} key={category.id} />
                 ))}
               </div>
-            ) : <p className="muted">No saved categories yet.</p>}
+            ) : <p className="muted">No saved categories yet</p>}
           </article>
         </section>
       ) : null}
@@ -230,9 +230,9 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           <article className="settings-panel">
             <h2><RefreshCw size={19} /> Add Service Interval</h2>
             <p className="muted">Define recurring service schedules to assign to your vehicles.</p>
-            {params.interval === "created" ? <p className="success">Service interval saved.</p> : null}
-            {params.interval === "updated" ? <p className="success">Service interval updated.</p> : null}
-            {params.interval === "deleted" ? <p className="success">Service interval deleted.</p> : null}
+            {params.interval === "created" ? <p className="success">Service interval saved</p> : null}
+            {params.interval === "updated" ? <p className="success">Service interval updated</p> : null}
+            {params.interval === "deleted" ? <p className="success">Service interval deleted</p> : null}
             <ServiceIntervalForm action={createServiceIntervalAction} button="Save interval" distanceUnit={regionalSettings.distanceUnit} />
           </article>
 
@@ -244,7 +244,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                   <ServiceIntervalCard interval={interval} key={interval.id} distanceUnit={regionalSettings.distanceUnit} />
                 ))}
               </div>
-            ) : <p className="muted">No service intervals defined yet.</p>}
+            ) : <p className="muted">No service intervals defined yet</p>}
           </article>
         </section>
       ) : null}
@@ -273,8 +273,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             <h2><Upload size={19} /> Restore</h2>
             <p className="muted">Upload a Carvey backup to preview it before replacing current data.</p>
             {params.restore === "preview-error" || params.restore === "restore-error" ? <p className="error">{params.message ?? "Restore failed."}</p> : null}
-            {params.restore === "success" ? <p className="success">Restore complete.</p> : null}
-            {params.restore === "confirm-required" ? <p className="error">Confirm the restore before continuing.</p> : null}
+            {params.restore === "success" ? <p className="success">Restore complete</p> : null}
+            {params.restore === "confirm-required" ? <p className="error">Confirm the restore before continuing</p> : null}
             <form action="/settings/restore/preview" method="post" encType="multipart/form-data" className="record-form">
               <label>
                 Backup file
@@ -288,9 +288,9 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             <article className="settings-panel">
               <h2><Bug size={19} /> Debug Tools</h2>
               <p className="muted">Load a curated screenshot garage for demos and GitHub screenshots. This temporarily replaces the live view until you restore the saved snapshot.</p>
-              {params.debug === "demo-loaded" ? <p className="success">Showcase demo data loaded.</p> : null}
+              {params.debug === "demo-loaded" ? <p className="success">Showcase demo data loaded</p> : null}
               {params.debug === "demo-saved" ? <p className="success">Current demo data saved as the showcase backup.</p> : null}
-              {params.debug === "previous-restored" ? <p className="success">Previous live data restored.</p> : null}
+              {params.debug === "previous-restored" ? <p className="success">Previous live data restored</p> : null}
               {params.debug === "missing-rollback" ? <p className="error">No previous live-data snapshot is available to restore.</p> : null}
               {params.debug === "error" ? <p className="error">{params.message ?? "Debug demo action failed."}</p> : null}
               <dl className="metric-list">

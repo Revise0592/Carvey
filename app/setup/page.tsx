@@ -14,7 +14,7 @@ export default function SetupPage() {
           <div className="auth-header-copy">
             <BrandLogo />
             <h1>Set up Carvey</h1>
-            <p>Create your admin account.</p>
+            <p>Create your admin account</p>
           </div>
         </div>
         <form action={setupAction} className="form-stack">

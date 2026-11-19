@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarDays, Check, FileBadge, Fuel, Gauge, Hammer, PackagePlus, Pencil, Plus, ShieldCheck, ShoppingCart, Trash2, Wrench } from "lucide-react";
+import { CalendarDays, Check, FileBadge, Fuel, Hammer, PackagePlus, Pencil, Plus, ShieldCheck, ShoppingCart, Trash2, Wrench } from "lucide-react";
 import {
   completeReminderAction,
   createFuelRecordAction,
@@ -539,15 +539,6 @@ export function ClearReminderButton({ record }: { record: Reminder }) {
         <ConfirmDelete action={deleteAction} label="Remove" />
       </div>
     </ModalPanel>
-  );
-}
-
-export function MileagePill({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="pill">
-      <Gauge size={14} />
-      {children}
-    </span>
   );
 }
 
