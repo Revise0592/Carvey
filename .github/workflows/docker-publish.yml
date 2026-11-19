@@ -49,6 +49,7 @@ jobs:
             tags="${tags},${image}:latest"
           fi
           echo "push=true" >> "$GITHUB_OUTPUT"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
           echo "tags=${tags}" >> "$GITHUB_OUTPUT"
           echo "Publishing: ${tags}"
 
@@ -66,6 +67,8 @@ jobs:
           context: .
           push: ${{ steps.meta.outputs.push == 'true' }}
           tags: ${{ steps.meta.outputs.tags }}
+          build-args: |
+            CARVEY_VERSION=${{ steps.meta.outputs.version }}
           labels: |
             org.opencontainers.image.title=Carvey
             org.opencontainers.image.description=Self-hosted car maintenance dashboard

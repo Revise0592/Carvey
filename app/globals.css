@@ -444,14 +444,26 @@ textarea {
   transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease, color 160ms ease, transform 160ms ease, opacity 160ms ease;
 }
 
+/* Outline, not box-shadow: every button sets its own box-shadow, which would
+   replace a shadow-based ring and leave keyboard focus invisible. */
 :focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 24%, transparent);
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Rows inside panels that clip their overflow draw the ring inside. */
+.list-panel :focus-visible,
+.inset-panel :focus-visible,
+.record-card :focus-visible,
+.gallery-card :focus-visible,
+.settings-nav :focus-visible {
+  outline-offset: -2px;
 }
 
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
+  outline: none;
   border-color: color-mix(in srgb, var(--accent) 48%, var(--line));
   background: var(--surface-raised);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent);
@@ -595,7 +607,7 @@ textarea:focus-visible {
 }
 
 .primary-button:hover {
-  filter: brightness(1.05);
+  background: var(--accent-strong);
 }
 
 .danger-button:hover,
@@ -852,17 +864,7 @@ textarea:focus-visible {
 .vehicle-card {
   position: relative;
   overflow: hidden;
-  transition: border-color 160ms ease, box-shadow 160ms ease;
-}
-
-.vehicle-card::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: none;
-  opacity: 0;
-  transition: opacity 180ms ease;
-  pointer-events: none;
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
 }
 
 .vehicle-card:hover {
@@ -870,8 +872,10 @@ textarea:focus-visible {
   box-shadow: var(--shadow);
 }
 
-.vehicle-card:hover::before {
-  opacity: 1;
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .vehicle-card:hover {
+    transform: translateY(-2px);
+  }
 }
 
 .vehicle-photo {
@@ -2029,7 +2033,8 @@ textarea:focus-visible {
   transition: opacity 0.15s, transform 0.2s;
 }
 
-.gallery-thumb-link:hover .gallery-thumb {
+.gallery-thumb-link:hover .gallery-thumb,
+.gallery-thumb-link:focus-visible .gallery-thumb {
   opacity: 0.88;
   transform: scale(1.03);
 }
@@ -3288,7 +3293,7 @@ a.bar-row:hover .bar-row-head span {
     border-radius: 50%;
     background: var(--accent);
     color: var(--accent-contrast);
-    box-shadow: 0 6px 16px color-mix(in srgb, var(--accent) 40%, transparent), 0 0 0 4px var(--bg);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18), 0 0 0 4px var(--bg);
     transition: transform 140ms ease;
   }
 
@@ -3895,4 +3900,47 @@ details.field-hint ul,
 .danger-zone > summary {
   color: var(--danger);
   font-weight: 600;
+}
+
+/* Touch: small icon buttons keep their look but get a 44px hit area. The
+   inset is negative only when the button is smaller than 44px. */
+@media (pointer: coarse) {
+  .icon-button,
+  .modal-close,
+  .modal-trigger,
+  .record-row-actions .secondary-button {
+    position: relative;
+  }
+
+  .icon-button::after,
+  .modal-close::after,
+  .modal-trigger::after,
+  .record-row-actions .secondary-button::after {
+    content: "";
+    position: absolute;
+    inset: min(0px, calc((100% - 44px) / 2));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 1ms !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+  }
+
+  .icon-button:active,
+  .primary-button:active,
+  .secondary-button:active,
+  .file-button:active,
+  .danger-button:active,
+  .modal-trigger:active,
+  .modal-close:active,
+  .bottom-nav-add:active .bottom-nav-add-circle,
+  .gallery-thumb-link:hover .gallery-thumb,
+  .gallery-thumb-link:focus-visible .gallery-thumb {
+    transform: none !important;
+  }
 }

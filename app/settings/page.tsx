@@ -19,6 +19,10 @@ import { NotificationsPanel } from "./_panels/notifications";
 
 export const dynamic = "force-dynamic";
 
+// Release images get CARVEY_VERSION from the git tag (see docker-publish.yml);
+// local and dev builds fall back to package.json.
+const appVersion = process.env.CARVEY_VERSION?.replace(/^[vV]/, "") || packageJson.version;
+
 const settingsTabs = ["personalisation", "admin", "regional", "notifications", "workshops", "categories", "service-intervals", "data", "backup"] as const;
 type SettingsTab = (typeof settingsTabs)[number];
 
@@ -259,7 +263,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
               <span>Region defaults</span>
               <strong>{regionalSettings.currency}, {regionalSettings.distanceUnit}, {regionalSettings.dateFormat === "iso" ? "ISO dates" : "UK dates"}</strong>
               <span>Version</span>
-              <strong>{packageJson.version}</strong>
+              <strong>{appVersion}</strong>
             </dl>
           </article>
 

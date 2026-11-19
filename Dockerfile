@@ -18,6 +18,10 @@ ENV CARVEY_DATA_DIR=/app/data
 ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
 
+# Set by the release workflow from the git tag; shown on Settings > Backup & restore.
+ARG CARVEY_VERSION=""
+ENV CARVEY_VERSION=$CARVEY_VERSION
+
 LABEL org.opencontainers.image.title="Carvey"
 LABEL org.opencontainers.image.description="Self-hosted car maintenance dashboard"
 LABEL org.opencontainers.image.source="https://github.com/Revise0592/Carvey"
