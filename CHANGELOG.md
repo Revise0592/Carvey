@@ -4,6 +4,31 @@ All notable changes to Carvey will be documented here.
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-11-19
+
+### Changed
+
+- **A quieter, more consistent look.** Spacing follows one scale across every page, coloured glows and tinted icon tiles are gone, and the teal accent is kept for the things that matter: the main button, the selected item and the figure you're looking at
+- **Settings reads top to bottom.** Each section's cards stack in one column next to the settings menu, instead of a two-column grid that left ragged gaps. Admin now runs Account, Password, Two-factor, Signed-in devices, then Sign-in mode. The settings menu icons match the text colour and the selected item has a thin border
+- **Garage overview:** the stat cards are just the label and the figure, without an icon in each
+- **Vehicle page:** mileage, year, money logged and price paid sit in one quiet line under the name instead of a row of pills
+- **Costs:** the monthly chart highlights the latest month with spending and keeps the others neutral
+- The sign-in page says **Sign in**, and status messages and empty lists no longer end in a full stop
+- Garage cards lift slightly when you point at them, and the main button darkens on hover instead of flashing brighter
+
+### Fixed
+
+- **Keyboard focus was invisible on buttons.** Tabbing now shows a clear outline on every button, link and field, drawn inside lists and settings rows so it isn't cut off
+- The logo on the sign-in and setup screens shrank to about half size
+- Small icon buttons (attachment rows, record actions, close and sign-out) were hard to tap on a phone. They look the same but now respond to a 44px touch area
+- With **Reduce motion** turned on in your system settings, transitions, button press effects and photo zoom now switch off
+
+### Under the hood
+
+- The Docker image and CI run on **Node 26**. better-sqlite3 is now 13, which builds from source: running Carvey outside Docker needs `python3`, `make` and a C++ compiler for `npm ci`
+- Dependency updates: lucide-react 1.72, TypeScript 6.0, ESLint 10, Vitest 5 and GitHub Actions
+- Pull requests that only change docs, screenshots or templates skip the build and test run
+
 ## [1.7.0] - 2026-11-16
 
 ### Added
