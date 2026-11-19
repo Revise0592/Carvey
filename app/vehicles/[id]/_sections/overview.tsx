@@ -90,7 +90,7 @@ export function OverviewSection({ vehicle, settings, motLabel }: SectionProps) {
             <span>{record.label}</span>
             <strong>{formatDate(record.date, settings)}</strong>
           </div>
-        )) : <p className="muted">No work logged yet.</p>}
+        )) : <p className="muted">No work logged yet</p>}
       </div>
     </section>
   );

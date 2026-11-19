@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BadgeCheck, Banknote, CalendarClock, DollarSign, Euro, PackagePlus, PoundSterling, Wrench } from "lucide-react";
+import { BadgeCheck } from "lucide-react";
 import { AppFrame } from "@/components/AppFrame";
 import { CreateVehicleForm } from "@/components/Forms";
 import { RegistrationPlate } from "@/components/RegistrationPlate";
@@ -32,23 +32,19 @@ export default async function GaragePage({ searchParams }: { searchParams: Promi
       </section>
 
       <section className="stats-grid">
-        <article className="stat-card stat-card-garage">
-          <Wrench size={20} />
+        <article className="stat-card">
           <span>Vehicles</span>
           <strong>{stats.vehicles.length}</strong>
         </article>
-        <article className="stat-card stat-card-spend">
-          {settings.currency === "USD" ? <DollarSign size={20} /> : settings.currency === "GBP" ? <PoundSterling size={20} /> : settings.currency === "EUR" ? <Euro size={20} /> : <Banknote size={20} />}
+        <article className="stat-card">
           <span>Spent this year</span>
           <strong>{formatCurrency(stats.yearlySpend, settings)}</strong>
         </article>
-        <article className="stat-card stat-card-reminders">
-          <CalendarClock size={20} />
+        <article className="stat-card">
           <span>Open reminders</span>
           <strong>{agenda.length}</strong>
         </article>
-        <article className="stat-card stat-card-reminders">
-          <PackagePlus size={20} />
+        <article className="stat-card">
           <span>To Buy</span>
           <strong>{stats.plannedPurchaseCount}</strong>
         </article>
@@ -107,7 +103,7 @@ export default async function GaragePage({ searchParams }: { searchParams: Promi
                     : formatMiles(reminder.dueOdometer, settings)}
               </strong>
             </Link>
-          )) : <p className="muted">No open reminders.</p>}
+          )) : <p className="muted">No open reminders</p>}
         </div>
 
         <div className="list-panel">
@@ -117,7 +113,7 @@ export default async function GaragePage({ searchParams }: { searchParams: Promi
               <span className="list-row-text"><span>{item.itemName}</span><small>{item.make} {item.model}</small></span>
               <strong>{formatCurrency(item.estimatedCost, settings)}</strong>
             </Link>
-          )) : <p className="muted">No planned purchases.</p>}
+          )) : <p className="muted">No planned purchases</p>}
         </div>
       </section>
     </AppFrame>

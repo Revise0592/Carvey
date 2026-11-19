@@ -166,7 +166,7 @@ export function AdminPanel({ user, account, app, recoveryLeft }: { user: Authent
                   </li>
                 ))}
               </ul>
-            ) : <p className="muted">No password sign-ins are active.</p>}
+            ) : <p className="muted">No password sign-ins are active</p>}
             {sessions.some((session) => session.id !== user.sessionId) ? (
               <form action={signOutOtherSessionsAction}>
                 <button className="secondary-button" type="submit">Sign out of all other devices</button>

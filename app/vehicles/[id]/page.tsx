@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BadgeCheck, ChevronLeft, Printer } from "lucide-react";
 import { AppFrame } from "@/components/AppFrame";
-import { DebugVehicleForm, EditVehicleForm, MileagePill } from "@/components/Forms";
+import { DebugVehicleForm, EditVehicleForm } from "@/components/Forms";
 import { ExplosionEffect } from "@/components/ExplosionEffect";
 import { RegistrationPlate } from "@/components/RegistrationPlate";
 import { VehicleTabs } from "@/components/VehicleTabs";
@@ -75,12 +75,12 @@ export default async function VehiclePage({
           <Link href="/garage" className="back-link"><ChevronLeft size={16} /> {getCollectionName()}</Link>
           <RegistrationPlate value={vehicle.registration} mode={settings.plateStyle} />
           <h1>{vehicle.make} {vehicle.model}</h1>
-          <div className="hero-meta">
-            <MileagePill>{formatMiles(vehicle.effectiveOdometer, settings)}</MileagePill>
-            <span className="pill">{vehicle.year ?? "Year unknown"}</span>
-            <span className="pill">{formatCurrency(spent, settings)} logged</span>
-            {vehicle.purchasePrice ? <span className="pill">{formatCurrency(vehicle.purchasePrice, settings)} paid</span> : null}
-          </div>
+          <p className="hero-meta">
+            <span>{formatMiles(vehicle.effectiveOdometer, settings)}</span>
+            <span>{vehicle.year ?? "Year unknown"}</span>
+            <span>{formatCurrency(spent, settings)} logged</span>
+            {vehicle.purchasePrice ? <span>{formatCurrency(vehicle.purchasePrice, settings)} paid</span> : null}
+          </p>
           {vehicle.notes ? <p className="vehicle-notes">{vehicle.notes}</p> : null}
           <div className="hero-actions">
             <VehiclePhotoUploadForm vehicleId={vehicle.id} />

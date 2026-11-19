@@ -25,7 +25,7 @@ export function InstallAppPanel() {
     return (
       <article className="settings-panel">
         <h2><Download size={19} /> Install App</h2>
-        <p className="muted">Carvey is installed on this device.</p>
+        <p className="muted">Carvey is installed on this device</p>
       </article>
     );
   }

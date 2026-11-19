@@ -116,7 +116,7 @@ export function GalleryGrid({
                 </Link>
               ) : null}
               {item.isStandalone && item.photoId !== null ? (
-                <div style={{ marginTop: "0.25rem" }}>
+                <div style={{ marginTop: 4 }}>
                   <EditPanel
                     title="Edit photo"
                     deleteAction={async (formData) => {

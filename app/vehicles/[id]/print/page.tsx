@@ -145,7 +145,7 @@ export default async function VehiclePrintPage({ params }: { params: Promise<{ i
               </tbody>
             </table>
           </div>
-        ) : <p className="print-empty">No open reminders.</p>}
+        ) : <p className="print-empty">No open reminders</p>}
       </section>
     </main>
   );

@@ -17,7 +17,7 @@ export default async function SetupPage({ searchParams }: { searchParams: Promis
           <div className="auth-header-copy">
             <BrandLogo />
             <h1>Set up Carvey</h1>
-            <p>Create your admin account.</p>
+            <p>Create your admin account</p>
           </div>
         </div>
         {error ? <p className="error">Use a username of 2 to 48 characters and a password of at least 8 characters.</p> : null}
